@@ -1,4 +1,4 @@
-FROM node:20-alpine
+FROM node:26-alpine
 LABEL maintainer="alertmap" description="Israel Alert Map — Real-time Pikud HaOref monitoring"
 
 WORKDIR /app
