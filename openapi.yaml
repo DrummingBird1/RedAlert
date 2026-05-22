@@ -1,0 +1,361 @@
+openapi: 3.0.3
+info:
+  title: Israel Alert Map API
+  description: |
+    Real-time Israeli Home Front Command (Pikud HaOref) alert monitoring.
+    Open public proxy + SSE stream, no authentication required for read endpoints.
+    Push subscription and admin endpoints require their own credentials.
+  version: '1.0.0'
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3000
+    description: Local development
+  - url: '{scheme}://{host}'
+    description: Production deployment behind reverse proxy
+    variables:
+      scheme:
+        default: https
+        enum: [http, https]
+      host:
+        default: alertmap.example.com
+
+tags:
+  - name: alerts
+    description: Public alert data
+  - name: stream
+    description: Real-time SSE channel
+  - name: stats
+    description: Aggregated statistics
+  - name: push
+    description: Web Push subscription management
+  - name: admin
+    description: Admin endpoints (Basic auth)
+  - name: ops
+    description: Health, config, logs
+  - name: pwa
+    description: Service worker, manifest, icon
+
+paths:
+  /api/alerts:
+    get:
+      tags: [alerts]
+      summary: Currently active alerts
+      description: Returns alerts that are still within the 90-second active window.
+      responses:
+        '200':
+          description: Active alerts
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [alerts, count, ts]
+                properties:
+                  alerts:
+                    type: array
+                    items: { $ref: '#/components/schemas/Alert' }
+                  count:
+                    type: integer
+                  ts:
+                    type: string
+                    format: date-time
+
+  /api/history:
+    get:
+      tags: [alerts]
+      summary: Recent alert history
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 1000, default: 200 }
+      responses:
+        '200':
+          description: Historical alerts (newest first)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  alerts:
+                    type: array
+                    items: { $ref: '#/components/schemas/Alert' }
+                  total: { type: integer }
+
+  /api/stream:
+    get:
+      tags: [stream]
+      summary: Server-Sent Events real-time stream
+      description: |
+        Emits `init` once on connect with current active alerts, then `update`
+        events whenever the set of active alerts changes. Heartbeat comment
+        (`:hb`) every 2 seconds otherwise.
+      responses:
+        '200':
+          description: text/event-stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                example: |
+                  data: {"type":"init","alerts":[]}
+
+                  data: {"type":"update","alerts":[{"id":"...","city":"שדרות","type":"rockets",...}]}
+
+  /api/stats:
+    get:
+      tags: [stats]
+      summary: Aggregate counts (total/today/last hour/active)
+      responses:
+        '200':
+          description: Stats
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total: { type: integer }
+                  today: { type: integer }
+                  lastHour: { type: integer }
+                  active: { type: integer }
+                  sse: { type: integer }
+                  types:
+                    type: object
+                    additionalProperties: { type: integer }
+
+  /api/health:
+    get:
+      tags: [ops]
+      summary: Health check
+      responses:
+        '200':
+          description: Service health
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, uptime_seconds, memory_mb, sse_clients, alerts_stored]
+                properties:
+                  status: { type: string, example: ok }
+                  uptime_seconds: { type: integer }
+                  memory_mb: { type: integer }
+                  sse_clients: { type: integer }
+                  alerts_stored: { type: integer }
+                  fallback: { type: boolean }
+                  web_push: { type: boolean }
+                  push_subs: { type: integer }
+                  last_poll_ago: { type: integer, nullable: true }
+                  health_webhook: { type: boolean }
+
+  /api/config:
+    get:
+      tags: [ops]
+      summary: Client-visible server configuration
+      responses:
+        '200':
+          description: Config
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  shelters_url: { type: string, nullable: true }
+                  web_push: { type: boolean }
+
+  /api/logs:
+    get:
+      tags: [ops]
+      summary: Tail of alerts.log (up to 500 KB)
+      responses:
+        '200':
+          description: Plain text log
+          content:
+            text/plain:
+              schema: { type: string }
+
+  /api/oref/live:
+    get:
+      tags: [alerts]
+      summary: OREF live alerts passthrough (cached 1s)
+      responses:
+        '200':
+          description: Raw OREF payload
+          content:
+            application/json:
+              schema: { type: object }
+
+  /api/oref/history:
+    get:
+      tags: [alerts]
+      summary: OREF history passthrough (cached 30s)
+      responses:
+        '200':
+          description: Raw OREF history payload
+          content:
+            application/json:
+              schema: { type: object }
+
+  /api/push/vapid-key:
+    get:
+      tags: [push]
+      summary: VAPID public key for subscription
+      responses:
+        '200':
+          description: VAPID key
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  publicKey: { type: string, nullable: true }
+                  available: { type: boolean }
+
+  /api/push/subscribe:
+    post:
+      tags: [push]
+      summary: Register a Web Push subscription
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subscription]
+              properties:
+                subscription:
+                  type: object
+                  description: PushSubscription.toJSON() output
+                favs:
+                  type: array
+                  items: { type: string }
+                  description: Subscriber's favorite cities — push only fires when alert hits one
+                dnd:
+                  type: boolean
+                  description: Send silent push during 23:00-07:00 if true
+      responses:
+        '201':
+          description: Subscribed
+        '400':
+          description: Bad request
+        '503':
+          description: web-push not installed on server
+
+  /api/push/unsubscribe:
+    post:
+      tags: [push]
+      summary: Remove a Web Push subscription
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                endpoint: { type: string }
+      responses:
+        '200': { description: Unsubscribed }
+
+  /admin:
+    get:
+      tags: [admin]
+      summary: Admin dashboard (HTML)
+      security: [{ basicAuth: [] }]
+      responses:
+        '200':
+          description: Dashboard
+          content:
+            text/html:
+              schema: { type: string }
+        '401':
+          description: Unauthorized
+
+  /api/admin/metrics:
+    get:
+      tags: [admin]
+      summary: Detailed runtime metrics
+      security: [{ basicAuth: [] }]
+      responses:
+        '200':
+          description: Metrics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  up: { type: string, example: "1h23m" }
+                  mem: { type: integer }
+                  sse: { type: integer }
+                  stored: { type: integer }
+                  reqs: { type: integer }
+                  polls: { type: integer }
+                  errs: { type: integer }
+                  lat: { type: integer, description: Last OREF response time in ms }
+                  fb: { type: boolean }
+                  subs: { type: integer }
+                  sent: { type: integer }
+                  wp: { type: boolean }
+                  hw: { type: boolean }
+                  routes:
+                    type: object
+                    additionalProperties: { type: integer }
+
+  /manifest.json:
+    get:
+      tags: [pwa]
+      summary: PWA manifest
+      responses:
+        '200':
+          description: Manifest
+          content:
+            application/manifest+json: {}
+
+  /sw.js:
+    get:
+      tags: [pwa]
+      summary: Service worker
+      responses:
+        '200':
+          description: SW script
+          content:
+            application/javascript: {}
+
+  /icon.svg:
+    get:
+      tags: [pwa]
+      summary: App icon
+      responses:
+        '200':
+          description: SVG
+          content:
+            image/svg+xml: {}
+
+components:
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+
+  schemas:
+    Alert:
+      type: object
+      required: [id, city, type, timestamp, active]
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 3f5a8e2c-1b7d-4f8a-9c3e-6d8f4e2b1a9c
+        city:
+          type: string
+          example: שדרות
+        type:
+          type: string
+          enum: [rockets, uav, earthquake, tsunami]
+        title:
+          type: string
+          description: Optional Hebrew title from OREF
+        timestamp:
+          type: string
+          format: date-time
+        active:
+          type: boolean

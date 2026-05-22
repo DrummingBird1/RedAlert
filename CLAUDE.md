@@ -1,0 +1,181 @@
+# CLAUDE.md
+
+מדריך עבודה בפרויקט עבור Claude Code. הקובץ נטען אוטומטית כשנפתח השיח בתיקייה הזו.
+
+## מה הפרויקט
+
+`israel-alert-map` (v3.0.0) — שרת Node.js + קליינט HTML עצמאי שמציג בזמן אמת את אזעקות פיקוד העורף על מפת Leaflet. תלות בליבה: אפס (רק `node` ≥ 18). תלויות אופציונליות: `web-push`, `node-telegram-bot-api`.
+
+מקור הנתונים: `https://www.oref.org.il/WarningMessages/alert/alerts.json` (polling כל 2 שניות). אין מפתחות, אין הרשמה.
+
+## מבנה הקבצים
+
+הפרויקט שטוח לחלוטין (אין `src/`, אין תיקיות משנה לקוד):
+
+| קובץ | תפקיד |
+|---|---|
+| [server.js](server.js) | שרת HTTP יחיד — proxy ל-OREF, SSE, API, PWA assets, admin dashboard, Web Push, fallback, health webhook. ~213 שורות, **בנוי כקובץ אחד עם שורות צפופות מאוד** (one-liners מכוונים). |
+| [index.html](index.html) | קליינט מונוליטי — HTML + CSS + JS באותו קובץ (~368 שורות, חלקן ארוכות מאוד). כל המפה, ה-UI, i18n, IndexedDB, audio, TTS. |
+| [test.js](test.js) | בדיקות עצמאיות לפונקציות פניניות + smoke test לשרת. ללא תלויות. |
+| [test-integration.js](test-integration.js) | E2E — מקים mock OREF + spawned server, מאמת אזעקה זורמת ל-`/api/alerts` + SSE + `/api/health`. |
+| [telegram-bot.js](telegram-bot.js) | בוט עצמאי — polling ל-`/api/alerts` ושליחה לערוץ טלגרם. |
+| [Dockerfile](Dockerfile) + [docker-compose.yml](docker-compose.yml) | בנייה ל-`node:20-alpine` עם healthcheck. |
+| [package.json](package.json) | scripts בלבד; ללא `dependencies` רגילים, רק `optionalDependencies`. |
+
+קבצי runtime שנוצרים אוטומטית (ב-`.gitignore`):
+- `logs/alerts.log` — לוג אזעקות עם רוטציה (10MB × 5 קבצים)
+- `.vapid-keys.json` — מפתחות VAPID ל-Web Push (נוצרים בהפעלה ראשונה)
+- `.push-subs.json` — הרשמות Push
+
+## פקודות הפעלה
+
+```bash
+node server.js              # מפעיל את השרת על פורט 3000
+node test.js                # 44+ בדיקות (כולל smoke test לשרת)
+node test-integration.js    # E2E — mock OREF → server → SSE
+node telegram-bot.js        # בוט טלגרם (דורש משתני סביבה)
+npm install                 # התקנת web-push + telegram-bot-api (אופציונלי)
+docker-compose up -d        # פריסה ב-Docker
+
+npm start                   # = node server.js
+npm test                    # = node test.js
+npm run test:integration    # = node test-integration.js
+npm run test:all            # הריצה של שניהם ברצף
+npm run telegram            # = node telegram-bot.js
+npm run docker:build        # docker build -t alertmap .
+npm run docker:run          # docker run -p 3000:3000 ...
+```
+
+אין `npm run lint`, `npm run typecheck`, `npm run format` — הפרויקט ללא toolchain.
+
+## משתני סביבה
+
+| משתנה | ברירת מחדל | הערה |
+|---|---|---|
+| `PORT` | `3000` | פורט השרת |
+| `ADMIN_USER` / `ADMIN_PASS` | `admin` / `admin123` | בסיסי לעמוד `/admin`. **שנה ב-production**. |
+| `FALLBACK_ALERT_URL` | (ריק) | URL חלופי שמופעל אחרי 5 כשלונות OREF |
+| `HEALTH_WEBHOOK` | (ריק) | URL ל-POST כשהשרת degraded/recovered |
+| `TELEGRAM_TOKEN` / `TELEGRAM_CHANNEL` | (ריק) | לבוט בלבד |
+| `OREF_URL_OVERRIDE` / `OREF_HIST_OVERRIDE` | (ריק) | החלף את URL של OREF (לטסטים בלבד; `test-integration.js` משתמש בזה) |
+| `SHELTERS_URL` | (ריק) | JSON חיצוני של מקלטים (`[{lat,lng,n}]`); הקליינט מחליף את 12 הדגימות אם נמצא |
+
+## ארכיטקטורה — נקודות חיוניות
+
+### שרת ([server.js](server.js))
+
+- **Polling יחיד**: `setInterval(pollAlerts, 2000)` מושך את OREF, מחשב hash, מוסיף לרשימה גלובלית (`store`, max 5000), משדר לכל לקוחות ה-SSE. אזעקות מוגדרות "active" למשך 90 שניות ואז מוחלפות ל-history.
+- **SSE** ב-`/api/stream`: שולח init אז update בכל שינוי, heartbeat כל 2s.
+- **דדופליקציה**: `lastHash` נמחק אחרי 30 שניות — אזעקה זהה תוך חצי דקה נחשבת חוזרת.
+- **Fallback**: אחרי 5 כשלונות רצופים, עובר ל-`FALLBACK_ALERT_URL`. בודק חזרה ל-OREF כל 60s.
+- **Web Push**: רק אם `web-push` הותקן. VAPID keys נשמרים ב-`.vapid-keys.json` ונוצרים אוטומטית. **שים לב — הקליינט עצמו לא נרשם ל-Web Push** (ראה issues).
+- **Rate limit**: 120 בקשות לדקה לכל IP. בקליפינג ב-`setInterval` כל 5 דקות.
+- **Gzip**: רק לתוכן > 1KB ו-MIME types מסוימים.
+- **HTML cache**: `getHtml()` קורא את `index.html` ושומר במזיכרון לפי mtime — שינוי בקובץ נתפס בלי restart.
+- **Admin dashboard**: `/admin` עם Basic auth, פולל את `/api/admin/metrics` כל 5s.
+- **Security headers**: רק לתגובת HTML. JSON endpoints לא מקבלים `X-Content-Type-Options` וכו'.
+
+### קליינט ([index.html](index.html))
+
+- **קוד JS דחוס ידנית**: שמות משתנים בני אות אחת, פונקציות בני 2-3 אותיות (`X`=escape, `t`=translate, `C`=cities, `TM`=type map, `RS`=region shelter, `SHL`=shelters list). זה לא מינופיקציה אוטומטית — לעריכה צריך לקרוא כל שורה בעיון.
+- **State גלובלי**: `hist`, `act` (Map), `mrk` (Map), `known` (Set), `favs`, `flt`, `theme` וכו' — אין framework.
+- **Persistence**:
+  - `localStorage`: lang, theme, favs, dnd, tts, siren, hc, cls, push.
+  - `IndexedDB` (`alertmap` v1, store `alerts`): היסטוריה ארוכת טווח להשוואות (today/yesterday/weekAvg).
+- **SSE + fallback polling**: `connectSSE()` + `startPoll()` רץ כל 5s רק אם `sseOK=false`.
+- **Cities (`C`)**: dict סטטי של ~55 ערים עם lat/lng, region, shelter time (לא 130+ כמו ב-README).
+- **Fuzzy matching (`findC`)**: exact → normalized → substring → word-by-word. תומך ב-"תל אביב - יפו" → "תל אביב".
+- **i18n (`LN`)**: 4 שפות (he/en/ar/ru), `t(key)` עם fallback ל-Hebrew. **TTS עדיין משתמש בעברית עבור ru/ar** (bug ידוע).
+- **PWA**: SW מקודד בתוך `server.js` (משתנה `SW`), מטמון `red-alert-v3`. שינוי ל-SW דורש bump של `CN` ב-server.js.
+
+## איך להוסיף תכונה / לשנות קוד
+
+1. **שינויים בלוגיקת השרת** — `server.js` ערוך ישירות. אין hot reload — `node server.js` מחדש.
+2. **שינויים בקליינט** — `index.html` ערוך ישירות. השרת מזהה את שינוי ה-mtime ומגיש את הגרסה החדשה (refresh בדפדפן). זכור ש-Service Worker עלול להגיש cached גרסה — חשוב לעדכן את `CN='red-alert-v3'` ב-`server.js` (משתנה `SW`) כדי להפעיל invalidate, או לפתוח DevTools → Application → Service Workers → Unregister.
+3. **הוספת עיר** — ערוך את `C` ב-`index.html` (שורה 213). פורמט: `"שם":{lat:X,lng:Y,r:"אזור",s:זמן_מיגון}`.
+4. **הוספת שפה** — הוסף ערך ל-`LN` ב-`index.html` (שורה 207) ול-`<select id="langS">`. וודא תיקון של `speak()` כדי לתמוך בקידומת השפה החדשה.
+5. **endpoint חדש** — הוסף `if (p === '/api/...')` ב-`server.js` ל-pipeline הקיים בתוך `http.createServer`. תזכור `track(p, code)` ו-`gz(req, res, body, ct)`.
+6. **בדיקות** — `test.js` משכפל ידנית פונקציות פניניות מהקליינט (אין import אמיתי כי הקליינט ב-HTML). אם משנים פונקציה חשובה ב-`index.html`, יש לעדכן עותק זהה ב-`test.js`. זה ידני וריבוי-source-of-truth.
+
+## מוסכמות סגנון
+
+- **שפה**: הערות וטקסט UI בעברית. שמות משתנים/פונקציות באנגלית.
+- **דחיסה**: הפרויקט מעדיף one-liners ארוכים על קוד מרווח. כשעורכים אזור קיים — שמרו על הסגנון; אזורים חדשים יכולים להיות נשימים יותר.
+- **ללא תלויות**: כל פיצ'ר חדש בשרת אמור לעבוד גם כש-`web-push` לא מותקן. ההתקנה היא אופציונלית בכוונה.
+- **אין framework בקליינט**: לא להוסיף React/Vue. השתמש ב-DOM API.
+- **אבטחה**: כל מחרוזת מהמשתמש/OREF שמוצגת ב-HTML חייבת לעבור `X()` (escape).
+
+## URL state (sharable links)
+
+הקליינט קורא וכותב את ה-URL דרך `history.replaceState`. סטייט שמתסנכרן:
+
+| param | טיפול בטעינה | סנכרון לאחור |
+|---|---|---|
+| `?lang=he\|en\|ar\|ru` | dorsרבים `lang`, override של localStorage | `setLang()` |
+| `?theme=light\|dark` | override של auto-dark + localStorage | `applyTh()` |
+| `?city=שדרות` | flyTo אחרי `initMap` (לא נשמר ב-URL) | — |
+| `?embed=1` | `document.documentElement.classList.add('embed')` — מסתיר כל ה-chrome | — |
+
+`syncURL()` מנקה פרמטרים שזהים לברירת המחדל (he, dark) כדי שה-URL ישאר קצר.
+
+## Embed widget
+
+`/embed.js` מוגש כסקריפט loader. אתרים זרים מטמיעים עם `<script src=".../embed.js" data-city="...">` והוא מזריק iframe ל-`/?embed=1&...`. `X-Frame-Options: DENY` ו-CSP `frame-ancestors 'self'` מתבטלים רק כאשר ה-URL מכיל `embed=1` (`secHeaders(res, true, isEmbed)`).
+
+## Prometheus
+
+`/metrics` — basic auth, פורמט 0.0.4. כל מטריקה משויכת ל-`alertmap_*` namespace. מטריקות gauge מציגות מצב נוכחי, counters לא יורדים לעולם. ראה [server.js](server.js) `prometheusMetrics()` לרשימה מלאה.
+
+## קיצורי מקלדת בקליינט
+
+| מקש | פעולה |
+|---|---|
+| `Space` | השתק/הפעל צליל |
+| `S` | סירנה (toggle) |
+| `H` | מבט בית של המפה |
+| `M` | המיקום שלי |
+| `L` | מעבר ערכת נושא |
+| `Esc` | סגירת modal פתוח |
+| `?` | toast עם רשימת הקיצורים |
+
+קיצורים מבוטלים כאשר ה-focus על `input/textarea/select`/contenteditable, או על `<button>` (כדי לאפשר ל-Space/Enter להפעיל את הכפתור), או כאשר modal פתוח (חוץ מ-ESC שתמיד סוגר).
+
+## בדיקות
+
+| קובץ | סוג | runner |
+|---|---|---|
+| [test.js](test.js) | unit (פונקציות פניניות) | `node:test` המובנה |
+| [test-integration.js](test-integration.js) | E2E (mock OREF → SSE) | ידני, ללא runner |
+
+`test.js` משכפל ידנית את הפונקציות מ-`index.html` (raison d'être של ה-`MEMORY.md` כי הקליינט הוא monolithic HTML). אם משנים `escapeHtml`/`formatShelter`/`shelterClass`/`distanceKm`/`isDND`/`normalizeCity`/`fuzzyMatch` ב-`index.html` — לעדכן גם ב-test.js.
+
+## API versioning
+
+כל endpoint תחת `/api/X` זמין גם תחת `/api/v1/X` עם תוצאה זהה. ה-aliasing נעשה ע״י strip של `/v1/` בתחילת ה-pathname לפני המעבר על הטבלת ה-endpoints. שינוי breaking בעתיד יוכל להיכנס תחת `/api/v2/`.
+
+## OpenAPI
+
+[openapi.yaml](openapi.yaml) — spec של כל ה-endpoints. נחשף דרך `GET /api/spec` (וגם `/openapi.yaml`). העלה ל-Swagger UI / Postman / Insomnia.
+
+## Severity profiles בקליינט
+
+כל סוג אזעקה (`rockets`/`uav`/`earthquake`/`tsunami`) משויך לפרופיל ב-`ALERT_PROFILES` עם:
+- תדרי `playSnd` שונים (רקטות 880-660Hz מהיר, רעידת אדמה 400Hz איטי)
+- vibration pattern שונה
+- מהירות pulse שונה ב-CSS (`.cm.t-rockets`/`.cm.t-uav`/וכו׳)
+
+הוספת סוג חדש דורשת עדכון של 3 מקומות: `TM` (icon/color), `ALERT_PROFILES` (sound/vibe), ו-CSS (`.cm.t-X`).
+
+## דיברגים נפוצים
+
+- **השרת מציג "OREF back" אבל אין אזעקות** — תקין; משמעו שהמערכת עברה ל-fallback וחזרה.
+- **בדיקת `node test.js` כושלת על `health fetch error`** — הפורט תפוס, או `server.js` לא קיים. הבדיקה משתמשת בפורט 3001-4000 רנדומלי.
+- **PWA לא מתעדכן** — DevTools → Application → Service Workers → Unregister, או bump של `CN` ב-`SW` בתוך server.js.
+- **אזעקות כפולות** — הדפדפן פתוח ב-2 טאבים; כל אחד מקבל SSE עצמאי. תקין.
+
+## אזהרות בטיחות
+
+- **`ADMIN_PASS=admin123` ברירת מחדל** — לעולם לא להפעיל פומבית בלי שינוי.
+- **CORS פתוח (`*`)** — מכוון; ה-API נועד לצריכה ציבורית.
+- **CSP מתיר `unsafe-inline`** — מכוון; הקליינט הוא HTML+JS מונוליטי.
+- **המערכת אינה חליפה להנחיות פיקוד העורף**. הדגש את זה בכל UI חדש.

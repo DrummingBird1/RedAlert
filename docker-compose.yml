@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  alertmap:
+    build: .
+    container_name: alertmap
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      - PORT=3000
+      - ADMIN_USER=${ADMIN_USER:-admin}
+      - ADMIN_PASS=${ADMIN_PASS:-changeme}
+      - FALLBACK_ALERT_URL=${FALLBACK_ALERT_URL:-}
+      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN:-}
+      - TELEGRAM_CHANNEL=${TELEGRAM_CHANNEL:-}
+      - HEALTH_WEBHOOK=${HEALTH_WEBHOOK:-}
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Optional: Telegram bot (uncomment to enable)
+  # telegram-bot:
+  #   build: .
+  #   container_name: alertmap-telegram
+  #   command: ["node", "telegram-bot.js"]
+  #   environment:
+  #     - API_URL=http://alertmap:3000
+  #     - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
+  #     - TELEGRAM_CHANNEL=${TELEGRAM_CHANNEL}
+  #   depends_on:
+  #     - alertmap
+  #   restart: unless-stopped

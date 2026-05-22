@@ -1,0 +1,55 @@
+name: tests
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test:
+    name: Node ${{ matrix.node }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['18', '20', '22']
+        os: [ubuntu-latest]
+        include:
+          - node: '20'
+            os: windows-latest
+          - node: '20'
+            os: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Syntax check
+        run: |
+          node --check server.js
+          node --check test.js
+          node --check test-integration.js
+          node --check telegram-bot.js
+
+      - name: Unit tests (node:test)
+        run: node test.js
+
+      - name: Integration tests
+        run: node test-integration.js
+
+  lint:
+    name: ESLint
+    runs-on: ubuntu-latest
+    continue-on-error: true  # optional dependency; don't block merges
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install --no-save eslint@9
+      - run: npx eslint server.js test.js test-integration.js telegram-bot.js

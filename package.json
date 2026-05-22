@@ -1,0 +1,38 @@
+{
+  "name": "israel-alert-map",
+  "version": "3.0.0",
+  "description": "מפת אזעקות ישראל — Real-time alert monitoring based on IDF Home Front Command (Pikud HaOref)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test.js",
+    "test:integration": "node test-integration.js",
+    "test:all": "node test.js && node test-integration.js",
+    "lint": "eslint server.js test.js test-integration.js telegram-bot.js",
+    "telegram": "node telegram-bot.js",
+    "docker:build": "docker build -t alertmap .",
+    "docker:run": "docker run -p 3000:3000 --name alertmap alertmap"
+  },
+  "keywords": [
+    "israel",
+    "alerts",
+    "pikud-haoref",
+    "red-alert",
+    "real-time",
+    "map",
+    "sse",
+    "pwa"
+  ],
+  "author": "",
+  "license": "MIT",
+  "optionalDependencies": {
+    "web-push": "^3.6.0",
+    "node-telegram-bot-api": "^0.66.0"
+  },
+  "devDependencies": {
+    "eslint": "^9.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

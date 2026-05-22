@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+<title>מפת אזעקות ישראל</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#ef4444">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="icon" type="image/svg+xml" href="/icon.svg">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&family=Rubik:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0e17;--bg2:#111827;--bgc:#1a2236;--bgch:#1f2a42;--bgh:rgba(10,14,23,.97);--red:#ef4444;--redg:rgba(239,68,68,.4);--orange:#f97316;--yellow:#eab308;--green:#22c55e;--blue:#3b82f6;--txt:#f1f5f9;--txt2:#94a3b8;--txtm:#64748b;--brd:rgba(255,255,255,.08);--brda:rgba(239,68,68,.3);--mapbg:#0d1117;--inp:rgba(255,255,255,.05)}
+html.light{--bg:#f0f2f5;--bg2:#fff;--bgc:#f8f9fb;--bgch:#eef0f4;--bgh:rgba(255,255,255,.97);--txt:#1e293b;--txt2:#475569;--txtm:#94a3b8;--brd:rgba(0,0,0,.1);--brda:rgba(239,68,68,.35);--mapbg:#e8ecf0;--inp:rgba(0,0,0,.04)}
+html.high-contrast{--bg:#000;--bg2:#0a0a0a;--bgc:#111;--txt:#fff;--txt2:#ddd;--txtm:#bbb;--brd:rgba(255,255,255,.25);--red:#ff2222;font-size:110%}
+/* High-contrast / colorblind-friendly markers — larger, thicker borders, shape variation */
+html.high-contrast .md{width:18px;height:18px;border-width:3px;border-color:#fff}
+html.high-contrast .md.active{background:#ff2222;box-shadow:0 0 0 2px #000,0 0 14px rgba(255,255,255,.9)}
+html.high-contrast .hm .md{background:transparent!important;border-color:#888!important;border-style:dashed!important;width:14px;height:14px}
+html.high-contrast .sm .md{background:#3b82f6;border-color:#fff;border-radius:2px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--txt);overflow:hidden;height:100vh;width:100vw}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+::view-transition-old(root),::view-transition-new(root){animation-duration:.4s}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+.hdr{position:fixed;top:0;left:0;right:0;z-index:1000;background:var(--bgh);backdrop-filter:blur(20px);border-bottom:1px solid var(--brd);padding:0 14px;height:54px;display:flex;align-items:center;justify-content:space-between}
+.logo{display:flex;align-items:center;gap:8px}.logo-i{width:32px;height:32px;background:linear-gradient(135deg,var(--red),#dc2626);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 0 16px var(--redg);animation:lp 3s ease-in-out infinite}
+@keyframes lp{0%,100%{box-shadow:0 0 16px var(--redg)}50%{box-shadow:0 0 30px var(--redg)}}
+.logo h1{font-family:'Rubik';font-size:15px;font-weight:700}.logo span{font-size:9px;color:var(--txtm)}
+.hl{display:flex;align-items:center;gap:5px}
+.badge{display:flex;align-items:center;gap:5px;padding:3px 9px;border-radius:14px;font-size:10px;font-weight:500;border:1px solid var(--brd);background:rgba(255,255,255,.03)}
+.badge .dot{width:6px;height:6px;border-radius:50%;background:var(--green)}.badge.live .dot{animation:bl 1.5s infinite}
+.badge.alert-on{background:rgba(239,68,68,.12);border-color:var(--brda);color:var(--red);animation:abp 1s infinite}
+@keyframes bl{0%,100%{opacity:1}50%{opacity:.3}}@keyframes abp{0%,100%{background:rgba(239,68,68,.12)}50%{background:rgba(239,68,68,.25)}}
+.cnt{padding:3px 7px;border-radius:5px;font-size:9px;background:rgba(255,255,255,.04);border:1px solid var(--brd);display:flex;align-items:center;gap:3px}
+.cnt .n{font-family:'Rubik';font-weight:700;font-size:12px}
+.ib{width:30px;height:30px;border-radius:6px;border:1px solid var(--brd);background:rgba(255,255,255,.04);color:var(--txt);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.ib:hover{background:rgba(255,255,255,.1)}.ib.on{background:rgba(34,197,94,.15);border-color:rgba(34,197,94,.4);color:var(--green)}
+.btn{padding:4px 9px;border-radius:5px;border:1px solid var(--brd);background:rgba(255,255,255,.04);color:var(--txt);font-family:'Heebo';font-size:10px;cursor:pointer;display:flex;align-items:center;gap:3px}
+.btn-d{background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.3);color:var(--red)}.btn-d.active{background:rgba(239,68,68,.25)}
+
+/* Defense panel */
+.defense{display:none;position:fixed;top:54px;left:0;right:320px;z-index:150;padding:7px 14px;background:rgba(34,197,94,.92);backdrop-filter:blur(10px);color:#fff;font-size:12px;font-weight:600;gap:8px;align-items:center;transition:top .2s}
+.defense.active{display:flex}
+.defense.below-banner{top:92px}
+.safe-btn{background:rgba(255,255,255,.95);color:#065f46;border:none;border-radius:5px;padding:5px 11px;font-family:'Heebo';font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap}
+.safe-btn:hover{background:#fff;box-shadow:0 0 8px rgba(255,255,255,.6)}
+.defense-t{flex:1}.defense-t small{font-weight:400;font-size:10px;opacity:.85;display:block;margin-top:1px}
+.defense-cd{font-family:'Rubik';font-size:20px;font-weight:800;min-width:44px;text-align:center}
+/* Offline bar */
+.offline{display:none;position:fixed;top:54px;left:0;right:320px;z-index:250;background:rgba(234,179,8,.9);color:#000;text-align:center;padding:5px;font-size:11px;font-weight:600}
+.offline.active{display:block}
+/* Banner */
+.banner{display:none;position:fixed;top:54px;left:0;right:320px;z-index:200;background:linear-gradient(135deg,rgba(220,38,38,.92),rgba(185,28,28,.92));color:#fff;text-align:center;padding:6px 14px;font-weight:700;font-size:12px;animation:bf 1s infinite;max-height:38px;overflow:hidden}
+.banner.active{display:flex;align-items:center;justify-content:center;gap:6px}
+@keyframes bf{0%,100%{opacity:1}50%{opacity:.85}}
+.overlay{display:none;position:fixed;top:54px;left:0;right:320px;bottom:0;z-index:100;pointer-events:none;background:radial-gradient(ellipse,rgba(239,68,68,.06),transparent 60%);animation:op 2s infinite}
+.overlay.active{display:block}@keyframes op{0%,100%{opacity:.4}50%{opacity:.8}}
+
+#map{position:fixed;top:54px;left:0;right:320px;bottom:0;z-index:1}
+.sb{position:fixed;top:54px;right:0;width:320px;bottom:0;background:var(--bg2);border-left:1px solid var(--brd);z-index:500;display:flex;flex-direction:column;overflow:hidden}
+.stabs{display:flex;border-bottom:1px solid var(--brd);background:rgba(0,0,0,.12);flex-shrink:0}
+.stab{flex:1;padding:9px;text-align:center;font-size:10px;font-weight:500;color:var(--txtm);cursor:pointer;border-bottom:2px solid transparent}
+.stab.active{color:var(--red);border-bottom-color:var(--red)}
+.sc{flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.08) transparent}
+.sc::-webkit-scrollbar{width:3px}.sc::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:2px}
+
+.fbar{padding:7px 9px;border-bottom:1px solid var(--brd);display:flex;flex-direction:column;gap:4px;position:sticky;top:0;z-index:5;background:var(--bg2)}
+.fr{display:flex;gap:3px}
+.fs{flex:1;padding:4px 6px;border-radius:4px;background:var(--inp);border:1px solid var(--brd);color:var(--txt);font-family:'Heebo';font-size:9px;cursor:pointer;appearance:none}
+.fs:focus{outline:none;border-color:var(--red)}
+.fc{padding:3px 6px;border-radius:3px;font-size:8px;background:transparent;border:1px solid var(--brd);color:var(--txtm);cursor:pointer}
+.fi{font-size:8px;color:var(--txtm);text-align:center}
+
+.st{padding:7px 12px 5px;font-size:9px;font-weight:600;color:var(--txtm);text-transform:uppercase;border-bottom:1px solid var(--brd);background:rgba(0,0,0,.1);display:flex;justify-content:space-between;align-items:center}
+.cb{background:var(--red);color:#fff;font-size:8px;font-weight:700;padding:1px 5px;border-radius:7px}.cb.off{background:var(--txtm)}
+.al{max-height:35vh;overflow-y:auto;border-bottom:2px solid var(--brda)}.hl2{max-height:40vh;overflow-y:auto}
+
+.ai{padding:9px 12px;border-bottom:1px solid var(--brd);cursor:pointer;animation:si .3s}
+.ai:hover{background:var(--bgch)}
+.ai.act{background:rgba(239,68,68,.08);border-right:3px solid var(--red);animation:si .3s,aip 2s infinite}
+@keyframes si{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:translateX(0)}}
+@keyframes aip{0%,100%{background:rgba(239,68,68,.08)}50%{background:rgba(239,68,68,.15)}}
+.ai-h{display:flex;justify-content:space-between;margin-bottom:2px}
+.ai-c{font-weight:600;font-size:12px;display:flex;align-items:center;gap:3px}
+.ai-t{font-size:8px;color:var(--txtm);font-family:'Rubik';direction:ltr}
+.ai-tp{font-size:9px;color:var(--txt2);display:flex;align-items:center;gap:3px}
+.td{width:5px;height:5px;border-radius:50%}.tr{background:var(--red)}.tu{background:var(--orange)}.te{background:var(--yellow)}.tt{background:var(--blue)}
+.ai-m{display:flex;align-items:center;gap:5px;margin-top:3px;flex-wrap:wrap}
+.sh{display:inline-flex;align-items:center;gap:2px;padding:1px 6px;border-radius:7px;font-size:8px;font-weight:600;background:rgba(255,255,255,.05);border:1px solid var(--brd)}
+.sh.imm{background:rgba(239,68,68,.15);color:var(--red);border-color:rgba(239,68,68,.3)}
+.sh.fast{background:rgba(249,115,22,.15);color:var(--orange);border-color:rgba(249,115,22,.3)}
+.sh.med{background:rgba(234,179,8,.15);color:var(--yellow);border-color:rgba(234,179,8,.3)}
+.sh.slow{background:rgba(34,197,94,.15);color:var(--green);border-color:rgba(34,197,94,.3)}
+.cd{display:inline-flex;align-items:center;padding:1px 6px;border-radius:7px;font-size:8px;font-weight:700;font-family:'Rubik';background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.2)}
+.cd.done{color:var(--green);background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.2)}
+.di{display:inline-flex;padding:1px 6px;border-radius:7px;font-size:8px;font-weight:600;background:rgba(59,130,246,.1);color:var(--blue);border:1px solid rgba(59,130,246,.2)}
+.fs2{cursor:pointer;font-size:12px;opacity:.3;background:none;border:none;padding:0;margin-right:1px}.fs2.on{opacity:1}
+
+.sg{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:10px}
+.sc2{background:var(--bgc);border:1px solid var(--brd);border-radius:6px;padding:9px;text-align:center}
+.sc2 .v{font-family:'Rubik';font-size:22px;font-weight:700}.sc2 .l{font-size:8px;color:var(--txtm)}
+.sc2.r .v{color:var(--red)}.sc2.o .v{color:var(--orange)}.sc2.y .v{color:var(--yellow)}.sc2.g .v{color:var(--green)}
+.tls{margin:0 10px 10px;padding:9px;background:var(--bgc);border:1px solid var(--brd);border-radius:6px}
+.tlt{font-size:10px;font-weight:600;color:var(--txt2);margin-bottom:7px;display:flex;justify-content:space-between}
+.tlt .m{font-size:8px;color:var(--txtm);font-weight:400}
+.tlw{height:80px;width:100%}.tlw canvas{width:100%;height:100%;display:block}
+.eb{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:0 10px 10px}
+.ebt{padding:6px;border-radius:5px;font-size:9px;font-weight:600;cursor:pointer;border:1px solid var(--brd);background:var(--bgc);color:var(--txt);display:flex;align-items:center;justify-content:center;gap:3px}
+.ebt:hover{border-color:var(--blue);color:var(--blue)}
+.rs{padding:0 10px 10px}
+.rsi{display:flex;justify-content:space-between;padding:6px 9px;background:var(--bgc);border:1px solid var(--brd);border-radius:5px;margin-bottom:4px;font-size:10px}
+.rsi .rc{font-family:'Rubik';font-weight:700;color:var(--red)}
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:36px 18px;text-align:center}
+.empty .icon{font-size:32px;margin-bottom:10px;opacity:.5}.empty h3{font-size:13px;font-weight:600;margin-bottom:4px;color:var(--txt2)}.empty p{font-size:10px;color:var(--txtm);line-height:1.5}
+
+.leaflet-container{background:var(--mapbg)}
+.cm{position:relative;display:flex;align-items:center;justify-content:center}
+.md{width:14px;height:14px;border-radius:50%;background:var(--red);border:2px solid #fff;box-shadow:0 0 12px var(--redg)}.md.active{animation:mp 1s infinite}
+@keyframes mp{0%,100%{transform:scale(1)}50%{transform:scale(1.3)}}
+.mr{position:absolute;width:40px;height:40px;border-radius:50%;border:2px solid rgba(239,68,68,.5);animation:re 2s infinite}
+@keyframes re{0%{transform:scale(.5);opacity:1}100%{transform:scale(2.5);opacity:0}}
+/* Per-type pulse rhythm — rockets fastest, UAV slower, quake distinct */
+.cm.t-rockets .md.active{animation-duration:.8s}
+.cm.t-rockets .mr{animation-duration:1.4s;border-color:rgba(239,68,68,.6)}
+.cm.t-uav .md.active{animation-duration:2.2s}
+.cm.t-uav .mr{animation-duration:2.6s;border-color:rgba(249,115,22,.55)}
+.cm.t-earthquake .md.active{animation-duration:.5s}
+.cm.t-earthquake .mr{animation-duration:1.8s;border-color:rgba(234,179,8,.55)}
+.cm.t-tsunami .md.active{animation-duration:1.6s}
+.cm.t-tsunami .mr{animation-duration:2.4s;border-color:rgba(59,130,246,.55)}
+.ml{position:absolute;top:-24px;white-space:nowrap;background:rgba(10,14,23,.9);padding:1px 5px;border-radius:3px;font-size:8px;font-weight:600;color:#fff;border:1px solid rgba(239,68,68,.3);pointer-events:none}
+html.light .ml{background:rgba(255,255,255,.9);color:#1e293b}
+.hm .md{background:var(--txtm);box-shadow:none;width:10px;height:10px;border-color:rgba(255,255,255,.5)}.hm .mr,.hm .ml{display:none}
+.sm .md{background:var(--blue);box-shadow:0 0 6px rgba(59,130,246,.4);width:10px;height:10px}.sm .mr{display:none}.sm .ml{background:rgba(59,130,246,.9);font-size:7px;top:-20px}
+.um{width:14px;height:14px;background:var(--blue);border:3px solid #fff;border-radius:50%;box-shadow:0 0 12px rgba(59,130,246,.5)}
+.marker-cluster-small,.marker-cluster-medium,.marker-cluster-large{background:rgba(100,116,139,.4)!important}
+.marker-cluster-small div,.marker-cluster-medium div,.marker-cluster-large div{background:rgba(100,116,139,.85)!important;color:#fff!important;font-family:'Rubik'!important;font-weight:700!important}
+
+.mc{position:fixed;bottom:14px;left:14px;z-index:500;display:flex;flex-direction:column;gap:4px}
+.mb{width:34px;height:34px;border-radius:6px;background:rgba(26,34,54,.95);border:1px solid var(--brd);color:var(--txt);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;backdrop-filter:blur(10px);padding:0;font-family:inherit}
+html.light .mb{background:rgba(255,255,255,.92)}.mb:hover{background:var(--bgch)}.mb.active{border-color:var(--red);color:var(--red)}
+.ci{position:fixed;bottom:56px;right:332px;z-index:600;background:rgba(26,34,54,.95);border:1px solid var(--brd);border-radius:6px;padding:4px 9px;font-size:8px;display:flex;align-items:center;gap:4px;backdrop-filter:blur(10px)}
+.ci.ok{color:var(--green);border-color:rgba(34,197,94,.3)}.ci.dc{color:var(--yellow);border-color:rgba(234,179,8,.3)}
+.tb{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:2000;display:flex;flex-direction:column;gap:4px;align-items:center;pointer-events:none}
+.t{background:var(--bgc);border:1px solid var(--brd);border-radius:6px;padding:7px 12px;font-size:10px;box-shadow:0 6px 24px rgba(0,0,0,.4);animation:ti .3s;display:flex;align-items:center;gap:5px;backdrop-filter:blur(15px);pointer-events:auto;max-width:320px}
+.t.info{border-color:rgba(59,130,246,.4);background:rgba(59,130,246,.08)}
+.t.warn{border-color:rgba(234,179,8,.5);background:rgba(234,179,8,.1);color:var(--txt)}
+.t.error{border-color:rgba(239,68,68,.6);background:rgba(239,68,68,.12);color:var(--red);font-weight:600;box-shadow:0 6px 30px rgba(239,68,68,.25)}
+.t.success{border-color:rgba(34,197,94,.4);background:rgba(34,197,94,.08)}
+@keyframes ti{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+.leaflet-popup-content-wrapper{background:var(--bgc)!important;color:var(--txt)!important;border:1px solid var(--brd)!important;border-radius:6px!important;font-family:'Heebo'!important}
+.leaflet-popup-tip{background:var(--bgc)!important}.leaflet-popup-content{margin:7px 10px!important;font-size:10px;direction:rtl}
+
+/* Settings */
+.smod{display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.5);backdrop-filter:blur(4px)}.smod.open{display:flex;align-items:center;justify-content:center}
+.sbox{background:var(--bg2);border:1px solid var(--brd);border-radius:10px;width:300px;max-height:78vh;overflow-y:auto;box-shadow:0 16px 48px rgba(0,0,0,.4);animation:ti .3s}
+.sh2{padding:12px 14px;border-bottom:1px solid var(--brd);font-size:14px;font-weight:700;display:flex;justify-content:space-between;align-items:center}
+.sx{background:none;border:none;color:var(--txtm);font-size:16px;cursor:pointer}
+.sg2{padding:10px 14px;border-bottom:1px solid var(--brd)}.sgt{font-size:9px;font-weight:700;color:var(--txtm);text-transform:uppercase;letter-spacing:.4px;margin-bottom:7px}
+.sr{display:flex;justify-content:space-between;align-items:center;padding:5px 0}
+.sl{font-size:11px;font-weight:500}.sd{font-size:8px;color:var(--txtm);margin-top:1px}
+.tg{position:relative;width:36px;height:18px;cursor:pointer}.tg input{opacity:0;width:0;height:0}
+.tgs{position:absolute;inset:0;background:var(--brd);border-radius:9px;transition:.3s}.tgs::before{content:'';position:absolute;width:12px;height:12px;border-radius:50%;background:#fff;bottom:3px;right:3px;transition:.3s}
+.tg input:checked+.tgs{background:var(--green)}.tg input:checked+.tgs::before{transform:translateX(-18px)}
+.ls{padding:4px 7px;border-radius:4px;background:var(--inp);border:1px solid var(--brd);color:var(--txt);font-size:10px}
+.snbtn{flex:1;min-width:60px;min-height:32px;padding:8px;border-radius:6px;background:var(--bgc);border:1px solid var(--brd);color:var(--txt);font-family:'Heebo';font-size:11px;cursor:pointer}
+.snbtn:hover{background:var(--bgch);border-color:var(--blue)}
+.snbtn.cancel{color:var(--red);border-color:var(--brda)}
+.snbtn.cancel:hover{border-color:var(--red);background:rgba(239,68,68,.08)}
+/* Skeleton loaders — shimmer while preloadHistory / IndexedDB resolve */
+.skel{background:linear-gradient(90deg,rgba(255,255,255,.03) 25%,rgba(255,255,255,.07) 50%,rgba(255,255,255,.03) 75%);background-size:200% 100%;animation:shimmer 1.4s ease-in-out infinite;border-radius:4px}
+html.light .skel{background:linear-gradient(90deg,rgba(0,0,0,.04) 25%,rgba(0,0,0,.08) 50%,rgba(0,0,0,.04) 75%);background-size:200% 100%}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.skel-card{height:62px;margin:10px}
+.skel-tl{height:80px;margin:0 10px 10px}
+.skel-row{height:28px;margin:4px 10px}
+
+/* About section cards */
+.ab{padding:14px 12px}.ab-h{text-align:center;margin-bottom:14px}.ab-h h3{font-size:14px;font-weight:700;margin:5px 0 2px}.ab-h p{font-size:9px;color:var(--txtm);line-height:1.5}
+.em{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:6px;padding:9px;text-align:center;margin-top:10px}
+.em-t{font-size:10px;font-weight:700;color:var(--red);margin-bottom:3px}
+.em-n{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+.en{display:flex;align-items:center;gap:2px;font-size:10px;font-weight:600;padding:2px 7px;background:rgba(239,68,68,.1);border-radius:4px}
+.en span{font-family:'Rubik';font-size:14px;font-weight:700;color:var(--red)}
+.lg{margin-bottom:12px}.lgt{font-size:9px;font-weight:700;color:var(--txtm);text-transform:uppercase;margin-bottom:5px;padding-bottom:3px;border-bottom:1px solid var(--brd)}
+.lc{display:flex;align-items:center;gap:7px;padding:7px 9px;background:var(--bgc);border:1px solid var(--brd);border-radius:6px;margin-bottom:4px;text-decoration:none;color:var(--txt)}
+.lc:hover{background:var(--bgch);border-color:var(--blue)}
+.li{width:28px;height:28px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.li.red{background:rgba(239,68,68,.12)}.li.blue{background:rgba(59,130,246,.12)}.li.green{background:rgba(34,197,94,.12)}.li.purple{background:rgba(168,85,247,.12)}
+.lb{flex:1;min-width:0}.ln{font-size:11px;font-weight:600}.ld{font-size:8px;color:var(--txtm)}
+
+/* Mobile nav */
+.mn{display:none;position:fixed;bottom:0;left:0;right:0;height:50px;background:var(--bg2);border-top:1px solid var(--brd);z-index:1500}
+.mn-i{display:flex;height:100%}
+.mn-b{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:8px;color:var(--txtm);cursor:pointer;gap:1px;border:none;background:none}
+.mn-b.active{color:var(--red)}.mn-b .ni{font-size:17px}
+.ms{display:none;position:fixed;bottom:50px;left:0;right:0;top:54px;background:var(--bg2);z-index:1400;overflow-y:auto;transform:translateY(100%);transition:transform .3s}
+.ms.open{transform:translateY(0)}
+
+@media(max-width:768px){.sb{display:none}#map,.overlay,.banner,.defense,.offline{right:0}#map{bottom:50px}.mn{display:flex}.hdr{padding:0 8px}.cnt{display:none!important}.ci{right:6px;bottom:66px}.mc{bottom:66px;left:8px}.tb{bottom:62px}}
+/* Embed mode — minimal chrome for iframe embedding */
+html.embed .hdr,html.embed .sb,html.embed .mn,html.embed .mc,html.embed .ci{display:none!important}
+html.embed #map,html.embed .banner,html.embed .defense,html.embed .offline,html.embed .overlay{top:0!important;right:0!important;bottom:0!important;left:0!important}
+html.embed .banner,html.embed .defense,html.embed .offline{bottom:auto!important}
+html.embed .banner{top:0!important}
+html.embed .defense.below-banner{top:38px!important}
+</style>
+</head>
+<body>
+<div class="hdr" role="banner">
+  <div class="logo"><div class="logo-i">🚨</div><div><h1 data-i18n="title">מפת אזעקות ישראל</h1><span>ניטור בזמן אמת — SSE</span></div></div>
+  <div class="hl">
+    <div class="cnt"><span>היום</span><span class="n" id="todayC" style="color:var(--red)">0</span></div>
+    <div class="cnt"><span>סה״כ</span><span class="n" id="totalC" style="color:var(--orange)">0</span></div>
+    <div class="badge live" id="sBadge" role="status" aria-live="polite"><div class="dot"></div><span id="sText">מתחבר...</span></div>
+    <button class="ib" onclick="tglPush()" id="pushB" aria-label="התראות Push">🔔</button>
+    <button class="btn" onclick="tglSnd()" id="sndB" aria-label="השתק/הפעל צליל">🔊</button>
+    <button class="btn btn-d" onclick="demo()" id="demoB" style="display:none" aria-label="הרץ הדגמה">▶</button>
+    <button class="ib" onclick="openSet()" aria-label="הגדרות">⚙️</button>
+    <button class="ib" onclick="tglTheme()" id="themeB" aria-label="מצב כהה/בהיר">🌙</button>
+  </div>
+</div>
+<div class="banner" id="banner" role="alert" aria-live="assertive"><span>⚠️</span><span id="banTxt">צבע אדום</span><span>⚠️</span></div>
+<div class="defense" id="defP" role="alert"><span>🛡️</span><div class="defense-t"><strong>היכנס למרחב מוגן עכשיו!</strong><small>ממ״ד, מקלט, או חדר מדרגות פנימי</small></div><button class="safe-btn" onclick="shareSafe()" aria-label="שלח הודעה שאני בסדר">✓ אני בסדר</button><div class="defense-cd" id="defCd"></div></div>
+<div class="offline" id="offBar">📵 אין חיבור — נתונים מהמטמון</div>
+<div class="overlay" id="overlay"></div>
+<div id="map"></div>
+<div class="sb"><div class="stabs" role="tablist"><div class="stab active" role="tab" onclick="swTab('alerts',this)">🔔 אזעקות</div><div class="stab" role="tab" onclick="swTab('stats',this)">📊</div><div class="stab" role="tab" onclick="swTab('about',this)">ℹ️</div></div><div class="sc" id="sbC"></div></div>
+<div class="mn"><div class="mn-i"><button class="mn-b active" onclick="mobTab('alerts',this)"><span class="ni">🔔</span>אזעקות</button><button class="mn-b" onclick="mobTab('stats',this)"><span class="ni">📊</span>סטטיסטיקה</button><button class="mn-b" onclick="mobTab('about',this)"><span class="ni">ℹ️</span>אודות</button><button class="mn-b" onclick="openSet()"><span class="ni">⚙️</span>הגדרות</button></div></div>
+<div class="ms" id="mSheet"></div>
+<div class="mc" role="toolbar" aria-label="פעולות מפה"><button class="mb" onclick="map.setView([31.5,34.8],8)" aria-label="חזור למבט בית">🏠</button><button class="mb" onclick="geoLoc()" id="geoB" aria-label="המיקום שלי">📍</button><button class="mb" onclick="manualRefresh()" aria-label="רענון">🔄</button><button class="mb" onclick="tglHeat()" id="heatB" aria-label="מפת חום">🔥</button><button class="mb" onclick="tglCls()" id="clsB" aria-label="קיבוץ מרקרים">🧲</button><button class="mb" onclick="tglShl()" id="shlB" aria-label="מקלטים">🏛️</button><button class="mb" onclick="clrHist()" aria-label="מחק היסטוריה">🗑️</button></div>
+<div class="ci" id="cInfo">⏳</div>
+<div class="tb" id="tBox"></div>
+<div class="smod" id="setMod"><div class="sbox"><div class="sh2"><span>⚙️ הגדרות</span><button class="sx" onclick="closeSet()">✕</button></div><div class="sg2"><div class="sgt">🌐 שפה</div><select class="ls" id="langS" onchange="setLang(this.value)"><option value="he">🇮🇱 עברית</option><option value="ar">🇸🇦 العربية</option><option value="en">🇺🇸 English</option><option value="ru">🇷🇺 Русский</option></select></div><div class="sg2"><div class="sgt">🔔 התראות</div><div class="sr"><div><div class="sl">מצב שקט</div><div class="sd">ללא צליל 23:00-07:00</div></div><label class="tg"><input type="checkbox" id="dndT" onchange="tglDND()"><span class="tgs"></span></label></div><div class="sr"><div><div class="sl">הכרזה קולית</div><div class="sd">TTS</div></div><label class="tg"><input type="checkbox" id="ttsT" onchange="tglTTS()"><span class="tgs"></span></label></div><div class="sr"><div><div class="sl">לולאת צופר</div><div class="sd">סירנה רציפה</div></div><label class="tg"><input type="checkbox" id="sirT" onchange="tglSir()"><span class="tgs"></span></label></div></div><div class="sg2"><div class="sgt">🔕 השתקה זמנית</div><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="snbtn" onclick="snooze(30)">30 דק׳</button><button class="snbtn" onclick="snooze(60)">שעה</button><button class="snbtn" onclick="snooze(180)">3 שעות</button><button class="snbtn cancel" onclick="snoozeCancel()">ביטול</button></div><div id="snoozeStatus" style="font-size:10px;color:var(--orange);margin-top:8px;text-align:center;display:none"></div></div><div class="sg2"><div class="sgt">♿ נגישות</div><div class="sr"><div><div class="sl">ניגודיות גבוהה</div></div><label class="tg"><input type="checkbox" id="hcT" onchange="tglHC()"><span class="tgs"></span></label></div></div><div class="sg2"><div class="sgt">⭐ מועדפות</div><div id="favL" style="font-size:9px;color:var(--txtm);text-align:center;padding:6px">לחץ ⭐ ליד עיר</div></div></div></div>
+
+<script>
+const API=location.origin,MH=500,MM=200,AD=90000;
+function X(s){return typeof s!=='string'?'':s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+// i18n
+const LN={he:{rockets:'ירי רקטות',uav:'כלי טיס עוין',earthquake:'רעידת אדמה',tsunami:'צונאמי',imm:'מיד',sec:'שניות',min:'דקות',minSingle:'דקה',active:'פעיל',km:'ק״מ',remaining:'נותרו',passed:'עבר',allClear:'הכל שקט',noAlerts:'אין אזעקות',noResults:'אין תוצאות',more:'עוד',now:'עכשיו',todayL:'היום',yesterdayL:'אתמול',weekAvg:'ממוצע',ttsPrefix:'צבע אדום ב'},en:{rockets:'Rockets',uav:'UAV',earthquake:'Earthquake',tsunami:'Tsunami',imm:'Now',sec:'s',min:'min',minSingle:'min',active:'Active',km:'km',remaining:'left',passed:'done',allClear:'All Clear',noAlerts:'No alerts',noResults:'No results',more:'More',now:'Now',todayL:'Today',yesterdayL:'Yesterday',weekAvg:'Avg',ttsPrefix:'Red alert in '},ar:{rockets:'صواريخ',uav:'طائرة',earthquake:'زلزال',tsunami:'تسونامي',imm:'فوراً',sec:'ث',min:'د',minSingle:'د',active:'نشط',km:'كم',remaining:'متبقي',passed:'انتهى',allClear:'هادئ',noAlerts:'لا إنذارات',noResults:'لا نتائج',more:'المزيد',now:'الآن',todayL:'اليوم',yesterdayL:'أمس',weekAvg:'متوسط',ttsPrefix:'إنذار أحمر في '},ru:{rockets:'Ракеты',uav:'БПЛА',earthquake:'Землетрясение',tsunami:'Цунами',imm:'Сейчас',sec:'с',min:'мин',minSingle:'мин',active:'Активно',km:'км',remaining:'осталось',passed:'прошло',allClear:'Спокойно',noAlerts:'Нет тревог',noResults:'Пусто',more:'Ещё',now:'Сейчас',todayL:'Сегодня',yesterdayL:'Вчера',weekAvg:'Средн.',ttsPrefix:'Красная тревога в '}};
+// URL state: ?lang=he|en|ar|ru &theme=light|dark &city=שדרות &embed=1
+const URL_PARAMS=new URLSearchParams(location.search);
+const URL_EMBED=URL_PARAMS.get('embed')==='1';
+const URL_CITY=URL_PARAMS.get('city');
+let lang=URL_PARAMS.get('lang')||localStorage.getItem('alertmap-lang')||'he';
+function syncURL(){const p=new URLSearchParams(location.search);if(lang!=='he')p.set('lang',lang);else p.delete('lang');if(theme==='light')p.set('theme',theme);else p.delete('theme');const ns=p.toString();const nu=location.pathname+(ns?'?'+ns:'');if(nu!==location.pathname+location.search)history.replaceState(null,'',nu)}
+async function shareLink(){const u=location.href;try{if(navigator.share){await navigator.share({url:u,title:document.title})}else if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(u);toast('🔗 הקישור הועתק')}else{prompt('העתק:',u)}}catch{}}
+function t(k){return(LN[lang]&&LN[lang][k])||LN.he[k]||k}
+function setLang(l){lang=l;localStorage.setItem('alertmap-lang',l);document.documentElement.lang=l;document.documentElement.dir=(l==='he'||l==='ar')?'rtl':'ltr';document.querySelectorAll('[data-i18n]').forEach(e=>{const v=t(e.dataset.i18n);if(v)e.textContent=v});document.getElementById('langS').value=l;schedUI();syncURL()}
+
+// Cities
+const C={"שדרות":{lat:31.524,lng:34.596,r:"עוטף עזה",s:15},"נתיבות":{lat:31.422,lng:34.588,r:"דרום",s:15},"אופקים":{lat:31.315,lng:34.618,r:"דרום",s:15},"עוטף עזה - בארי":{lat:31.426,lng:34.494,r:"עוטף עזה",s:0},"עוטף עזה - רעים":{lat:31.392,lng:34.457,r:"עוטף עזה",s:0},"עוטף עזה - כיסופים":{lat:31.376,lng:34.399,r:"עוטף עזה",s:0},"עוטף עזה - ניר עוז":{lat:31.286,lng:34.39,r:"עוטף עזה",s:0},"עוטף עזה - יד מרדכי":{lat:31.584,lng:34.559,r:"עוטף עזה",s:15},"עוטף עזה - זיקים":{lat:31.612,lng:34.537,r:"עוטף עזה",s:15},"אשקלון":{lat:31.669,lng:34.574,r:"דרום",s:30},"אשדוד":{lat:31.801,lng:34.644,r:"דרום",s:45},"באר שבע":{lat:31.253,lng:34.792,r:"דרום",s:60},"קריית גת":{lat:31.61,lng:34.764,r:"שפלה",s:30},"ערד":{lat:31.259,lng:35.213,r:"דרום",s:60},"דימונה":{lat:31.07,lng:35.034,r:"דרום",s:60},"אילת":{lat:29.558,lng:34.952,r:"ערבה",s:180},"יבנה":{lat:31.876,lng:34.739,r:"שפלה",s:45},"גדרה":{lat:31.815,lng:34.779,r:"שפלה",s:45},"רחובות":{lat:31.893,lng:34.811,r:"מרכז",s:60},"נס ציונה":{lat:31.931,lng:34.799,r:"מרכז",s:60},"בית שמש":{lat:31.746,lng:34.989,r:"ירושלים",s:60},"מודיעין":{lat:31.897,lng:35.01,r:"מרכז",s:60},"ראשון לציון":{lat:31.973,lng:34.793,r:"מרכז",s:90},"לוד":{lat:31.953,lng:34.89,r:"מרכז",s:90},"רמלה":{lat:31.928,lng:34.863,r:"מרכז",s:90},"תל אביב":{lat:32.085,lng:34.782,r:"מרכז",s:90},"חולון":{lat:32.012,lng:34.776,r:"מרכז",s:90},"בת ים":{lat:32.019,lng:34.751,r:"מרכז",s:90},"רמת גן":{lat:32.07,lng:34.825,r:"מרכז",s:90},"גבעתיים":{lat:32.072,lng:34.812,r:"מרכז",s:90},"בני ברק":{lat:32.083,lng:34.834,r:"מרכז",s:90},"פתח תקווה":{lat:32.084,lng:34.888,r:"מרכז",s:90},"אור יהודה":{lat:32.031,lng:34.853,r:"מרכז",s:90},"ראש העין":{lat:32.083,lng:34.957,r:"מרכז",s:90},"נתניה":{lat:32.322,lng:34.853,r:"שרון",s:60},"הרצליה":{lat:32.166,lng:34.846,r:"שרון",s:90},"כפר סבא":{lat:32.175,lng:34.907,r:"שרון",s:90},"רעננה":{lat:32.184,lng:34.871,r:"שרון",s:90},"הוד השרון":{lat:32.155,lng:34.888,r:"שרון",s:90},"חדרה":{lat:32.434,lng:34.92,r:"שרון",s:60},"חיפה":{lat:32.794,lng:34.99,r:"חיפה",s:60},"קריית ביאליק":{lat:32.837,lng:35.081,r:"חיפה",s:60},"קריית אתא":{lat:32.809,lng:35.106,r:"חיפה",s:60},"נהריה":{lat:33.004,lng:35.098,r:"צפון",s:60},"עכו":{lat:32.933,lng:35.083,r:"צפון",s:60},"כרמיאל":{lat:32.913,lng:35.3,r:"צפון",s:60},"צפת":{lat:32.965,lng:35.496,r:"צפון",s:30},"טבריה":{lat:32.792,lng:35.531,r:"צפון",s:60},"עפולה":{lat:32.608,lng:35.293,r:"צפון",s:60},"קריית שמונה":{lat:33.207,lng:35.571,r:"צפון",s:30},"מטולה":{lat:33.28,lng:35.573,r:"צפון",s:0},"שלומי":{lat:33.073,lng:35.146,r:"צפון",s:15},"ירושלים":{lat:31.768,lng:35.214,r:"ירושלים",s:90},"מעלה אדומים":{lat:31.775,lng:35.299,r:"ירושלים",s:90},"אריאל":{lat:32.106,lng:35.187,r:"יו״ש",s:90}};
+const TM={rockets:{icon:'🚀',color:'#ef4444',css:'tr'},uav:{icon:'✈️',color:'#f97316',css:'tu'},earthquake:{icon:'🌍',color:'#eab308',css:'te'},tsunami:{icon:'🌊',color:'#3b82f6',css:'tt'}};
+const RS={'עוטף עזה':15,'דרום':30,'שפלה':45,'שרון':60,'חיפה':60,'מרכז':90,'ירושלים':90,'צפון':60,'יו״ש':90,'ערבה':180};
+let SHL=[{lat:32.085,lng:34.782,n:'מקלט דיזנגוף'},{lat:32.074,lng:34.778,n:'מקלט רוטשילד'},{lat:31.768,lng:35.214,n:'מקלט ירושלים'},{lat:32.794,lng:34.99,n:'מקלט חיפה'},{lat:31.253,lng:34.791,n:'מקלט ב״ש'},{lat:31.669,lng:34.574,n:'מקלט אשקלון'},{lat:31.524,lng:34.596,n:'מקלט שדרות'},{lat:31.801,lng:34.643,n:'מקלט אשדוד'},{lat:32.07,lng:34.825,n:'מקלט רמת גן'},{lat:32.322,lng:34.853,n:'מקלט נתניה'},{lat:31.897,lng:35.01,n:'מקלט מודיעין'},{lat:31.973,lng:34.793,n:'מקלט ראשל״צ'}];
+// Optionally fetch a richer shelter dataset configured server-side via SHELTERS_URL
+async function loadExternalShelters(){try{const cfg=await fetch(`${API}/api/config`).then(r=>r.json());if(!cfg.shelters_url)return;const r=await fetch(cfg.shelters_url);if(!r.ok)return;const arr=await r.json();if(!Array.isArray(arr))return;const valid=arr.filter(s=>typeof s?.lat==='number'&&typeof s?.lng==='number').map(s=>({lat:s.lat,lng:s.lng,n:String(s.n||s.name||'מקלט').slice(0,120)})).slice(0,5000);if(valid.length)SHL=valid}catch{}}
+
+// Fuzzy matching
+function normC(n){return n.trim().replace(/[-–—]/g,' ').replace(/['"״׳"]/g,'').replace(/\s+/g,' ')}
+function findC(name){if(C[name])return{name,...C[name]};const n=normC(name);for(const[k,v]of Object.entries(C))if(normC(k)===n)return{name:k,...v};for(const[k,v]of Object.entries(C)){const nk=normC(k);if(n.includes(nk)||nk.includes(n))return{name:k,...v}}const w=n.split(' ');for(const[k,v]of Object.entries(C)){const kw=normC(k).split(' ');if(w.some(x=>x.length>2&&kw.some(y=>y.includes(x)||x.includes(y))))return{name:k,...v}}return null}
+
+// State
+let hist=[],act=new Map(),mrk=new Map(),known=new Set();
+let sndOn=true,pushOn=false,isDem=false,demTO=null,es=null,reconTO=null,sseOK=false;
+let map,tileL,heatV=false,heatC=[],clsG=null,clsOn=JSON.parse(localStorage.getItem('alertmap-cls')||'true');
+let flt={r:'',t:'',time:'all'},lastFly=0,actx=null,lastS=0,uiP=false,tlP=false;
+let uLoc=null,uMark=null,favs=JSON.parse(localStorage.getItem('alertmap-favs')||'[]');
+let dndOn=JSON.parse(localStorage.getItem('alertmap-dnd')||'false');
+let ttsOn=JSON.parse(localStorage.getItem('alertmap-tts')||'false');
+let sirOn=JSON.parse(localStorage.getItem('alertmap-siren')||'false');
+let hcOn=JSON.parse(localStorage.getItem('alertmap-hc')||'false');
+let shlV=false,shlM=[],sirOsc=null,sirG=null,sirIV=null,cdIV=null;
+let wakeLock=null,snoozeUntil=0,preloadDone=false;
+async function acquireWakeLock(){try{if('wakeLock' in navigator&&!wakeLock){wakeLock=await navigator.wakeLock.request('screen');wakeLock.addEventListener('release',()=>{wakeLock=null})}}catch{}}
+function releaseWakeLock(){try{if(wakeLock)wakeLock.release()}catch{}wakeLock=null}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&act.size>0)acquireWakeLock()});
+function isSnoozed(){return Date.now()<snoozeUntil}
+function isMuted(){return!sndOn||isDND2()||isSnoozed()}
+function snooze(min){snoozeUntil=Date.now()+min*60000;localStorage.setItem('alertmap-snooze',String(snoozeUntil));updSnoozeUI();stopSir();try{speechSynthesis.cancel()}catch{}toast(`🔕 ${min}${t('min')}`,'info')}
+function snoozeCancel(){snoozeUntil=0;localStorage.removeItem('alertmap-snooze');updSnoozeUI();toast('🔔','success')}
+function updSnoozeUI(){const e=document.getElementById('snoozeStatus');if(!e)return;if(isSnoozed()){const left=Math.ceil((snoozeUntil-Date.now())/60000);e.textContent=`🔕 ${left}${t('min')}`;e.style.display=''}else{e.style.display='none'}}
+try{const s=parseInt(localStorage.getItem('alertmap-snooze')||'0');if(s>Date.now())snoozeUntil=s;else localStorage.removeItem('alertmap-snooze')}catch{}
+
+// Auto dark — URL override > localStorage > prefers-color-scheme > night-time heuristic
+let theme=URL_PARAMS.get('theme')||localStorage.getItem('alertmap-theme');
+if(theme!=='light'&&theme!=='dark')theme=null;
+if(!theme){const mq=window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches;const h=new Date().getHours();theme=(mq||(h>=21||h<6))?'dark':'light'}
+function applyTh(th){theme=th;document.documentElement.classList.toggle('light',th==='light');document.getElementById('themeB').textContent=th==='light'?'☀️':'🌙';localStorage.setItem('alertmap-theme',th);if(tileL&&map){map.removeLayer(tileL);tileL=L.tileLayer(th==='light'?'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png':'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(map)}schedTL();syncURL()}
+function tglTheme(){const next=theme==='dark'?'light':'dark';if(document.startViewTransition){document.startViewTransition(()=>applyTh(next))}else{applyTh(next)}}
+function tglHC(){hcOn=!hcOn;localStorage.setItem('alertmap-hc',JSON.stringify(hcOn));document.documentElement.classList.toggle('high-contrast',hcOn);document.getElementById('hcT').checked=hcOn}
+
+function initMap(){map=L.map('map',{center:[31.5,34.8],zoom:8,zoomControl:false,attributionControl:false});tileL=L.tileLayer(theme==='light'?'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png':'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(map);L.control.zoom({position:'bottomleft'}).addTo(map);clsG=L.markerClusterGroup({chunkedLoading:true,maxClusterRadius:50,disableClusteringAtZoom:12});if(clsOn)map.addLayer(clsG);updCls()}
+function tglCls(){clsOn=!clsOn;localStorage.setItem('alertmap-cls',JSON.stringify(clsOn));updCls();if(!clsG)return;if(clsOn){map.addLayer(clsG);mrk.forEach((m,id)=>{if(!act.has(id)){if(map.hasLayer(m))map.removeLayer(m);clsG.addLayer(m)}})}else{clsG.eachLayer(l=>map.addLayer(l));clsG.clearLayers();map.removeLayer(clsG)}}
+function updCls(){document.getElementById('clsB').classList.toggle('active',clsOn)}
+
+function geoLoc(){if(!navigator.geolocation){toast('⚠️ מיקום לא נתמך','warn');return}navigator.geolocation.getCurrentPosition(p=>{uLoc={lat:p.coords.latitude,lng:p.coords.longitude};if(uMark)map.removeLayer(uMark);uMark=L.marker([uLoc.lat,uLoc.lng],{icon:L.divIcon({className:'',html:'<div class="um"></div>',iconSize:[14,14],iconAnchor:[7,7]})}).addTo(map);map.flyTo([uLoc.lat,uLoc.lng],12);document.getElementById('geoB').classList.add('active');schedUI();toast('📍 מיקום אותר','success')},err=>{if(err.code===1)toast('⚠️ הרשאת מיקום נדחתה','warn');else if(err.code===2)toast('⚠️ מיקום לא זמין','warn');else if(err.code===3)toast('⚠️ הזמן לקבלת המיקום עבר','warn');else toast('⚠️ שגיאת מיקום','warn')},{enableHighAccuracy:true,timeout:10000})}
+function distK(a,b,c,d){const R=6371,dLat=(c-a)*Math.PI/180,dLon=(d-b)*Math.PI/180,x=Math.sin(dLat/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dLon/2)**2;return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x))}
+
+function tglFav(c){const i=favs.indexOf(c);if(i>=0)favs.splice(i,1);else favs.push(c);localStorage.setItem('alertmap-favs',JSON.stringify(favs));updFav();schedUI();if(pushOn)wpSub()}
+function updFav(){const e=document.getElementById('favL');if(!favs.length){e.innerHTML='<div style="font-size:9px;color:var(--txtm);text-align:center;padding:6px">לחץ ⭐ ליד עיר</div>';return}e.innerHTML=favs.map(c=>`<div style="display:flex;justify-content:space-between;padding:4px 7px;background:var(--bgc);border:1px solid var(--brd);border-radius:4px;margin-bottom:2px;font-size:10px"><span>⭐ ${X(c)}</span><button style="background:none;border:none;color:var(--red);cursor:pointer" onclick="tglFav('${X(c)}')">✕</button></div>`).join('')}
+function isDND2(){if(!dndOn)return false;const h=new Date().getHours();return h>=23||h<7}
+function tglDND(){dndOn=!dndOn;localStorage.setItem('alertmap-dnd',JSON.stringify(dndOn));document.getElementById('dndT').checked=dndOn;if(pushOn)wpSub()}
+function tglTTS(){ttsOn=!ttsOn;localStorage.setItem('alertmap-tts',JSON.stringify(ttsOn));document.getElementById('ttsT').checked=ttsOn}
+function tglSir(){sirOn=!sirOn;localStorage.setItem('alertmap-siren',JSON.stringify(sirOn));document.getElementById('sirT').checked=sirOn;if(!sirOn)stopSir()}
+function speak(a){if(!ttsOn||isMuted()||!('speechSynthesis' in window))return;try{speechSynthesis.cancel()}catch{}const u=new SpeechSynthesisUtterance(`${t('ttsPrefix')}${a.city}`);u.lang=lang==='ar'?'ar-SA':lang==='en'?'en-US':lang==='ru'?'ru-RU':'he-IL';u.rate=1.1;speechSynthesis.speak(u)}
+function startSir(){if(sirOsc||!sirOn||isMuted())return;const c=getAC();if(!c)return;sirG=c.createGain();sirG.gain.value=.18;sirG.connect(c.destination);sirOsc=c.createOscillator();sirOsc.type='triangle';sirOsc.connect(sirG);sirOsc.start();function cy(){if(!sirOsc)return;const n=c.currentTime;sirOsc.frequency.setValueAtTime(950,n);sirOsc.frequency.linearRampToValueAtTime(1200,n+1.2);sirOsc.frequency.linearRampToValueAtTime(950,n+2.4);sirOsc.frequency.linearRampToValueAtTime(1200,n+3.6)}cy();sirIV=setInterval(cy,3600)}
+function stopSir(){if(sirOsc){try{sirOsc.stop()}catch{}sirOsc=null}if(sirIV){clearInterval(sirIV);sirIV=null}sirG=null}
+
+// IndexedDB
+const DBN='alertmap',DBV=1,DBS='alerts';
+function odb(){return new Promise((res,rej)=>{const r=indexedDB.open(DBN,DBV);r.onupgradeneeded=e=>{const d=e.target.result;if(!d.objectStoreNames.contains(DBS))d.createObjectStore(DBS,{keyPath:'id'}).createIndex('timestamp','timestamp')};r.onsuccess=e=>res(e.target.result);r.onerror=e=>rej(e.target.error)})}
+async function sDB(a){try{const d=await odb();d.transaction(DBS,'readwrite').objectStore(DBS).put({id:a.id,city:a.city,region:a.region,typeKey:a.typeKey,shelter:a.shelter,timestamp:a.timestamp.toISOString(),lat:a.lat,lng:a.lng});d.close()}catch{}}
+async function gDB(since){try{const d=await odb();return new Promise(res=>{const r=d.transaction(DBS,'readonly').objectStore(DBS).getAll();r.onsuccess=()=>{let x=r.result||[];if(since)x=x.filter(a=>new Date(a.timestamp)>=since);d.close();res(x)};r.onerror=()=>{d.close();res([])}})}catch{return[]}}
+async function getComp(){const now=new Date(),ts=new Date(now.getFullYear(),now.getMonth(),now.getDate()),ys=new Date(ts-864e5),wa=new Date(ts-6048e5);const all=await gDB(wa);return{today:Math.max(all.filter(a=>new Date(a.timestamp)>=ts).length,hist.filter(a=>a.timestamp>=ts).length),yesterday:all.filter(a=>{const d=new Date(a.timestamp);return d>=ys&&d<ts}).length,weekAvg:Math.round(all.length/7)}}
+
+function tglShl(){shlV=!shlV;document.getElementById('shlB').classList.toggle('active',shlV);if(shlV){SHL.forEach(s=>{shlM.push(L.marker([s.lat,s.lng],{icon:L.divIcon({className:'cm sm',html:`<div class="md"></div><div class="ml">${X(s.n)}</div>`,iconSize:[10,10],iconAnchor:[5,5]})}).addTo(map).bindPopup(`🏛️ ${X(s.n)}`))})}else{shlM.forEach(m=>map.removeLayer(m));shlM=[]}}
+
+// Offline
+window.addEventListener('offline',()=>{document.getElementById('offBar').classList.add('active')});
+window.addEventListener('online',()=>{document.getElementById('offBar').classList.remove('active');connectSSE()});
+
+// SSE
+function connectSSE(){if(reconTO){clearTimeout(reconTO);reconTO=null}if(es){es.onopen=es.onmessage=es.onerror=null;es.close();es=null}sseOK=false;const ci=document.getElementById('cInfo');ci.className='ci dc';ci.textContent='⏳';try{es=new EventSource(`${API}/api/stream`)}catch{schedR();return}es.onopen=()=>{sseOK=true;ci.className='ci ok';ci.textContent='🟢 SSE';setSt('live','מחובר')};es.onmessage=e=>{try{const d=JSON.parse(e.data);if(d.type==='init'||d.type==='update')procSA(d.alerts||[])}catch{}};es.onerror=()=>{sseOK=false;ci.className='ci dc';ci.textContent='🟡';setSt('disconnected','מנותק');if(es){es.onopen=es.onmessage=es.onerror=null;es.close();es=null}schedR()}}
+function schedR(){if(reconTO)return;reconTO=setTimeout(()=>{reconTO=null;connectSSE()},3000)}
+function startPoll(){setInterval(async()=>{if(sseOK)return;try{const r=await fetch(`${API}/api/alerts`);const d=await r.json();procSA(d.alerts||[])}catch{}},5000)}
+
+// Pre-load recent alerts from OREF's official history endpoint on startup, so stats/timeline have real data
+// instead of an empty graph until the first live alert. Silent: no markers/sound/popups.
+async function preloadHistory(){
+  try{
+    const r=await fetch(`${API}/api/oref/history`);
+    if(!r.ok)return;
+    const data=await r.json();
+    const list=Array.isArray(data)?data:(data?.data||[]);
+    if(!list.length)return;
+    const cutoff=Date.now()-7*864e5; // last 7 days
+    let imported=0;
+    for(const item of list){
+      const city=item.data||item.city||item.name;
+      const rawDate=item.alertDate||item.date||item.timestamp;
+      if(!city||!rawDate)continue;
+      const ts=new Date(rawDate);
+      if(!ts.getTime()||ts.getTime()<cutoff)continue;
+      const cat=String(item.category||item.cat||'1');
+      const typeKey=cat==='2'?'uav':cat==='3'?'earthquake':cat==='6'?'tsunami':'rockets';
+      const f=findC(String(city));
+      const ti=TM[typeKey]||TM.rockets;
+      const region=f?.r||'אחר';
+      const id=`hist-${ts.getTime()}-${imported}`;
+      if(known.has(id))continue;
+      const al={id,city:String(city),type:ti,typeKey,lat:f?.lat||31.5,lng:f?.lng||34.8,region,shelter:f?.s??RS[region]??90,timestamp:ts,detectedAt:ts.getTime(),active:false};
+      hist.push(al);
+      known.add(id);
+      sDB(al);
+      imported++;
+      if(imported>=500)break;
+    }
+    if(imported>0){
+      hist.sort((a,b)=>b.timestamp-a.timestamp);
+      schedUI();
+      schedTL();
+    }
+  }catch{}finally{preloadDone=true;schedUI();schedTL()}
+}
+// Anomaly detection — compare today's count vs 7-day average. Badge shows if today >= 1.5x avg
+function anomalyBadge(){const now=new Date(),ts=new Date(now.getFullYear(),now.getMonth(),now.getDate());const today=hist.filter(a=>a.timestamp>=ts).length;const w0=new Date(ts-6048e5);const weekAlerts=hist.filter(a=>a.timestamp>=w0&&a.timestamp<ts);const avg=weekAlerts.length/7;if(today===0||avg<2||today<avg*1.5)return '';const pct=Math.round((today/Math.max(avg,1)-1)*100);return `<div style="margin:10px;padding:10px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.35);border-radius:6px;display:flex;align-items:center;gap:8px;font-size:11px"><span style="font-size:18px">🔥</span><div><div style="font-weight:700;color:var(--red)">פעילות חריגה היום</div><div style="font-size:9px;color:var(--txt2);margin-top:2px">${today} אזעקות (${pct}%+ מהממוצע השבועי של ${avg.toFixed(1)})</div></div></div>`}
+
+// Process
+function procSA(sa){const ids=new Set(sa.map(a=>a.id));let deact=false;act.forEach((_,id)=>{if(!id.startsWith('local-')&&!ids.has(id)){moveHist(id);act.get(id).active=false;act.delete(id);deact=true}});if(deact&&act.size===0){if(sirOn)stopSir();releaseWakeLock()}if(!sa.length){if(deact){schedUI();updDef()}return}let nc=0;let topType='rockets';sa.forEach(s=>{if(act.has(s.id)||known.has(s.id))return;const f=findC(s.city);const ti=TM[s.type]||TM.rockets;const region=f?.r||'אחר';const al={id:s.id,city:s.city,type:ti,typeKey:s.type,lat:f?.lat||31.5+(Math.random()-.5),lng:f?.lng||34.8+(Math.random()-.5),region,shelter:f?.s??RS[region]??90,timestamp:new Date(s.timestamp),detectedAt:Date.now(),active:true};hist.unshift(al);known.add(s.id);act.set(s.id,al);addMrk(al);sDB(al);nc++;topType=s.type||topType;if(!isMuted()){const now=Date.now();if(now-lastS>400){lastS=now;playSnd(s.type)}}speak(al);showPN(al)});trimH();pruneMrk();schedUI();schedTL();if(nc>0){if(sirOn)startSir();vibrateAlert(topType);acquireWakeLock();startCD();updDef();if(nc<=5){const now=Date.now();if(now-lastFly>3000){lastFly=now;const f=hist[0];if(f)map.flyTo([f.lat,f.lng],10,{duration:1})}}const cities=sa.slice(0,3).map(a=>a.city).join(', ');toast(`🚨 ${cities}${sa.length>3?' +'+(sa.length-3):''}`,'error')}}
+
+function createL(city,type='rockets'){const f=findC(city);if(!f)return;const ti=TM[type]||TM.rockets;const id=`local-${Date.now()}-${Math.random().toString(36).slice(2,6)}`;const al={id,city:f.name||city,type:ti,typeKey:type,lat:f.lat,lng:f.lng,region:f.r,shelter:f.s??RS[f.r]??90,timestamp:new Date(),detectedAt:Date.now(),active:true};hist.unshift(al);known.add(id);act.set(id,al);addMrk(al);sDB(al);if(!isMuted()){const now=Date.now();if(now-lastS>400){lastS=now;playSnd(type)}}speak(al);showPN(al);if(sirOn)startSir();vibrateAlert(type);acquireWakeLock();startCD();updDef();setTimeout(()=>deactA(id),AD);trimH();schedUI();schedTL()}
+function deactA(id){const a=act.get(id);if(!a)return;a.active=false;act.delete(id);moveHist(id);if(sirOn&&act.size===0)stopSir();if(act.size===0)releaseWakeLock();updDef();schedUI()}
+
+// Countdown
+function startCD(){if(cdIV)return;cdIV=setInterval(updCD,1000)}
+function updCD(){if(act.size===0){clearInterval(cdIV);cdIV=null;updDef();return}const now=Date.now();document.querySelectorAll('.cdt').forEach(el=>{const det=parseInt(el.dataset.det),sh=parseInt(el.dataset.sh);const rem=sh-Math.floor((now-det)/1000);if(rem>0){el.textContent=`⏳ ${t('remaining')} ${rem}${t('sec')}`;el.classList.remove('done')}else{el.textContent=`✓ ${t('passed')}`;el.classList.add('done')}});const dc=document.getElementById('defCd');if(dc){const minR=Math.min(...[...act.values()].map(a=>a.shelter-Math.floor((now-a.detectedAt)/1000)));dc.textContent=minR>0?`${minR}s`:'✓'}}
+function updDef(){document.getElementById('defP').classList.toggle('active',act.size>0)}
+
+// Markers
+function moveHist(id){const m=mrk.get(id);if(!m)return;m.setIcon(L.divIcon({className:'cm hm',html:'<div class="md"></div>',iconSize:[10,10],iconAnchor:[5,5]}));if(clsOn&&clsG){if(map.hasLayer(m))map.removeLayer(m);clsG.addLayer(m)}}
+function trimH(){if(hist.length>MH){const rm=hist.splice(MH);rm.forEach(a=>{known.delete(a.id);const m=mrk.get(a.id);if(m){if(clsG&&clsG.hasLayer(m))clsG.removeLayer(m);if(map.hasLayer(m))map.removeLayer(m);mrk.delete(a.id)}})}}
+function pruneMrk(){if(mrk.size<=MM)return;const ids=[...mrk.keys()];ids.slice(0,ids.length-MM).forEach(id=>{const m=mrk.get(id);if(m){if(clsG&&clsG.hasLayer(m))clsG.removeLayer(m);if(map.hasLayer(m))map.removeLayer(m)}mrk.delete(id)})}
+function addMrk(a){if(mrk.has(a.id)){const o=mrk.get(a.id);if(clsG&&clsG.hasLayer(o))clsG.removeLayer(o);if(map.hasLayer(o))map.removeLayer(o)}const sc=X(a.city);const tcls=`cm t-${a.typeKey||'rockets'}`;const m=L.marker([a.lat,a.lng],{icon:L.divIcon({className:tcls,html:`<div class="mr"></div><div class="md active"></div><div class="ml">${sc}</div>`,iconSize:[14,14],iconAnchor:[7,7]})}).bindPopup(`<b>${sc}</b><br>${a.type.icon} ${t(a.typeKey)}<br>⏱️ ${fSh(a.shelter)}<br>${fTime(a.timestamp)}`);m.addTo(map);mrk.set(a.id,m);const c=L.circleMarker([a.lat,a.lng],{radius:25,color:'transparent',fillColor:a.type.color,fillOpacity:.15,weight:1.5}).addTo(map);setTimeout(()=>{try{map.removeLayer(c)}catch{}},5000)}
+
+function fSh(s){if(s===0)return t('imm');if(s<60)return`${s} ${t('sec')}`;const m=s/60;const lbl=(m===1)?t('minSingle'):t('min');return`${m%1===0?m:m.toFixed(1)} ${lbl}`}
+function shC(s){if(s<=15)return'imm';if(s<=30)return'fast';if(s<=60)return'med';return'slow'}
+function applyF(){flt.r=document.getElementById('fR')?.value||'';flt.t=document.getElementById('fT')?.value||'';flt.time=document.getElementById('fTime')?.value||'all';schedUI()}
+function clearF(){const a=document.getElementById('fR'),b=document.getElementById('fT'),c=document.getElementById('fTime');if(a)a.value='';if(b)b.value='';if(c)c.value='all';applyF()}
+function filterH2(list){const now=Date.now();let cut=0;if(flt.time==='hour')cut=now-36e5;else if(flt.time==='day')cut=now-864e5;else if(flt.time==='week')cut=now-6048e5;return list.filter(a=>{if(flt.r&&a.region!==flt.r)return false;if(flt.t&&a.typeKey!==flt.t)return false;if(cut&&a.timestamp.getTime()<cut)return false;return true})}
+
+function schedUI(){if(uiP)return;uiP=true;requestAnimationFrame(()=>{uiP=false;updUI()})}
+function updUI(){renderSB();updBanner();updStats();updDef()}
+function renderSB(){const el=document.getElementById('sbC');const all=filterH2(hist),ac=all.filter(a=>a.active),hi=all.filter(a=>!a.active);
+let h='<div class="fbar"><div class="fr"><select class="fs" id="fR" onchange="applyF()"><option value="">כל האזורים</option><option value="צפון">צפון</option><option value="חיפה">חיפה</option><option value="שרון">שרון</option><option value="מרכז">מרכז</option><option value="ירושלים">ירושלים</option><option value="שפלה">שפלה</option><option value="דרום">דרום</option><option value="עוטף עזה">עוטף עזה</option><option value="ערבה">ערבה</option><option value="יו״ש">יו״ש</option></select><select class="fs" id="fT" onchange="applyF()"><option value="">הכל</option><option value="rockets">רקטות</option><option value="uav">כטב״מ</option></select></div><div class="fr"><select class="fs" id="fTime" onchange="applyF()"><option value="all">הכל</option><option value="hour">שעה</option><option value="day">יום</option><option value="week">שבוע</option></select><button class="fc" onclick="clearF()">נקה</button></div></div>';
+if(!all.length){h+=`<div class="empty"><div class="icon">✅</div><h3>${t(hist.length?'noResults':'allClear')}</h3><p>${t('noAlerts')}</p></div>`}else{if(ac.length)h+=`<div class="st">${t('active')} <span class="cb">${ac.length}</span></div><div class="al">${ac.slice(0,20).map(a=>rItem(a,true)).join('')}</div>`;if(hi.length)h+=`<div class="st">${t('history')} <span class="cb off">${hi.length}</span></div><div class="hl2">${hi.slice(0,30).map(a=>rItem(a,false)).join('')}</div>`}
+el.innerHTML=h;const a=document.getElementById('fR'),b=document.getElementById('fT'),c=document.getElementById('fTime');if(a)a.value=flt.r;if(b)b.value=flt.t;if(c)c.value=flt.time}
+function rItem(a,isAct){const sc=X(a.city),sl=shC(a.shelter),sf=fSh(a.shelter),isFav=favs.includes(a.city);let dH='';if(uLoc)dH=`<span class="di">📍 ${distK(uLoc.lat,uLoc.lng,a.lat,a.lng).toFixed(1)} ${t('km')}</span>`;let cdH='';if(isAct&&a.detectedAt){const rem=a.shelter-Math.floor((Date.now()-a.detectedAt)/1000);cdH=`<span class="cd cdt ${rem<=0?'done':''}" data-det="${a.detectedAt}" data-sh="${a.shelter}">${rem>0?`⏳ ${t('remaining')} ${rem}${t('sec')}`:`✓ ${t('passed')}`}</span>`}
+return`<div class="ai ${isAct?'act':''}" onclick="map.flyTo([${a.lat},${a.lng}],12)"><div class="ai-h"><div class="ai-c"><button class="fs2 ${isFav?'on':''}" onclick="event.stopPropagation();tglFav('${X(a.city)}')">${isFav?'⭐':'☆'}</button>${a.type.icon} ${sc}</div><div class="ai-t">${fTime(a.timestamp)}</div></div><div class="ai-tp"><span class="td ${a.type.css}"></span>${t(a.typeKey)}${isAct?`<span style="color:var(--red);margin-right:auto">● ${t('active')}</span>`:''}</div><div class="ai-m"><span class="sh ${sl}">⏱️ ${sf}</span>${cdH}${dH}</div></div>`}
+function updBanner(){const b=document.getElementById('banner'),o=document.getElementById('overlay'),s=document.getElementById('sBadge'),d=document.getElementById('defP');if(act.size){const cities=[...act.values()].map(a=>a.city);document.getElementById('banTxt').textContent=`צבע אדום — ${cities.slice(0,4).join(' | ')}${cities.length>4?' +'+(cities.length-4):''}`;b.classList.add('active');o.classList.add('active');s.className='badge alert-on';d.classList.add('below-banner')}else{b.classList.remove('active');o.classList.remove('active');s.className=sseOK?'badge live':'badge';d.classList.remove('below-banner')}}
+function updStats(){const now=new Date(),ts=new Date(now.getFullYear(),now.getMonth(),now.getDate());document.getElementById('todayC').textContent=hist.filter(a=>a.timestamp>=ts).length;document.getElementById('totalC').textContent=hist.length}
+
+// Tabs — track currentTab so the 10s refresh interval doesn't clobber the user's chosen tab
+let currentTab='alerts';
+function swTab(tab,el){currentTab=tab;document.querySelectorAll('.stab').forEach(t=>t.classList.remove('active'));el.classList.add('active');if(tab==='alerts')renderSB();else if(tab==='stats')renderStatTab();else renderAboutTab();if(tab==='stats')schedTL()}
+function refreshCurrentTab(){if(currentTab==='alerts')renderSB();else if(currentTab==='stats'){/* stats tab repaints itself via schedTL */}}
+function renderStatTab(){if(!preloadDone&&hist.length===0){document.getElementById('sbC').innerHTML='<div class="sg"><div class="skel skel-card"></div><div class="skel skel-card"></div><div class="skel skel-card"></div><div class="skel skel-card"></div></div><div class="skel skel-tl"></div><div class="skel skel-tl"></div><div class="skel skel-row"></div><div class="skel skel-row"></div><div class="skel skel-row"></div>';return}const now=new Date(),ts=new Date(now.getFullYear(),now.getMonth(),now.getDate()),ha=new Date(now-36e5);const rk=hist.filter(a=>a.typeKey==='rockets'),uav=hist.filter(a=>a.typeKey==='uav'),lh=hist.filter(a=>a.timestamp>=ha);const regions={};hist.forEach(a=>{regions[a.region]=(regions[a.region]||0)+1});const anomalyHtml=anomalyBadge();document.getElementById('sbC').innerHTML=`${anomalyHtml}<div class="sg"><div class="sc2 r"><div class="v">${rk.length}</div><div class="l">${t('rockets')}</div></div><div class="sc2 o"><div class="v">${uav.length}</div><div class="l">${t('uav')}</div></div><div class="sc2 y"><div class="v">${Object.keys(regions).length}</div><div class="l">אזורים</div></div><div class="sc2 g"><div class="v">${lh.length}</div><div class="l">שעה</div></div></div><div class="tls"><div class="tlt"><span>📊 24h</span><span class="m" id="tlM">0</span></div><div class="tlw"><canvas id="tlC"></canvas></div></div><div class="tls"><div class="tlt"><span>📈 ${t('todayL')} / ${t('yesterdayL')}</span><span class="m" id="compM"></span></div><div class="tlw"><canvas id="compC"></canvas></div></div><div class="rs">${Object.entries(regions).sort((a,b)=>b[1]-a[1]).map(([r,c])=>`<div class="rsi"><span>${X(r)}</span><span class="rc">${c}</span></div>`).join('')}</div><div class="eb"><button class="ebt" onclick="expCSV()">📄 CSV</button><button class="ebt" onclick="expJSON()">📋 JSON</button></div>`;setTimeout(()=>{drawTL();drawComp()},50)}
+function renderAboutTab(){document.getElementById('sbC').innerHTML=`<div class="ab"><div class="ab-h"><div style="font-size:28px">🛡️</div><h3>מפת אזעקות ישראל</h3><p>ניטור בזמן אמת — פיקוד העורף</p><button class="snbtn" style="margin-top:10px;max-width:200px" onclick="shareLink()">🔗 שתף קישור</button></div><div class="em"><div class="em-t">📞 חירום</div><div class="em-n"><div class="en">משטרה <span>100</span></div><div class="en">מד״א <span>101</span></div><div class="en">כיבוי <span>102</span></div><div class="en">פקע״ר <span>104</span></div></div></div><div class="lg" style="margin-top:12px"><div class="lgt">🛡️ ביטחון</div><a class="lc" href="https://www.oref.org.il/" target="_blank" rel="noopener"><div class="li red">🚨</div><div class="lb"><div class="ln">פיקוד העורף</div><div class="ld">אזעקות והנחיות</div></div></a><a class="lc" href="https://www.idf.il/" target="_blank" rel="noopener"><div class="li blue">⭐</div><div class="lb"><div class="ln">צה״ל</div></div></a></div><div class="lg"><div class="lgt">🚑 הצלה</div><a class="lc" href="https://www.mdais.org/" target="_blank" rel="noopener"><div class="li red">🏥</div><div class="lb"><div class="ln">מד״א — 101</div></div></a><a class="lc" href="https://www.1221.org.il/" target="_blank" rel="noopener"><div class="li green">🚴</div><div class="lb"><div class="ln">איחוד הצלה — 1221</div></div></a></div><div class="lg"><div class="lgt">💬 תמיכה נפשית</div><a class="lc" href="https://www.eran.org.il/" target="_blank" rel="noopener"><div class="li green">💚</div><div class="lb"><div class="ln">ער״ן — 1201</div></div></a><a class="lc" href="https://www.natal.org.il/" target="_blank" rel="noopener"><div class="li purple">🫂</div><div class="lb"><div class="ln">נט״ל — 1-800-363-363</div></div></a></div><div style="text-align:center;font-size:8px;color:var(--txtm);margin-top:10px">⚠️ מידע בלבד. פעל לפי פיקוד העורף.</div></div>`}
+
+// Mobile
+function mobTab(tab,el){currentTab=tab;document.querySelectorAll('.mn-b').forEach(b=>b.classList.remove('active'));el.classList.add('active');const sh=document.getElementById('mSheet');if(tab==='alerts'){renderSB();sh.innerHTML=document.getElementById('sbC').innerHTML}else if(tab==='stats'){renderStatTab();sh.innerHTML=document.getElementById('sbC').innerHTML}else{renderAboutTab();sh.innerHTML=document.getElementById('sbC').innerHTML}sh.style.display='block';setTimeout(()=>sh.classList.add('open'),10);if(tab==='stats')setTimeout(()=>{drawTL();drawComp()},100)}
+
+// Timeline
+function schedTL(){if(tlP)return;tlP=true;requestAnimationFrame(()=>{tlP=false;drawTL();drawComp()})}
+function drawTL(){const c=document.getElementById('tlC');if(!c||!c.clientWidth)return;const dpr=window.devicePixelRatio||1,w=c.clientWidth,h=c.clientHeight;c.width=w*dpr;c.height=h*dpr;const ctx=c.getContext('2d');ctx.scale(dpr,dpr);ctx.clearRect(0,0,w,h);const now=new Date(),bk=Array(24).fill(0);hist.forEach(a=>{const d=(now-a.timestamp)/36e5;if(d>=0&&d<24)bk[23-Math.floor(d)]++});const total=bk.reduce((s,v)=>s+v,0);const tlM=document.getElementById('tlM');if(tlM)tlM.textContent=String(total);const max=Math.max(...bk,1),bW=(w-4)/24;bk.forEach((v,i)=>{const bH=(v/max)*(h-16),x=2+i*bW,y=h-14-bH;ctx.fillStyle='rgba(255,255,255,.03)';ctx.fillRect(x+1,0,bW-2,h-14);if(v>0){const g=ctx.createLinearGradient(0,y,0,y+bH);g.addColorStop(0,'#ef4444');g.addColorStop(1,'#991b1b');ctx.fillStyle=g;ctx.fillRect(x+1,y,bW-2,bH);if(bH>14){ctx.fillStyle='#fff';ctx.font='bold 7px Heebo';ctx.textAlign='center';ctx.fillText(v,x+bW/2,y+8)}}})}
+async function drawComp(){const c=document.getElementById('compC');if(!c||!c.clientWidth)return;const dpr=window.devicePixelRatio||1,w=c.clientWidth,h=c.clientHeight;c.width=w*dpr;c.height=h*dpr;const ctx=c.getContext('2d');ctx.scale(dpr,dpr);ctx.clearRect(0,0,w,h);let d;try{d=await getComp()}catch{d={today:0,yesterday:0,weekAvg:0}}const cm=document.getElementById('compM');if(cm)cm.textContent=`${t('todayL')}: ${d.today}`;const vals=[d.today,d.yesterday,d.weekAvg],labels=[t('todayL'),t('yesterdayL'),t('weekAvg')],colors=['#ef4444','#f97316','#3b82f6'];const max=Math.max(...vals,1),bW=36,gap=14,totalW=vals.length*(bW+gap)-gap,sx=(w-totalW)/2;vals.forEach((v,i)=>{const bH=(v/max)*(h-22),x=sx+i*(bW+gap),y=h-16-bH;ctx.fillStyle=colors[i];ctx.beginPath();ctx.roundRect(x,y,bW,bH,3);ctx.fill();ctx.fillStyle=theme==='light'?'#1e293b':'#fff';ctx.font='bold 10px Rubik';ctx.textAlign='center';ctx.fillText(v,x+bW/2,y-2);ctx.fillStyle=theme==='light'?'#475569':'#94a3b8';ctx.font='8px Heebo';ctx.fillText(labels[i],x+bW/2,h-3)})}
+
+// Export
+function dl(fn,c,m){const b=new Blob([c],{type:m}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download=fn;document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(()=>URL.revokeObjectURL(u),1000)}
+function expCSV(){if(!hist.length)return toast('⚠️');const h=['Timestamp','City','Region','Type','Shelter'];const rows=hist.map(a=>[a.timestamp.toISOString(),a.city,a.region,t(a.typeKey),a.shelter]);dl(`alerts-${new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')}.csv`,'\ufeff'+[h,...rows].map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n'),'text/csv;charset=utf-8');toast(`📄 ${hist.length}`)}
+function expJSON(){if(!hist.length)return toast('⚠️');dl(`alerts-${new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')}.json`,JSON.stringify({total:hist.length,alerts:hist.map(a=>({id:a.id,ts:a.timestamp.toISOString(),city:a.city,region:a.region,type:a.typeKey,lat:a.lat,lng:a.lng,shelter:a.shelter}))},null,2),'application/json;charset=utf-8');toast(`📋 ${hist.length}`)}
+
+// Push (Web Push via service worker + VAPID; falls back to in-page Notifications if server has no web-push)
+function u8(b64){const pad='='.repeat((4-b64.length%4)%4);const s=(b64+pad).replace(/-/g,'+').replace(/_/g,'/');const raw=atob(s);const arr=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)arr[i]=raw.charCodeAt(i);return arr}
+let wpSubInFlight=null;
+async function wpSub(){if(wpSubInFlight)return wpSubInFlight;wpSubInFlight=(async()=>{try{if(!('serviceWorker' in navigator)||!('PushManager' in window))return null;const reg=await navigator.serviceWorker.ready;const k=await fetch(`${API}/api/push/vapid-key`).then(r=>r.json());if(!k.available||!k.publicKey)return null;let sub=await reg.pushManager.getSubscription();if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:u8(k.publicKey)});await fetch(`${API}/api/push/subscribe`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subscription:sub.toJSON(),favs,dnd:dndOn})});return sub}catch{return null}})();try{return await wpSubInFlight}finally{wpSubInFlight=null}}
+async function wpUnsub(){try{if(!('serviceWorker' in navigator))return;const reg=await navigator.serviceWorker.ready;const sub=await reg.pushManager.getSubscription();if(!sub)return;await fetch(`${API}/api/push/unsubscribe`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:sub.endpoint})}).catch(()=>{});await sub.unsubscribe().catch(()=>{})}catch{}}
+async function tglPush(){if(!('Notification' in window))return;if(pushOn){pushOn=false;localStorage.setItem('alertmap-push','off');updPush();wpUnsub();return}if(Notification.permission==='denied')return toast('⚠️ התראות נחסמו בדפדפן');if(Notification.permission==='default'){const p=await Notification.requestPermission();if(p!=='granted')return}pushOn=true;localStorage.setItem('alertmap-push','on');updPush();const sub=await wpSub();try{new Notification('🚨',{body:sub?'Web Push פעיל':'התראות מקומיות פעילות',icon:'/icon.svg',tag:'test'})}catch{}}
+function updPush(){const b=document.getElementById('pushB');b.textContent=pushOn?'🔔':'🔕';b.classList.toggle('on',pushOn)}
+function showPN(a){if(!pushOn||Notification.permission!=='granted')return;if(document.visibilityState==='visible'&&document.hasFocus())return;if(favs.length&&!favs.includes(a.city))return;try{const n=new Notification(`🚨 ${a.city}`,{body:`${t(a.typeKey)} ⏱️${fSh(a.shelter)}`,icon:'/icon.svg',tag:`a-${a.id}`});n.onclick=()=>{window.focus();n.close()};setTimeout(()=>{try{n.close()}catch{}},8000)}catch{}}
+
+// Sound
+function setSt(s,txt){document.getElementById('sBadge').className=`badge ${s}`;document.getElementById('sText').textContent=txt}
+function getAC(){if(!actx||actx.state==='closed')try{actx=new(window.AudioContext||window.webkitAudioContext)()}catch{return null};if(actx.state==='suspended')actx.resume().catch(()=>{});return actx}
+// Per-type sound + vibration profiles. Rockets = highest urgency; UAV slightly lower; quake/tsunami distinctive
+const ALERT_PROFILES={
+  rockets:{f:[880,660,880],dur:.5,vib:[300,100,300,100,600]},
+  uav:    {f:[700,520,700],dur:.45,vib:[200,150,200,150,200]},
+  earthquake:{f:[400,300,400,300],dur:.7,vib:[80,60,80,60,80,60,80,60,400]},
+  tsunami:{f:[600,400],dur:.8,vib:[500,200,500,200,500]}
+};
+function playSnd(typeKey='rockets'){if(isMuted())return;const prof=ALERT_PROFILES[typeKey]||ALERT_PROFILES.rockets;try{const c=getAC();if(!c)return;const o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);const step=prof.dur/prof.f.length;prof.f.forEach((f,i)=>o.frequency.setValueAtTime(f,c.currentTime+i*step));g.gain.setValueAtTime(.3,c.currentTime);g.gain.exponentialRampToValueAtTime(.01,c.currentTime+prof.dur);o.start(c.currentTime);o.stop(c.currentTime+prof.dur)}catch{}}
+function vibrateAlert(typeKey='rockets'){if(isMuted())return;const prof=ALERT_PROFILES[typeKey]||ALERT_PROFILES.rockets;try{if(navigator.vibrate)navigator.vibrate(prof.vib)}catch{}}
+function tglSnd(){sndOn=!sndOn;document.getElementById('sndB').textContent=sndOn?'🔊':'🔇';if(!sndOn){stopSir();try{speechSynthesis.cancel()}catch{}}}
+function openSet(){document.getElementById('setMod').classList.add('open')}
+function closeSet(){document.getElementById('setMod').classList.remove('open')}
+function demo(){if(isDem){isDem=false;if(demTO){clearTimeout(demTO);demTO=null}document.getElementById('demoB').classList.remove('active');return}isDem=true;document.getElementById('demoB').classList.add('active');['שדרות','אשקלון','באר שבע','תל אביב'].forEach((c,i)=>setTimeout(()=>{if(isDem)createL(c)},i*700));const cn=Object.keys(C);let n=0;function nx(){if(n++>=10||!isDem){isDem=false;document.getElementById('demoB').classList.remove('active');return}createL(cn[Math.floor(Math.random()*cn.length)],Math.random()>.8?'uav':'rockets');demTO=setTimeout(nx,3000+Math.random()*4000)}demTO=setTimeout(nx,3500)}
+function tglHeat(){heatV=!heatV;document.getElementById('heatB').classList.toggle('active');if(heatV){const r={};hist.forEach(a=>{const k=`${a.lat.toFixed(2)},${a.lng.toFixed(2)}`;r[k]=r[k]||{lat:a.lat,lng:a.lng,c:0};r[k].c++});Object.values(r).forEach(v=>{heatC.push(L.circle([v.lat,v.lng],{radius:v.c*2000,color:'transparent',fillColor:'#ef4444',fillOpacity:Math.min(.1+v.c*.05,.5)}).addTo(map))})}else{heatC.forEach(c=>map.removeLayer(c));heatC=[]}}
+async function clrIDB(){try{const d=await odb();await new Promise(res=>{const r=d.transaction(DBS,'readwrite').objectStore(DBS).clear();r.onsuccess=()=>res();r.onerror=()=>res()});d.close()}catch{}}
+function clrHist(){const n=hist.length;if(n>0&&!confirm(`למחוק את כל ההיסטוריה (${n} פריטים)?\nפעולה זו לא ניתנת לביטול.`))return;hist=[];act.clear();known.clear();mrk.forEach(m=>{if(clsG&&clsG.hasLayer(m))clsG.removeLayer(m);if(map.hasLayer(m))map.removeLayer(m)});mrk.clear();heatC.forEach(c=>map.removeLayer(c));heatC=[];heatV=false;document.getElementById('heatB').classList.remove('active');if(sirOn)stopSir();releaseWakeLock();updDef();updUI();schedTL();clrIDB().then(()=>schedTL());toast('🗑️')}
+function manualRefresh(){toast('🔄 רענון...','info');if(!sseOK)connectSSE();fetch(`${API}/api/alerts`).then(r=>r.json()).then(d=>procSA(d.alerts||[])).catch(()=>{});preloadHistory()}
+// "I'm safe" — opens device's share sheet (or WhatsApp fallback) with a pre-filled status message
+async function shareSafe(){const time=new Date().toLocaleTimeString(lang==='he'?'he-IL':lang==='ar'?'ar-SA':lang==='ru'?'ru-RU':'en-US',{hour:'2-digit',minute:'2-digit'});const msg=lang==='en'?`✓ I'm safe (${time})`:lang==='ar'?`✓ أنا بأمان (${time})`:lang==='ru'?`✓ Я в безопасности (${time})`:`✓ אני בסדר (${time})`;if(navigator.share){try{await navigator.share({text:msg});return}catch{}}window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`,'_blank','noopener')}
+function fTime(d){if(!(d instanceof Date)||isNaN(d))return'--:--';return d.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}
+function toast(msg,severity){const c=document.getElementById('tBox');while(c.children.length>=3)c.removeChild(c.firstChild);const t=document.createElement('div');t.className='t'+(severity?' '+severity:'');t.setAttribute('role',severity==='error'?'alert':'status');t.textContent=msg;c.appendChild(t);const ttl=severity==='error'?5000:3000;setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity .3s';setTimeout(()=>{try{t.remove()}catch{}},300)},ttl)}
+function regSW(){if(!('serviceWorker' in navigator))return;window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js').catch(()=>{})})}
+
+// Keyboard shortcuts — defer to native behavior on form controls and on focused buttons
+const SHORTCUTS_HELP={he:'Space=השתק • S=סירנה • H=מפת בית • M=מיקום שלי • L=ערכת נושא • ESC=סגור',en:'Space=Mute • S=Siren • H=Home • M=My location • L=Theme • ESC=Close',ar:'Space=كتم • S=صفارة • H=الرئيسية • M=موقعي • L=النمط • ESC=إغلاق',ru:'Space=Тихо • S=Сирена • H=Карта • M=Моё место • L=Тема • ESC=Закрыть'};
+function isFormControl(t){const tag=(t&&t.tagName)||'';return tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT'||(t&&t.isContentEditable)}
+function isFocusedButton(t){return t&&(t.tagName==='BUTTON'||t.getAttribute('role')==='button')}
+function modalOpen(){return document.getElementById('setMod').classList.contains('open')||document.getElementById('mSheet').classList.contains('open')}
+function onKeydown(e){if(e.ctrlKey||e.metaKey||e.altKey)return;if(isFormControl(e.target))return;const k=e.key;if(k==='Escape'){const mod=document.getElementById('setMod');if(mod.classList.contains('open'))return closeSet();const sh=document.getElementById('mSheet');if(sh.classList.contains('open')){sh.classList.remove('open');setTimeout(()=>sh.style.display='none',300);return}return}
+  // While a modal is open or a button is focused, let native keys fire (Space/Enter activate the button)
+  if(modalOpen()||isFocusedButton(e.target))return;
+  if(k===' '){e.preventDefault();tglSnd();return}if(k==='?'||k==='/'){toast(SHORTCUTS_HELP[lang]||SHORTCUTS_HELP.he);return}const lower=k.toLowerCase();if(lower==='s'){tglSir();return}if(lower==='h'){map&&map.setView([31.5,34.8],8);return}if(lower==='m'){geoLoc();return}if(lower==='l'){tglTheme();return}}
+document.addEventListener('keydown',onKeydown);
+
+document.addEventListener('DOMContentLoaded',()=>{
+  if(URL_EMBED)document.documentElement.classList.add('embed');
+  applyTh(theme);
+  if(hcOn)document.documentElement.classList.add('high-contrast');
+  document.getElementById('hcT').checked=hcOn;
+  document.getElementById('dndT').checked=dndOn;
+  document.getElementById('ttsT').checked=ttsOn;
+  document.getElementById('sirT').checked=sirOn;
+  document.getElementById('langS').value=lang;
+  setLang(lang);updFav();updSnoozeUI();initMap();renderSB();
+  // ?city=שדרות — fly to that city after map is ready
+  if(URL_CITY){setTimeout(()=>{const c=findC(URL_CITY);if(c&&c.lat)map.flyTo([c.lat,c.lng],11,{duration:1.5})},500)}
+  // Refresh snooze status display every minute so the countdown stays accurate
+  setInterval(updSnoozeUI,60000);
+  if(localStorage.getItem('alertmap-push')==='on'&&'Notification' in window&&Notification.permission==='granted'){pushOn=true;setTimeout(()=>wpSub(),1500)}
+  updPush();connectSSE();startPoll();regSW();
+  preloadHistory();
+  loadExternalShelters();
+  // Show demo button on desktop, hide on narrow viewports (re-evaluated on resize)
+  const demoB=document.getElementById('demoB');
+  function syncDemoVis(){demoB.style.display=window.innerWidth>768?'':'none'}
+  syncDemoVis();
+  setInterval(()=>{updStats();refreshCurrentTab()},10000);
+  setInterval(schedTL,60000);
+  window.addEventListener('resize',()=>{schedTL();syncDemoVis()});
+  document.getElementById('setMod').addEventListener('click',e=>{if(e.target.classList.contains('smod'))closeSet()});
+  if(window.matchMedia)window.matchMedia('(prefers-color-scheme:dark)').addEventListener('change',e=>{if(!localStorage.getItem('alertmap-theme'))applyTh(e.matches?'dark':'light')});
+});
+</script>
+</body>
+</html>

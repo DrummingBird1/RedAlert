@@ -1,0 +1,46 @@
+version: 2
+updates:
+  # Optional runtime deps (web-push, node-telegram-bot-api)
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Asia/Jerusalem
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - automated
+    commit-message:
+      prefix: deps
+      include: scope
+    groups:
+      production-deps:
+        patterns:
+          - '*'
+        exclude-patterns:
+          - 'eslint*'
+      dev-deps:
+        patterns:
+          - 'eslint*'
+
+  # GitHub Actions versions (uses: actions/checkout@vX, etc.)
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    labels:
+      - ci
+      - automated
+    commit-message:
+      prefix: ci
+
+  # Docker base image
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: monthly
+    labels:
+      - docker
+      - automated
