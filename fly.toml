@@ -1,0 +1,62 @@
+# fly.toml — Fly.io configuration for Israel Alert Map
+#
+# Initial setup (run once, locally):
+#   curl -L https://fly.io/install.sh | sh         # install flyctl
+#   flyctl auth signup                              # create account
+#   flyctl launch --copy-config --no-deploy         # creates the app + assigns URL
+#   flyctl secrets set ADMIN_PASS="$(openssl rand -hex 16)"
+#   flyctl deploy
+#
+# After initial deploy, every push to main triggers .github/workflows/deploy.yml
+# which runs `flyctl deploy --remote-only` using FLY_API_TOKEN.
+
+app = "red-alert"               # 👈 change to a globally-unique name (gets <name>.fly.dev)
+primary_region = "fra"          # Frankfurt — closest Fly region to Israel (~80ms)
+kill_signal = "SIGTERM"         # We have a SIGTERM handler that drains SSE + closes log
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "3000"
+  NODE_ENV = "production"
+
+# ── HTTP service ──────────────────────────────────────────────
+# auto_stop_machines=false is critical: alerts must be received 24/7. A stopped
+# machine misses OREF polls and Web Push delivery, defeating the app's purpose.
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+  [[http_service.checks]]
+    grace_period = "10s"
+    interval = "30s"
+    method = "GET"
+    timeout = "5s"
+    path = "/api/health"
+
+# ── VM size ──────────────────────────────────────────────────
+# 256MB is enough: ~50MB RSS at rest, +100MB headroom for SSE clients + push subs.
+# Bump cpus/memory if SSE connections > 500 or push subs > 10k.
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 256
+
+# ── Optional persistent volume ───────────────────────────────
+# Uncomment to persist VAPID keys + push subscriptions across deploys.
+# Without this, every deploy regenerates VAPID keys (existing push subscribers
+# silently break and need to re-subscribe).
+#
+# Step 1: flyctl volumes create alertmap_data --region fra --size 1
+# Step 2: uncomment the block below
+# Step 3: update server.js to write `.vapid-keys.json` and `.push-subs.json`
+#         under /app/data (or symlink). Currently they go to /app.
+#
+# [mounts]
+#   source = "alertmap_data"
+#   destination = "/app/data"

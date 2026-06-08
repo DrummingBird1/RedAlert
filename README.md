@@ -203,6 +203,76 @@ docker-compose logs -f
 
 ---
 
+## ☁️ פריסה ל-Fly.io (חינמי, אוטומטי מ-GitHub)
+
+הריפו כולל [fly.toml](fly.toml) ו-[.github/workflows/deploy.yml](.github/workflows/deploy.yml) — כל `git push` ל-`main` יפרוס אוטומטית.
+
+### setup חד-פעמי (3 דקות)
+
+```bash
+# 1. התקנת CLI + יצירת חשבון (חינמי, אישור באמצעות כרטיס בלי חיוב)
+curl -L https://fly.io/install.sh | sh     # macOS/Linux
+# או: iwr https://fly.io/install.ps1 -useb | iex   # Windows PowerShell
+flyctl auth signup
+
+# 2. יצירת האפליקציה ב-Fly (השם חייב להיות גלובלית-ייחודי; ערוך את fly.toml בהתאם)
+flyctl apps create red-alert        # → https://red-alert.fly.dev
+
+# 3. הגדרת secrets (לא ב-fly.toml — אלה מוצפנים)
+flyctl secrets set ADMIN_PASS="$(openssl rand -hex 16)"
+flyctl secrets set FALLBACK_ALERT_URLS=""    # אופציונלי
+flyctl secrets set HEALTH_WEBHOOK=""         # אופציונלי (Slack/Discord)
+
+# 4. יצירת deploy token לשימוש ב-GitHub Actions
+flyctl tokens create deploy -x 99999h
+# העתק את הפלט.
+
+# 5. ב-GitHub: Settings → Secrets and variables → Actions → New repository secret
+#    Name:  FLY_API_TOKEN
+#    Value: <ה-token מצעד 4>
+
+# 6. דחיפה ראשונה
+git push origin main
+```
+
+ה-workflow ירוץ ב-Actions tab, יבנה Docker image מ-`Dockerfile`, ידחוף ל-Fly, ויאמת `/api/health`. URL: `https://red-alert.fly.dev`.
+
+### למה Fly ולא Render/Railway/Heroku?
+
+- **SSE עובד מעולה** — חיבורים ארוכים, לא נחתכים
+- **`auto_stop_machines = false`** — ה-VM לא נרדם → אזעקות בזמן אמת
+- **HTTPS אוטומטי** — Web Push דורש זאת
+- **Frankfurt region** — ~80ms לישראל
+- **Free tier**: 3 VMs קטנים + 160GB egress/חודש (מספיק לטרפיק רגיל)
+
+### post-deploy hardening
+
+```bash
+# הגדל זיכרון לעומסים גדולים (default 256MB מספיק עד ~500 SSE clients):
+flyctl scale memory 512
+
+# פרוס בכמה regions:
+flyctl regions add waw ams        # Warsaw + Amsterdam
+flyctl scale count 2 --region fra # 2 VMs ב-Frankfurt
+
+# מעקב בזמן אמת:
+flyctl logs                       # streaming logs
+flyctl status                     # מצב VMs + checks
+flyctl dashboard                  # פותח את ה-UI ב-Fly
+```
+
+### Persistent volume (אופציונלי) — שמירת VAPID keys בין deploys
+
+ללא volume, בכל deploy ה-VAPID keys נוצרים מחדש → push subscribers ישנים מתנתקים בשקט. לפרודקשן מומלץ:
+
+```bash
+flyctl volumes create alertmap_data --region fra --size 1
+# ערוך fly.toml — בטל הערה ב-[mounts] בלוק
+# עדכן server.js שיכתוב VAPID + push-subs ל-/app/data
+```
+
+---
+
 ## 🔒 HTTPS (נדרש ל-Web Push)
 
 הדפדפן **לא מאפשר Web Push ב-HTTP** (חוץ מ-`localhost`). לפריסה ציבורית — שים reverse proxy מול השרת ב-`:3000`.

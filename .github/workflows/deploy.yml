@@ -1,0 +1,59 @@
+name: deploy
+
+# Auto-deploy to Fly.io on every push to main.
+# Prereqs (one-time, on your machine):
+#   1. flyctl auth signup            (create Fly.io account)
+#   2. flyctl apps create red-alert  (must match `app` field in fly.toml)
+#   3. flyctl tokens create deploy -x 99999h
+#   4. GitHub → Settings → Secrets and variables → Actions → New secret:
+#        Name: FLY_API_TOKEN
+#        Value: <output of step 3>
+#   5. flyctl secrets set ADMIN_PASS="$(openssl rand -hex 16)"  # production password
+#   6. Push to main → this workflow runs → app live at https://red-alert.fly.dev
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'CLAUDE.md'
+      - '.github/dependabot.yml'
+      - '.eslintrc.json'
+      - 'openapi.yaml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to Fly.io
+    runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-${{ github.ref }}
+      cancel-in-progress: false   # don't cancel in-flight deploys
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run unit tests before deploy
+        run: |
+          node --check server.js
+          node test.js
+
+      - name: Setup flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy to Fly.io
+        run: flyctl deploy --remote-only --wait-timeout=300
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Smoke-check production /api/health
+        run: |
+          sleep 5
+          URL=$(flyctl status --json | jq -r '.Hostname')
+          if [ -n "$URL" ]; then
+            curl --fail --silent --show-error "https://$URL/api/health" | head -c 300
+            echo ""
+            echo "✅ Live: https://$URL"
+          fi
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        continue-on-error: true
