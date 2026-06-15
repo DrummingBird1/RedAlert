@@ -7,7 +7,7 @@ LABEL org.opencontainers.image.licenses="MIT"
 WORKDIR /app
 
 # Copy app sources (everything needed at runtime)
-COPY server.js index.html openapi.yaml package.json ./
+COPY server.js index.html lib.js openapi.yaml package.json ./
 
 # Pre-create runtime dirs (logs rotates here; VAPID keys + push-subs live in /app root)
 RUN mkdir -p /app/logs

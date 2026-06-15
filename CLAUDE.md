@@ -14,9 +14,10 @@
 
 | קובץ | תפקיד |
 |---|---|
-| [server.js](server.js) | שרת HTTP יחיד — proxy ל-OREF, SSE, API, PWA assets, admin dashboard, Web Push, fallback, health webhook. ~213 שורות, **בנוי כקובץ אחד עם שורות צפופות מאוד** (one-liners מכוונים). |
-| [index.html](index.html) | קליינט מונוליטי — HTML + CSS + JS באותו קובץ (~368 שורות, חלקן ארוכות מאוד). כל המפה, ה-UI, i18n, IndexedDB, audio, TTS. |
-| [test.js](test.js) | בדיקות עצמאיות לפונקציות פניניות + smoke test לשרת. ללא תלויות. |
+| [server.js](server.js) | שרת HTTP יחיד — proxy ל-OREF, SSE, API, PWA assets, admin dashboard, Web Push, fallback, health webhook, store snapshot. **בנוי כקובץ אחד עם שורות צפופות מאוד** (one-liners מכוונים). |
+| [index.html](index.html) | קליינט מונוליטי — HTML + CSS + JS באותו קובץ. כל המפה, ה-UI, IndexedDB, audio, TTS. **טוען את [lib.js](lib.js) באופן סינכרוני** (`<script src="/lib.js">`) לפני הסקריפט הפנימי. |
+| [lib.js](lib.js) | **מקור-אמת יחיד** ל-data סטטי (`CITIES`, `LN`, `TM`, `RS`, `SHELTERS_DEFAULT`) ופונקציות פניניות (`escapeHtml`, `formatShelter`, `shelterClass`, `distanceKm`, `isDND`, `normalizeCity`, `fuzzyMatch`). UMD — עובד גם כ-`<script>` בדפדפן (גלובל `AlertLib`) וגם כ-`require('./lib.js')` ב-Node. הקליינט עוטף בשמות קצרים (`X`, `C`, `findC`...), הטסטים מייבאים ישירות. |
+| [test.js](test.js) | בדיקות יחידה ל-`lib.js` דרך `node:test`. ללא תלויות. |
 | [test-integration.js](test-integration.js) | E2E — מקים mock OREF + spawned server, מאמת אזעקה זורמת ל-`/api/alerts` + SSE + `/api/health`. |
 | [telegram-bot.js](telegram-bot.js) | בוט עצמאי — polling ל-`/api/alerts` ושליחה לערוץ טלגרם. |
 | [Dockerfile](Dockerfile) + [docker-compose.yml](docker-compose.yml) | בנייה ל-`node:20-alpine` עם healthcheck. |
@@ -26,6 +27,7 @@
 - `logs/alerts.log` — לוג אזעקות עם רוטציה (10MB × 5 קבצים)
 - `.vapid-keys.json` — מפתחות VAPID ל-Web Push (נוצרים בהפעלה ראשונה)
 - `.push-subs.json` — הרשמות Push
+- `.store-snapshot.json` — snapshot של היסטוריית האזעקות; נטען בהפעלה (כ-history בלבד, לא active) כדי לשרוד restart/redeploy
 
 ## פקודות הפעלה
 
@@ -95,7 +97,8 @@ npm run docker:run          # docker run -p 3000:3000 ...
 3. **הוספת עיר** — ערוך את `C` ב-`index.html` (שורה 213). פורמט: `"שם":{lat:X,lng:Y,r:"אזור",s:זמן_מיגון}`.
 4. **הוספת שפה** — הוסף ערך ל-`LN` ב-`index.html` (שורה 207) ול-`<select id="langS">`. וודא תיקון של `speak()` כדי לתמוך בקידומת השפה החדשה.
 5. **endpoint חדש** — הוסף `if (p === '/api/...')` ב-`server.js` ל-pipeline הקיים בתוך `http.createServer`. תזכור `track(p, code)` ו-`gz(req, res, body, ct)`.
-6. **בדיקות** — `test.js` משכפל ידנית פונקציות פניניות מהקליינט (אין import אמיתי כי הקליינט ב-HTML). אם משנים פונקציה חשובה ב-`index.html`, יש לעדכן עותק זהה ב-`test.js`. זה ידני וריבוי-source-of-truth.
+6. **בדיקות** — הפונקציות הפניניות חיות ב-[lib.js](lib.js) (מקור-אמת יחיד). הקליינט עוטף בשמות קצרים, ו-`test.js` מייבא `require('./lib.js')`. **אם משנים לוגיקה פנינית — עורכים את `lib.js`, וזהו.** אין יותר שכפול ידני.
+7. **הוספת data סטטי** (עיר/שפה/סוג אזעקה) — עורכים את האובייקטים ב-[lib.js](lib.js) (`CITIES`/`LN`/`TM`/`RS`). הקליינט מושך אותם דרך `AlertLib`. עיר ללא קואורדינטה (לא נמצאה ב-`fuzzyMatch`) מסומנת `noLoc:true` — **לא מוצב מרקר במיקום אקראי** (היא מופיעה ברשימה עם תווית "מיקום לא ידוע" בלבד).
 
 ## מוסכמות סגנון
 
@@ -147,7 +150,7 @@ npm run docker:run          # docker run -p 3000:3000 ...
 | [test.js](test.js) | unit (פונקציות פניניות) | `node:test` המובנה |
 | [test-integration.js](test-integration.js) | E2E (mock OREF → SSE) | ידני, ללא runner |
 
-`test.js` משכפל ידנית את הפונקציות מ-`index.html` (raison d'être של ה-`MEMORY.md` כי הקליינט הוא monolithic HTML). אם משנים `escapeHtml`/`formatShelter`/`shelterClass`/`distanceKm`/`isDND`/`normalizeCity`/`fuzzyMatch` ב-`index.html` — לעדכן גם ב-test.js.
+`test.js` מייבא את הפונקציות מ-[lib.js](lib.js) ישירות (`require('./lib.js')`) — אותו קובץ שהקליינט טוען. אין יותר שכפול: עריכה ב-`lib.js` משפיעה גם על הקליינט וגם על הטסטים. `shelterClass` ב-lib מחזיר `immediate/fast/medium/slow`; הקליינט ממפה ל-CSS suffix קצר (`imm/fast/med/slow`) דרך `SHC_MAP`. `formatShelter(s, labels)` מקבל את מחרוזות התרגום כפרמטר (הקליינט מעביר `t(...)`, הטסטים מעבירים עברית).
 
 ## API versioning
 

@@ -105,17 +105,24 @@ ADMIN_PASS=secret node server.js
 
 ```
 israel-alert-map/
-├── server.js           # שרת Node.js — proxy, SSE, API, PWA, admin
-├── index.html          # קליינט — מפה, UI, כל הלוגיקה
+├── server.js           # שרת Node.js — proxy, SSE, API, PWA, admin, snapshot
+├── index.html          # קליינט — מפה, UI, כל הלוגיקה (טוען lib.js)
+├── lib.js              # מקור-אמת יחיד: data + פונקציות פניניות (UMD; קליינט + טסטים)
 ├── package.json        # Metadata + npm scripts
+├── openapi.yaml        # OpenAPI 3.0.3 spec (מוגש ב-/api/spec)
 ├── Dockerfile          # Docker image + healthcheck
 ├── docker-compose.yml  # One-click deployment
+├── fly.toml            # Fly.io deployment config
 ├── telegram-bot.js     # בוט טלגרם (עצמאי)
-├── test.js             # 25+ בדיקות אוטומטיות
+├── test.js             # בדיקות יחידה (node:test) ל-lib.js
+├── test-integration.js # E2E: mock OREF → server → SSE
+├── .github/workflows/  # CI (tests) + deploy (Fly.io)
 ├── README.md           # אתה פה
 ├── LICENSE             # MIT
-└── .gitignore          # logs, secrets, node_modules
+└── .gitignore          # logs, secrets, snapshot, node_modules
 ```
+
+> 🗺️ **דיוק מיקום:** אזעקה לעיר שאינה במאגר הקואורדינטות (`lib.js` → `CITIES`) **לא מוצבת במיקום אקראי על המפה** — היא מופיעה ברשימה עם תווית "מיקום לא ידוע". זו אפליקציית בטיחות; מרקר במקום שגוי מטעה יותר ממרקר חסר.
 
 ---
 

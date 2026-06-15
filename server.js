@@ -119,6 +119,36 @@ const MAX_STORE = 5000, sseClients = new Set();
 const activeAlerts = new Map(); // id -> alert
 const POLL_BASE_MS = 2000, POLL_MAX_MS = 30000;
 let nextPollDelay = POLL_BASE_MS, pollTimer = null;
+let orefFormatMisses = 0, formatAlerted = false; // detect OREF JSON shape changes
+
+// ── Store snapshot (survive process restart) ─────────────────
+// Persists alert history to disk so a Fly VM restart / redeploy doesn't lose it.
+// Active alerts are NOT restored as active (they're ephemeral, 90s, and re-arrive from OREF).
+const SNAP_F = path.join(__dirname, '.store-snapshot.json');
+const SNAP_MAX = 2000; // cap persisted entries to keep the file small
+let snapTimer = null;
+function loadSnapshot() {
+  try {
+    if (!fs.existsSync(SNAP_F)) return;
+    const arr = JSON.parse(fs.readFileSync(SNAP_F, 'utf8'));
+    if (!Array.isArray(arr)) return;
+    store = arr.slice(0, MAX_STORE).map(e => ({ ...e, active: false }));
+    console.log(`♻️  Restored ${store.length} alerts from snapshot`);
+  } catch {}
+}
+function saveSnapshot() {
+  if (snapTimer) return;
+  snapTimer = setTimeout(() => { snapTimer = null; fs.writeFile(SNAP_F, JSON.stringify(store.slice(0, SNAP_MAX)), () => {}); }, 2000);
+}
+function noteFormatMiss() {
+  orefFormatMisses++;
+  if (orefFormatMisses >= 20 && !formatAlerted) {
+    formatAlerted = true;
+    console.warn('⚠️ OREF response shape unrecognized 20× — possible format change');
+    sendHealthWebhook('degraded', ['OREF response format may have changed (unrecognized JSON shape)']);
+  }
+}
+loadSnapshot();
 
 function fetchUrl(url, headers) { return new Promise((resolve, reject) => { const t0 = Date.now(); const mod = url.startsWith('https:') ? https : http; const req = mod.get(url, { headers: headers || OREF_H }, r => { const ch = []; r.on('data', c => ch.push(c)); r.on('end', () => { M.latMs = Date.now() - t0; let b = Buffer.concat(ch).toString('utf8'); if (b.charCodeAt(0) === 0xFEFF) b = b.slice(1); resolve({ status: r.statusCode, body: b }); }); }); req.on('error', reject); req.setTimeout(5000, () => { req.destroy(); reject(new Error('timeout')); }); }); }
 
@@ -130,15 +160,19 @@ async function pollAlerts() {
     // Send OREF-specific headers only to OREF; use minimal generic headers for fallback URLs
     const headers = useFallback ? { 'Accept': 'application/json', 'User-Agent': 'alertmap/3.0' } : OREF_H;
     const { status, body } = await fetchUrl(targetUrl, headers);
-    if (status !== 200 || !body || body.trim().length < 3) { orefFail(); return; }
-    let parsed; try { parsed = JSON.parse(body); } catch { return; }
-    let areas = [], type = 'rockets', title = '';
+    if (status !== 200) { orefFail(); return; }
+    const markHealthy = () => { lastPoll = Date.now(); orefFails = 0; nextPollDelay = POLL_BASE_MS; if (useFB) { useFB = false; console.log('✅ OREF back'); } };
+    // 200 + empty/whitespace body = OREF healthy but no active alerts (NOT a failure)
+    if (!body || body.trim().length < 3) { markHealthy(); return; }
+    let parsed; try { parsed = JSON.parse(body); } catch { noteFormatMiss(); orefFail(); return; }
+    let areas = [], type = 'rockets', title = '', recognized = false;
     if (parsed && typeof parsed === 'object') {
-      if (parsed.data && Array.isArray(parsed.data)) { areas = parsed.data; title = parsed.title || ''; const c = String(parsed.cat); if (c === '2') type = 'uav'; else if (c === '3') type = 'earthquake'; else if (c === '6') type = 'tsunami'; }
-      else if (Array.isArray(parsed)) areas = parsed.filter(a => typeof a === 'string');
+      if (Array.isArray(parsed.data)) { recognized = true; areas = parsed.data; title = parsed.title || ''; const c = String(parsed.cat); if (c === '2') type = 'uav'; else if (c === '3') type = 'earthquake'; else if (c === '6') type = 'tsunami'; }
+      else if (Array.isArray(parsed)) { recognized = true; areas = parsed.filter(a => typeof a === 'string'); }
     }
-    lastPoll = Date.now(); orefFails = 0; nextPollDelay = POLL_BASE_MS;
-    if (useFB) { useFB = false; console.log('✅ OREF back'); }
+    if (!recognized) { noteFormatMiss(); orefFail(); return; } // 200 + parseable but unknown shape
+    orefFormatMisses = 0; formatAlerted = false;
+    markHealthy();
     if (!areas.length) return;
     const hash = JSON.stringify([...areas].sort());
     if (hash === lastHash) return;
@@ -147,6 +181,7 @@ async function pollAlerts() {
     const cleanTitle = typeof title === 'string' ? title.replace(/[<>]/g, '').slice(0, 200) : '';
     areas.forEach(city => { const safeCity = String(city).trim().slice(0, 100); const e = { id: crypto.randomUUID(), city: safeCity, type, title: cleanTitle, timestamp: now, active: true }; store.unshift(e); activeAlerts.set(e.id, e); newIds.push(e.id); newEntries.push(e); M.alerts++; });
     logBatch(newEntries);
+    saveSnapshot();
     setTimeout(() => { newIds.forEach(id => { const e = store.find(a => a.id === id); if (e) e.active = false; activeAlerts.delete(id); }); }, 90000);
     if (store.length > MAX_STORE) store = store.slice(0, MAX_STORE);
     console.log(`\x1b[31m🚨 ${cleanTitle || type} — ${areas.join(', ')}\x1b[0m`);
@@ -220,10 +255,38 @@ function gz(req, res, data, ct, sc = 200) { const ae = req.headers['accept-encod
 let htmlCache = null, htmlMt = 0;
 function getHtml() { const p = path.join(__dirname, 'index.html'); try { const s = fs.statSync(p); if (!htmlCache || s.mtimeMs !== htmlMt) { htmlCache = fs.readFileSync(p, 'utf8'); htmlMt = s.mtimeMs; } return htmlCache; } catch { return null; } }
 
+// ── lib.js cache (shared data + pure functions; also required by test.js) ──
+let libCache = null, libMt = 0;
+function getLib() { const p = path.join(__dirname, 'lib.js'); try { const s = fs.statSync(p); if (!libCache || s.mtimeMs !== libMt) { libCache = fs.readFileSync(p, 'utf8'); libMt = s.mtimeMs; } return libCache; } catch { return null; } }
+
 // ── PWA ─────────────────────────────────────────────────────
 const MANIFEST = JSON.stringify({ name: 'מפת אזעקות ישראל', short_name: 'אזעקות', description: 'ניטור אזעקות בזמן אמת', start_url: '/', display: 'standalone', background_color: '#0a0e17', theme_color: '#ef4444', orientation: 'any', lang: 'he', dir: 'rtl', icons: [{ src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' }] }, null, 2);
 // NOTE: bump CN whenever the client (index.html) or SW logic changes, otherwise users keep cached version
-const SW = `const CN='red-alert-v6',AS=['/','/index.html','/manifest.json','/icon.svg'],CDN=['https://unpkg.com/leaflet@1.9.4/dist/leaflet.css','https://unpkg.com/leaflet@1.9.4/dist/leaflet.js','https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css','https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css','https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js'];self.addEventListener('install',e=>{e.waitUntil((async()=>{const c=await caches.open(CN);await Promise.allSettled(AS.map(u=>c.add(u)));Promise.allSettled(CDN.map(u=>c.add(new Request(u,{mode:'no-cors'}))))})());self.skipWaiting()});self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CN).map(k=>caches.delete(k)))));self.clients.claim()});self.addEventListener('fetch',e=>{const u=new URL(e.request.url);if(u.pathname.startsWith('/api/'))return;e.respondWith(fetch(e.request).then(r=>{if(r.ok&&e.request.method==='GET'){const c=r.clone();caches.open(CN).then(ca=>ca.put(e.request,c)).catch(()=>{});}return r}).catch(()=>caches.match(e.request).then(r=>r||caches.match('/'))))});self.addEventListener('push',e=>{if(!e.data)return;try{const d=e.data.json();e.waitUntil(self.registration.showNotification(d.title||'🚨',{body:d.body||'',icon:d.icon||'/icon.svg',tag:d.tag||'alert',requireInteraction:!d.silent,silent:!!d.silent,vibrate:d.silent?undefined:[300,100,300,100,600],actions:[{action:'view',title:'מפה'},{action:'dismiss',title:'סגור'}]}))}catch{}});self.addEventListener('notificationclick',e=>{e.notification.close();if(e.action==='dismiss')return;e.waitUntil(clients.matchAll({type:'window'}).then(cls=>{for(const c of cls)if(c.url.includes(self.location.origin))return c.focus();return clients.openWindow('/')}))});`;
+const SW = `
+const CN='red-alert-v7';
+const TILE='red-alert-tiles-v1';
+const AS=['/','/index.html','/lib.js','/manifest.json','/icon.svg'];
+const CDN=['https://unpkg.com/leaflet@1.9.4/dist/leaflet.css','https://unpkg.com/leaflet@1.9.4/dist/leaflet.js','https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css','https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css','https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js'];
+self.addEventListener('install',e=>{e.waitUntil((async()=>{const c=await caches.open(CN);await Promise.allSettled(AS.map(u=>c.add(u)));Promise.allSettled(CDN.map(u=>c.add(new Request(u,{mode:'no-cors'}))))})());self.skipWaiting()});
+self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CN&&k!==TILE).map(k=>caches.delete(k)))));self.clients.claim()});
+self.addEventListener('fetch',e=>{
+  const u=new URL(e.request.url);
+  if(e.request.method!=='GET'||u.pathname.startsWith('/api/'))return;
+  // Map basemap tiles → cache-first so previously-viewed areas work offline (capped ~500 tiles)
+  if(u.hostname.endsWith('basemaps.cartocdn.com')){
+    e.respondWith((async()=>{
+      const c=await caches.open(TILE);
+      const hit=await c.match(e.request);
+      if(hit)return hit;
+      try{const r=await fetch(e.request);c.put(e.request,r.clone());c.keys().then(ks=>{if(ks.length>500)c.delete(ks[0])});return r;}
+      catch(err){return hit||Response.error();}
+    })());
+    return;
+  }
+  e.respondWith(fetch(e.request).then(r=>{if(r.ok){const c=r.clone();caches.open(CN).then(ca=>ca.put(e.request,c)).catch(()=>{});}return r}).catch(()=>caches.match(e.request).then(r=>r||caches.match('/'))));
+});
+self.addEventListener('push',e=>{if(!e.data)return;try{const d=e.data.json();e.waitUntil(self.registration.showNotification(d.title||'🚨',{body:d.body||'',icon:d.icon||'/icon.svg',tag:d.tag||'alert',requireInteraction:!d.silent,silent:!!d.silent,vibrate:d.silent?undefined:[300,100,300,100,600],actions:[{action:'view',title:'מפה'},{action:'dismiss',title:'סגור'}]}))}catch{}});
+self.addEventListener('notificationclick',e=>{e.notification.close();if(e.action==='dismiss')return;e.waitUntil(clients.matchAll({type:'window'}).then(cls=>{for(const c of cls)if(c.url.includes(self.location.origin))return c.focus();return clients.openWindow('/')}))});`;
 const ICON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><radialGradient id="bg" cx="50%" cy="40%" r="60%"><stop offset="0%" stop-color="#1a2236"/><stop offset="100%" stop-color="#0a0e17"/></radialGradient><radialGradient id="dot" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#fef2f2"/><stop offset="60%" stop-color="#ef4444"/><stop offset="100%" stop-color="#991b1b"/></radialGradient></defs><rect width="512" height="512" rx="100" fill="url(#bg)"/><circle cx="256" cy="256" r="200" fill="none" stroke="#ef4444" stroke-width="4" opacity="0.3"/><circle cx="256" cy="256" r="160" fill="none" stroke="#ef4444" stroke-width="4" opacity="0.5"/><circle cx="256" cy="256" r="120" fill="none" stroke="#ef4444" stroke-width="4" opacity="0.7"/><circle cx="256" cy="256" r="80" fill="url(#dot)"/><circle cx="256" cy="256" r="20" fill="#fff"/></svg>`;
 
 // ── Prometheus metrics text format ───────────────────────────
@@ -293,6 +356,7 @@ const server = http.createServer(async (req, res) => {
   if (p === '/sw.js') { res.setHeader('Service-Worker-Allowed', '/'); res.setHeader('Cache-Control', 'no-cache'); track(p, 200); return gz(req, res, SW, 'application/javascript; charset=utf-8'); }
   if (p === '/embed.js') { res.setHeader('Cache-Control', 'public, max-age=3600'); track(p, 200); return gz(req, res, EMBED_JS, 'application/javascript; charset=utf-8'); }
   if (p === '/icon.svg' || p === '/favicon.ico') { res.setHeader('Cache-Control', 'public, max-age=86400'); track(p, 200); return gz(req, res, ICON, 'image/svg+xml; charset=utf-8'); }
+  if (p === '/lib.js') { const lib = getLib(); if (lib) { res.setHeader('Cache-Control', 'no-cache'); track(p, 200); return gz(req, res, lib, 'application/javascript; charset=utf-8'); } track(p, 404); res.writeHead(404); return res.end('// lib.js not found'); }
 
   if (p === '/api/push/vapid-key') { track(p, 200); return gz(req, res, JSON.stringify({ publicKey: vapidKeys?.publicKey || null, available: !!webpush }), 'application/json; charset=utf-8'); }
   if (p === '/api/push/subscribe' && req.method === 'POST') { try { if (!webpush) { track(p, 503); res.writeHead(503); return res.end('{"error":"web-push not available on server"}'); } const b = await parseBody(req); const sub = b.subscription || b; if (!sub?.endpoint) throw new Error('no endpoint'); const favs = Array.isArray(b.favs) ? b.favs.map(c => String(c).slice(0, 100)).slice(0, 200) : []; pushSubs.set(sub.endpoint, { sub, favs, dnd: !!b.dnd }); saveSubs(); track(p, 201); res.writeHead(201, { 'Content-Type': 'application/json' }); return res.end('{"ok":true}'); } catch (e) { track(p, 400); res.writeHead(400); return res.end(`{"error":"${String(e.message).replace(/"/g,"'")}"}`); } }
@@ -339,6 +403,8 @@ function shutdown(signal) {
   shuttingDown = true;
   console.log(`\n📴 ${signal} received — shutting down gracefully`);
   if (pollTimer) clearTimeout(pollTimer);
+  if (snapTimer) clearTimeout(snapTimer);
+  try { fs.writeFileSync(SNAP_F, JSON.stringify(store.slice(0, SNAP_MAX))); } catch {} // final flush
   sseClients.forEach(cl => { try { cl.res.end(); } catch {} });
   sseClients.clear();
   activeAlerts.clear();

@@ -8,6 +8,7 @@ logs/
 # Secrets & generated data
 .vapid-keys.json
 .push-subs.json
+.store-snapshot.json
 
 # Environment
 .env
