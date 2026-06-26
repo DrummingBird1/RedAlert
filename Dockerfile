@@ -1,4 +1,4 @@
-FROM node:20-alpine
+FROM node:26-alpine
 LABEL org.opencontainers.image.title="Israel Alert Map"
 LABEL org.opencontainers.image.description="Real-time Pikud HaOref alert monitoring"
 LABEL org.opencontainers.image.source="https://github.com/DrummingBird1/RedAlert"
