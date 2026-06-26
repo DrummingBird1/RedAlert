@@ -16,7 +16,11 @@ const LOG_DIR = path.join(__dirname, 'logs');
 const LOG_FILE = path.join(LOG_DIR, 'alerts.log');
 const SERVER_START = Date.now();
 const ADMIN_USER = process.env.ADMIN_USER || 'admin';
-const ADMIN_PASS = process.env.ADMIN_PASS || 'admin123';
+// Security: never ship a hardcoded default password. If ADMIN_PASS is unset,
+// generate a strong random one at boot and print it once (see startup banner).
+let ADMIN_PASS = process.env.ADMIN_PASS;
+const ADMIN_PASS_GENERATED = !ADMIN_PASS;
+if (ADMIN_PASS_GENERATED) ADMIN_PASS = crypto.randomBytes(12).toString('base64url');
 const HEALTH_WEBHOOK = process.env.HEALTH_WEBHOOK || ''; // URL to POST when health degrades
 const SHELTERS_URL = process.env.SHELTERS_URL || ''; // Optional external shelters JSON (e.g. data.gov.il export)
 
@@ -263,7 +267,7 @@ function getLib() { const p = path.join(__dirname, 'lib.js'); try { const s = fs
 const MANIFEST = JSON.stringify({ name: 'מפת אזעקות ישראל', short_name: 'אזעקות', description: 'ניטור אזעקות בזמן אמת', start_url: '/', display: 'standalone', background_color: '#0a0e17', theme_color: '#ef4444', orientation: 'any', lang: 'he', dir: 'rtl', icons: [{ src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' }] }, null, 2);
 // NOTE: bump CN whenever the client (index.html) or SW logic changes, otherwise users keep cached version
 const SW = `
-const CN='red-alert-v7';
+const CN='red-alert-v8';
 const TILE='red-alert-tiles-v1';
 const AS=['/','/index.html','/lib.js','/manifest.json','/icon.svg'];
 const CDN=['https://unpkg.com/leaflet@1.9.4/dist/leaflet.css','https://unpkg.com/leaflet@1.9.4/dist/leaflet.js','https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css','https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css','https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js'];
@@ -386,11 +390,17 @@ server.on('error', err => { if (err.code === 'EADDRINUSE') { console.error(`❌ 
 server.listen(PORT, () => {
   console.log(`\n╔═══════════════════════════════════════════════╗`);
   console.log(`║  🚨 Alert Map v3 — http://localhost:${PORT}         ║`);
-  console.log(`║  🛡️  /admin (${ADMIN_USER}:${ADMIN_PASS})                    ║`);
+  console.log(`║  🛡️  /admin user: ${ADMIN_USER}                         ║`);
   console.log(`║  📡 web-push: ${webpush ? '✅' : '❌ npm i web-push'}                   ║`);
   console.log(`║  🔄 Fallback: ${FB_URL ? '✅' : '❌ set FALLBACK_ALERT_URL'}          ║`);
   console.log(`║  📣 Health WH: ${HEALTH_WEBHOOK ? '✅' : '❌ set HEALTH_WEBHOOK'}         ║`);
-  console.log(`╚═══════════════════════════════════════════════╝\n`);
+  console.log(`╚═══════════════════════════════════════════════╝`);
+  if (ADMIN_PASS_GENERATED) {
+    console.log(`\n  🔑 Generated admin password (set ADMIN_PASS to override): \x1b[1;33m${ADMIN_PASS}\x1b[0m`);
+    console.log(`     Save it now — it changes on every restart until you set ADMIN_PASS.\n`);
+  } else {
+    console.log(`\n  🔑 /admin password: set via ADMIN_PASS env (hidden)\n`);
+  }
 });
 
 // Kick off self-paced polling (no overlap, with exponential backoff on failures)

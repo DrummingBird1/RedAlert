@@ -161,7 +161,7 @@ israel-alert-map/
 |---|---|---|
 | `PORT` | `3000` | פורט השרת |
 | `ADMIN_USER` | `admin` | שם משתמש לאדמין |
-| `ADMIN_PASS` | `admin123` | סיסמת אדמין |
+| `ADMIN_PASS` | *(אקראי)* | סיסמת אדמין. אם לא מוגדרת — השרת **מגריל סיסמה חזקה בהפעלה** ומדפיס אותה פעם אחת ללוג (משתנה בכל restart עד שתגדיר ערך קבוע). |
 | `FALLBACK_ALERT_URL` | (ריק) | URL חלופי לאזעקות (יחיד, legacy) |
 | `FALLBACK_ALERT_URLS` | (ריק) | רשימת URLs מופרדת בפסיק — sequence של mirrors. אם הראשון נכשל 5 פעמים השרת מסתובב לבא בתור |
 | `HEALTH_WEBHOOK` | (ריק) | URL ל-POST כשהמערכת degraded |
@@ -408,6 +408,22 @@ scrape_configs:
 | `?embed=1` | `?embed=1` | מצב iframe מצומצם |
 
 כפתור 🔗 בטאב "אודות" משתמש ב-`navigator.share` או clipboard.
+
+---
+
+## 💛 תמיכה בפרויקט / Support
+
+הפרויקט חינמי וקוד פתוח. אם הוא עוזר לכם — אפשר לתמוך ב-Patreon כדי לכסות שרתים ופיתוח:
+
+**[❤️ patreon.com/cw/MrIdan](https://www.patreon.com/cw/MrIdan)**
+
+כפתור התרומה מופיע גם בטאב "אודות" באפליקציה (דו-לשוני). להחלפת הקישור — ערכו את `PATREON_URL` ב-[index.html](index.html) (מחרוזת ריקה מסתירה את הכרטיס).
+
+---
+
+## 🔒 אבטחה
+
+ראו [SECURITY.md](SECURITY.md) — נוהל דיווח פגיעויות, checklist hardening לפריסה ציבורית, והחלטות עיצוב מכוונות (CORS פתוח, CSP עם `unsafe-inline`).
 
 ---
 

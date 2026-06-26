@@ -9,7 +9,9 @@ services:
     environment:
       - PORT=3000
       - ADMIN_USER=${ADMIN_USER:-admin}
-      - ADMIN_PASS=${ADMIN_PASS:-changeme}
+      # Leave ADMIN_PASS unset to let the server generate a random one (printed in logs),
+      # or set it in a .env file / your shell for a stable password.
+      - ADMIN_PASS=${ADMIN_PASS:-}
       - FALLBACK_ALERT_URL=${FALLBACK_ALERT_URL:-}
       - TELEGRAM_TOKEN=${TELEGRAM_TOKEN:-}
       - TELEGRAM_CHANNEL=${TELEGRAM_CHANNEL:-}
