@@ -33,7 +33,7 @@ html.high-contrast .sm .md{background:#3b82f6;border-color:#fff;border-radius:2p
 .logo h1{font-family:'Rubik';font-size:15px;font-weight:700}.logo span{font-size:9px;color:var(--txtm)}
 .hl{display:flex;align-items:center;gap:5px}
 .badge{display:flex;align-items:center;gap:5px;padding:3px 9px;border-radius:14px;font-size:10px;font-weight:500;border:1px solid var(--brd);background:rgba(255,255,255,.03)}
-.badge .dot{width:6px;height:6px;border-radius:50%;background:var(--green)}.badge.live .dot{animation:bl 1.5s infinite}
+.badge .dot{width:6px;height:6px;border-radius:50%;background:var(--green)}.badge.connecting .dot{animation:bl 1.5s infinite}
 .badge.alert-on{background:rgba(239,68,68,.12);border-color:var(--brda);color:var(--red);animation:abp 1s infinite}
 @keyframes bl{0%,100%{opacity:1}50%{opacity:.3}}@keyframes abp{0%,100%{background:rgba(239,68,68,.12)}50%{background:rgba(239,68,68,.25)}}
 .cnt{padding:3px 7px;border-radius:5px;font-size:9px;background:rgba(255,255,255,.04);border:1px solid var(--brd);display:flex;align-items:center;gap:3px}
@@ -209,6 +209,11 @@ html.light .skel{background:linear-gradient(90deg,rgba(0,0,0,.04) 25%,rgba(0,0,0
 .mn-b.active{color:var(--red)}.mn-b .ni{font-size:17px}
 .ms{display:none;position:fixed;bottom:50px;left:0;right:0;top:54px;background:var(--bg2);z-index:1400;overflow-y:auto;transform:translateY(100%);transition:transform .3s}
 .ms.open{transform:translateY(0)}
+/* Pull-to-refresh indicator (mobile sheet only; touch-driven, see initPTR) */
+.ptr-ind{display:none;position:fixed;top:54px;left:50%;transform:translateX(-50%) translateY(-40px);width:32px;height:32px;border-radius:50%;background:var(--bgc);border:1px solid var(--brd);align-items:center;justify-content:center;font-size:14px;z-index:1450;box-shadow:0 4px 12px rgba(0,0,0,.3)}
+.ptr-ind.show{display:flex}
+.ptr-ind.spin{animation:ptrspin .6s linear infinite}
+@keyframes ptrspin{to{transform:translateX(-50%) translateY(10px) rotate(360deg)}}
 
 @media(max-width:768px){.sb{display:none}#map,.overlay,.banner,.defense,.offline{right:0}#map{bottom:50px}.mn{display:flex}.hdr{padding:0 8px}.cnt{display:none!important}.ci{right:6px;bottom:66px}.mc{bottom:66px;left:8px}.tb{bottom:62px}}
 /* Embed mode — minimal chrome for iframe embedding */
@@ -225,7 +230,7 @@ html.embed .defense.below-banner{top:38px!important}
   <div class="hl">
     <div class="cnt"><span>היום</span><span class="n" id="todayC" style="color:var(--red)">0</span></div>
     <div class="cnt"><span>סה״כ</span><span class="n" id="totalC" style="color:var(--orange)">0</span></div>
-    <div class="badge live" id="sBadge" role="status" aria-live="polite"><div class="dot"></div><span id="sText">מתחבר...</span></div>
+    <div class="badge connecting" id="sBadge" role="status" aria-live="polite"><div class="dot"></div><span id="sText">מתחבר...</span></div>
     <button class="ib" onclick="tglPush()" id="pushB" aria-label="התראות Push">🔔</button>
     <button class="btn" onclick="tglSnd()" id="sndB" aria-label="השתק/הפעל צליל">🔊</button>
     <button class="btn btn-d" onclick="demo()" id="demoB" style="display:none" aria-label="הרץ הדגמה">▶</button>
@@ -241,6 +246,7 @@ html.embed .defense.below-banner{top:38px!important}
 <div class="sb"><div class="stabs" role="tablist"><div class="stab active" role="tab" onclick="swTab('alerts',this)">🔔 אזעקות</div><div class="stab" role="tab" onclick="swTab('stats',this)">📊</div><div class="stab" role="tab" onclick="swTab('about',this)">ℹ️</div></div><div class="sc" id="sbC"></div></div>
 <div class="mn"><div class="mn-i"><button class="mn-b active" onclick="mobTab('alerts',this)"><span class="ni">🔔</span>אזעקות</button><button class="mn-b" onclick="mobTab('stats',this)"><span class="ni">📊</span>סטטיסטיקה</button><button class="mn-b" onclick="mobTab('about',this)"><span class="ni">ℹ️</span>אודות</button><button class="mn-b" onclick="openSet()"><span class="ni">⚙️</span>הגדרות</button></div></div>
 <div class="ms" id="mSheet"></div>
+<div class="ptr-ind" id="ptrInd" aria-hidden="true">🔄</div>
 <div class="mc" role="toolbar" aria-label="פעולות מפה"><button class="mb" onclick="map.setView([31.5,34.8],8)" aria-label="חזור למבט בית">🏠</button><button class="mb" onclick="geoLoc()" id="geoB" aria-label="המיקום שלי">📍</button><button class="mb" onclick="manualRefresh()" aria-label="רענון">🔄</button><button class="mb" onclick="tglHeat()" id="heatB" aria-label="מפת חום">🔥</button><button class="mb" onclick="tglCls()" id="clsB" aria-label="קיבוץ מרקרים">🧲</button><button class="mb" onclick="tglShl()" id="shlB" aria-label="מקלטים">🏛️</button><button class="mb" onclick="clrHist()" aria-label="מחק היסטוריה">🗑️</button></div>
 <div class="ci" id="cInfo">⏳</div>
 <div class="tb" id="tBox"></div>
@@ -292,7 +298,12 @@ let shlV=false,shlM=[],sirOsc=null,sirG=null,sirIV=null,cdIV=null;
 let wakeLock=null,snoozeUntil=0,preloadDone=false;
 async function acquireWakeLock(){try{if('wakeLock' in navigator&&!wakeLock){wakeLock=await navigator.wakeLock.request('screen');wakeLock.addEventListener('release',()=>{wakeLock=null})}}catch{}}
 function releaseWakeLock(){try{if(wakeLock)wakeLock.release()}catch{}wakeLock=null}
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&act.size>0)acquireWakeLock()});
+// requestAnimationFrame (which schedUI/updUI rely on) is throttled/paused while the tab
+// is hidden, so DOM state (banner/badge classes) can go stale while backgrounded — e.g. an
+// alert that ended while the tab was in the background still LOOKS active/blinking until
+// something repaints. Force a full, synchronous UI resync the moment the tab is visible
+// again so nothing is ever stuck showing a stale state.
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){if(act.size>0)acquireWakeLock();updUI()}});
 function isSnoozed(){return Date.now()<snoozeUntil}
 function isMuted(){return!sndOn||isDND2()||isSnoozed()}
 function snooze(min){snoozeUntil=Date.now()+min*60000;localStorage.setItem('alertmap-snooze',String(snoozeUntil));updSnoozeUI();stopSir();try{speechSynthesis.cancel()}catch{}toast(`🔕 ${min}${t('min')}`,'info')}
@@ -339,7 +350,7 @@ window.addEventListener('offline',()=>{document.getElementById('offBar').classLi
 window.addEventListener('online',()=>{document.getElementById('offBar').classList.remove('active');connectSSE()});
 
 // SSE
-function connectSSE(){if(reconTO){clearTimeout(reconTO);reconTO=null}if(es){es.onopen=es.onmessage=es.onerror=null;es.close();es=null}sseOK=false;const ci=document.getElementById('cInfo');ci.className='ci dc';ci.textContent='⏳';try{es=new EventSource(`${API}/api/stream`)}catch{schedR();return}es.onopen=()=>{sseOK=true;ci.className='ci ok';ci.textContent='🟢 SSE';setSt('live','מחובר')};es.onmessage=e=>{try{const d=JSON.parse(e.data);if(d.type==='init'||d.type==='update')procSA(d.alerts||[])}catch{}};es.onerror=()=>{sseOK=false;ci.className='ci dc';ci.textContent='🟡';setSt('disconnected','מנותק');if(es){es.onopen=es.onmessage=es.onerror=null;es.close();es=null}schedR()}}
+function connectSSE(){if(reconTO){clearTimeout(reconTO);reconTO=null}if(es){es.onopen=es.onmessage=es.onerror=null;es.close();es=null}sseOK=false;setSt('connecting','מתחבר...');const ci=document.getElementById('cInfo');ci.className='ci dc';ci.textContent='⏳';try{es=new EventSource(`${API}/api/stream`)}catch{schedR();return}es.onopen=()=>{sseOK=true;ci.className='ci ok';ci.textContent='🟢 SSE';setSt('live','מחובר')};es.onmessage=e=>{try{const d=JSON.parse(e.data);if(d.type==='init'||d.type==='update')procSA(d.alerts||[])}catch{}};es.onerror=()=>{sseOK=false;ci.className='ci dc';ci.textContent='🟡';setSt('disconnected','מנותק');if(es){es.onopen=es.onmessage=es.onerror=null;es.close();es=null}schedR()}}
 function schedR(){if(reconTO)return;reconTO=setTimeout(()=>{reconTO=null;connectSSE()},3000)}
 function startPoll(){setInterval(async()=>{if(sseOK)return;try{const r=await fetch(`${API}/api/alerts`);const d=await r.json();procSA(d.alerts||[])}catch{}},5000)}
 
@@ -467,11 +478,25 @@ let setPrevFocus=null;
 function trapFocus(e){if(e.key!=='Tab')return;const box=document.querySelector('#setMod .sbox');const f=box.querySelectorAll('button,select,input,a[href],[tabindex]:not([tabindex="-1"])');if(!f.length)return;const first=f[0],last=f[f.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}}
 function openSet(){const m=document.getElementById('setMod');setPrevFocus=document.activeElement;m.classList.add('open');m.addEventListener('keydown',trapFocus);const f=m.querySelector('button,select,input');if(f)setTimeout(()=>f.focus(),50)}
 function closeSet(){const m=document.getElementById('setMod');m.classList.remove('open');m.removeEventListener('keydown',trapFocus);if(setPrevFocus&&setPrevFocus.focus){try{setPrevFocus.focus()}catch{}}}
-function demo(){if(isDem){isDem=false;if(demTO){clearTimeout(demTO);demTO=null}document.getElementById('demoB').classList.remove('active');return}isDem=true;document.getElementById('demoB').classList.add('active');['שדרות','אשקלון','באר שבע','תל אביב'].forEach((c,i)=>setTimeout(()=>{if(isDem)createL(c)},i*700));const cn=Object.keys(C);let n=0;function nx(){if(n++>=10||!isDem){isDem=false;document.getElementById('demoB').classList.remove('active');return}createL(cn[Math.floor(Math.random()*cn.length)],Math.random()>.8?'uav':'rockets');demTO=setTimeout(nx,3000+Math.random()*4000)}demTO=setTimeout(nx,3500)}
+// Force-deactivate any demo-created (local-*) alerts so the red banner/badge/overlay stop immediately
+// instead of waiting out each alert's independent 90s decay timer (deactA is a safe no-op if already inactive).
+function stopDemoAlerts(){[...act.keys()].filter(id=>id.startsWith('local-')).forEach(id=>deactA(id))}
+function demo(){if(isDem){isDem=false;if(demTO){clearTimeout(demTO);demTO=null}document.getElementById('demoB').classList.remove('active');stopDemoAlerts();return}isDem=true;document.getElementById('demoB').classList.add('active');['שדרות','אשקלון','באר שבע','תל אביב'].forEach((c,i)=>setTimeout(()=>{if(isDem)createL(c)},i*700));const cn=Object.keys(C);let n=0;function nx(){if(n++>=10||!isDem){isDem=false;document.getElementById('demoB').classList.remove('active');stopDemoAlerts();return}createL(cn[Math.floor(Math.random()*cn.length)],Math.random()>.8?'uav':'rockets');demTO=setTimeout(nx,3000+Math.random()*4000)}demTO=setTimeout(nx,3500)}
 function tglHeat(){heatV=!heatV;document.getElementById('heatB').classList.toggle('active');if(heatV){const r={};hist.forEach(a=>{if(a.noLoc||a.lat==null)return;const k=`${a.lat.toFixed(2)},${a.lng.toFixed(2)}`;r[k]=r[k]||{lat:a.lat,lng:a.lng,c:0};r[k].c++});Object.values(r).forEach(v=>{heatC.push(L.circle([v.lat,v.lng],{radius:v.c*2000,color:'transparent',fillColor:'#ef4444',fillOpacity:Math.min(.1+v.c*.05,.5)}).addTo(map))})}else{heatC.forEach(c=>map.removeLayer(c));heatC=[]}}
 async function clrIDB(){try{const d=await odb();await new Promise(res=>{const r=d.transaction(DBS,'readwrite').objectStore(DBS).clear();r.onsuccess=()=>res();r.onerror=()=>res()});d.close()}catch{}}
 function clrHist(){const n=hist.length;if(n>0&&!confirm(`למחוק את כל ההיסטוריה (${n} פריטים)?\nפעולה זו לא ניתנת לביטול.`))return;hist=[];act.clear();known.clear();mrk.forEach(m=>{if(clsG&&clsG.hasLayer(m))clsG.removeLayer(m);if(map.hasLayer(m))map.removeLayer(m)});mrk.clear();heatC.forEach(c=>map.removeLayer(c));heatC=[];heatV=false;document.getElementById('heatB').classList.remove('active');if(sirOn)stopSir();releaseWakeLock();updDef();updUI();schedTL();clrIDB().then(()=>schedTL());toast('🗑️')}
 function manualRefresh(){toast('🔄 רענון...','info');if(!sseOK)connectSSE();fetch(`${API}/api/alerts`).then(r=>r.json()).then(d=>procSA(d.alerts||[])).catch(()=>{});preloadHistory()}
+
+// Pull-to-refresh — touch-only, scoped to the mobile bottom sheet. Only arms when the
+// sheet is already scrolled to top (so it never fights normal scrolling), and only fires
+// manualRefresh() past a distance threshold on release.
+let ptrStartY=0,ptrDist=0,ptrActive=false,ptrRefreshing=false;
+function ptrReset(){const ind=document.getElementById('ptrInd');ind.classList.remove('show','spin');ind.style.transform='translateX(-50%) translateY(-40px)';ptrDist=0;ptrActive=false}
+function initPTR(){const sheet=document.getElementById('mSheet'),ind=document.getElementById('ptrInd');if(!sheet||!ind)return;const THRESH=60,MAX=100;
+  sheet.addEventListener('touchstart',e=>{if(sheet.scrollTop>0||ptrRefreshing)return;ptrStartY=e.touches[0].clientY;ptrActive=true},{passive:true});
+  sheet.addEventListener('touchmove',e=>{if(!ptrActive||ptrRefreshing)return;const dy=e.touches[0].clientY-ptrStartY;if(dy<=0||sheet.scrollTop>0){ptrReset();return}ptrDist=Math.min(dy*.5,MAX);ind.classList.add('show');ind.style.transform=`translateX(-50%) translateY(${-40+ptrDist}px) rotate(${ptrDist*3}deg)`},{passive:true});
+  sheet.addEventListener('touchend',()=>{if(!ptrActive)return;const dist=ptrDist;ptrActive=false;if(dist>=THRESH&&!ptrRefreshing){ptrRefreshing=true;ind.classList.add('spin');ind.style.transform='translateX(-50%) translateY(10px)';manualRefresh();setTimeout(()=>{ptrRefreshing=false;ptrReset()},700)}else{ptrReset()}});
+}
 // "I'm safe" — opens device's share sheet (or WhatsApp fallback) with a pre-filled status message
 async function shareSafe(){const time=new Date().toLocaleTimeString(lang==='he'?'he-IL':lang==='ar'?'ar-SA':lang==='ru'?'ru-RU':'en-US',{hour:'2-digit',minute:'2-digit'});const msg=lang==='en'?`✓ I'm safe (${time})`:lang==='ar'?`✓ أنا بأمان (${time})`:lang==='ru'?`✓ Я в безопасности (${time})`:`✓ אני בסדר (${time})`;if(navigator.share){try{await navigator.share({text:msg});return}catch{}}window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`,'_blank','noopener')}
 function fTime(d){if(!(d instanceof Date)||isNaN(d))return'--:--';return d.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}
@@ -507,6 +532,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   updPush();connectSSE();startPoll();regSW();
   preloadHistory();
   loadExternalShelters();
+  initPTR();
   // Show demo button on desktop, hide on narrow viewports (re-evaluated on resize)
   const demoB=document.getElementById('demoB');
   function syncDemoVis(){demoB.style.display=window.innerWidth>768?'':'none'}

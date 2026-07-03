@@ -4,7 +4,7 @@
 
 ## מה הפרויקט
 
-`israel-alert-map` (v3.0.0) — שרת Node.js + קליינט HTML עצמאי שמציג בזמן אמת את אזעקות פיקוד העורף על מפת Leaflet. תלות בליבה: אפס (רק `node` ≥ 18). תלויות אופציונליות: `web-push`, `node-telegram-bot-api`.
+`israel-alert-map` (v3.2.0) — שרת Node.js + קליינט HTML עצמאי שמציג בזמן אמת את אזעקות פיקוד העורף על מפת Leaflet. תלות בליבה: אפס (רק `node` ≥ 18). תלויות אופציונליות: `web-push`, `node-telegram-bot-api`.
 
 מקור הנתונים: `https://www.oref.org.il/WarningMessages/alert/alerts.json` (polling כל 2 שניות). אין מפתחות, אין הרשמה.
 
@@ -60,7 +60,7 @@ npm run docker:run          # docker run -p 3000:3000 ...
 | `HEALTH_WEBHOOK` | (ריק) | URL ל-POST כשהשרת degraded/recovered |
 | `TELEGRAM_TOKEN` / `TELEGRAM_CHANNEL` | (ריק) | לבוט בלבד |
 | `OREF_URL_OVERRIDE` / `OREF_HIST_OVERRIDE` | (ריק) | החלף את URL של OREF (לטסטים בלבד; `test-integration.js` משתמש בזה) |
-| `SHELTERS_URL` | (ריק) | JSON חיצוני של מקלטים (`[{lat,lng,n}]`); הקליינט מחליף את 12 הדגימות אם נמצא |
+| `SHELTERS_URL` | (ריק) | JSON חיצוני של מקלטים אמיתיים (`[{lat,lng,n}]`); הקליינט מחליף את ~34 הדוגמאות ה-illustrative אם נמצא. **אין מאגר CKAN פתוח של מקלטים ב-data.gov.il** (נבדק — 0 תוצאות); ה-default הוא נקודות מרכז-עיר גסות ומסומנות "לדוגמה", לא כתובות מאומתות |
 
 ## ארכיטקטורה — נקודות חיוניות
 

@@ -1,0 +1,46 @@
+name: ✨ Feature request
+description: Suggest an idea, improvement, or new integration
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before requesting a feature, a quick reminder of this project's constraints
+        (see [CLAUDE.md](../../CLAUDE.md) for the full picture):
+        - **Zero core dependencies** — any server feature must degrade gracefully if
+          `web-push` / `node-telegram-bot-api` aren't installed.
+        - **No client framework** — the client is a single monolithic `index.html`
+          using plain DOM APIs, by design.
+        - **This is a safety-adjacent, volunteer project** — it's explicitly not a
+          replacement for official Home Front Command guidance.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: What's missing or annoying today? Real scenario > abstract ask.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What would you like to see? Sketches, links to similar features elsewhere, or a rough API shape are all welcome.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Client UI / map
+        - Server / API
+        - Notifications (Web Push / Telegram)
+        - Accessibility
+        - Deployment / Ops
+        - Docs
+        - Other
+    validations:
+      required: true

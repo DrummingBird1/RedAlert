@@ -1,0 +1,63 @@
+name: 🐛 Bug report
+description: Something in the app or server isn't working as expected
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. This is a volunteer, informational
+        project — please see [SECURITY.md](../../SECURITY.md) instead if this is a
+        security vulnerability (don't file it as a public issue).
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug. Include what you expected instead.
+      placeholder: The connection badge keeps blinking even after it says "מחובר" (connected)...
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Numbered steps so it can be reproduced reliably.
+      placeholder: |
+        1. Open the app
+        2. Wait for SSE to connect
+        3. ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where did this happen?
+      options:
+        - Client (browser UI / map / alerts)
+        - Server (API / SSE / admin dashboard)
+        - PWA / Service Worker (offline, install, push notifications)
+        - Telegram bot
+        - Docker / deployment
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Browser + OS, or Node version + OS if server-side.
+      placeholder: Chrome 128 on Windows 11 / Node 20 on Ubuntu 22.04
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Console / server logs
+      description: Paste any relevant browser console output or server log lines. No need for `code fences`, they'll be added automatically.
+      render: shell
+    validations:
+      required: false

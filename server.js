@@ -267,7 +267,7 @@ function getLib() { const p = path.join(__dirname, 'lib.js'); try { const s = fs
 const MANIFEST = JSON.stringify({ name: 'מפת אזעקות ישראל', short_name: 'אזעקות', description: 'ניטור אזעקות בזמן אמת', start_url: '/', display: 'standalone', background_color: '#0a0e17', theme_color: '#ef4444', orientation: 'any', lang: 'he', dir: 'rtl', icons: [{ src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' }] }, null, 2);
 // NOTE: bump CN whenever the client (index.html) or SW logic changes, otherwise users keep cached version
 const SW = `
-const CN='red-alert-v8';
+const CN='red-alert-v9';
 const TILE='red-alert-tiles-v1';
 const AS=['/','/index.html','/lib.js','/manifest.json','/icon.svg'];
 const CDN=['https://unpkg.com/leaflet@1.9.4/dist/leaflet.css','https://unpkg.com/leaflet@1.9.4/dist/leaflet.js','https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css','https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css','https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js'];

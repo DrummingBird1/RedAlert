@@ -10,7 +10,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker)](Dockerfile)
 [![PWA](https://img.shields.io/badge/PWA-Installable-5A0FC8)]()
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 [![Patreon](https://img.shields.io/badge/Patreon-Support-FF424D?logo=patreon&logoColor=white)](https://www.patreon.com/cw/MrIdan)
 
 </div>
@@ -54,7 +54,7 @@ ADMIN_PASS=secret node server.js
 - 📍 **מרקרים אנימטיביים** — פעימה אדומה לאזעקות פעילות, אפור להיסטוריה
 - 🧲 **Marker Clustering** — קיבוץ מרקרים אוטומטי בזום רחוק
 - 🔥 **מפת חום** — שכבה ויזואלית לאזורים עם ריכוז אזעקות
-- 🏛️ **מקלטים ציבוריים** — שכבת מקלטים על המפה (12+ לדוגמה)
+- 🏛️ **מקלטים ציבוריים** — שכבת מקלטים על המפה (~34 דוגמאות illustrative; ל-נתונים אמיתיים ראה `SHELTERS_URL`)
 - 📍 **המיקום שלי** — GPS + מרחק בק"מ מכל אזעקה
 
 ### אזעקות ומידע
@@ -117,7 +117,10 @@ israel-alert-map/
 ├── telegram-bot.js     # בוט טלגרם (עצמאי)
 ├── test.js             # בדיקות יחידה (node:test) ל-lib.js
 ├── test-integration.js # E2E: mock OREF → server → SSE
-├── .github/workflows/  # CI (tests) + deploy (Fly.io)
+├── .github/            # CI + deploy workflows, Dependabot, issue/PR templates
+├── CHANGELOG.md        # היסטוריית גרסאות
+├── CONTRIBUTING.md     # מדריך תרומה לפרויקט
+├── SECURITY.md         # נוהל דיווח פגיעויות
 ├── README.md           # אתה פה
 ├── LICENSE             # MIT
 └── .gitignore          # logs, secrets, snapshot, node_modules
@@ -168,9 +171,13 @@ israel-alert-map/
 | `HEALTH_WEBHOOK` | (ריק) | URL ל-POST כשהמערכת degraded |
 | `OREF_URL_OVERRIDE` | (ריק) | החלף את URL של פיקוד העורף (לטסטים בלבד) |
 | `OREF_HIST_OVERRIDE` | (ריק) | החלף את URL של ההיסטוריה (לטסטים בלבד) |
-| `SHELTERS_URL` | (ריק) | URL חיצוני ל-JSON של מקלטים. הקליינט מאחה אם זמין; אחרת fallback ל-12 דגימות מובנות |
+| `SHELTERS_URL` | (ריק) | URL חיצוני ל-JSON של מקלטים אמיתיים (למשל מ-API של הרשות המקומית שלך). הקליינט מאחה אם זמין; אחרת fallback ל-~34 דוגמאות illustrative |
 | `TELEGRAM_TOKEN` | (ריק) | Bot token לטלגרם |
 | `TELEGRAM_CHANNEL` | (ריק) | Channel ID לטלגרם |
+
+### ⚠️ לגבי דיוק נתוני המקלטים
+
+ה-`SHELTERS_DEFAULT` המובנה (~34 נקודות, אחת לכל עיר גדולה, מסומנות "לדוגמה") הוא **illustrative בלבד** — נקודת מרכז-עיר גסה, לא כתובת מקלט מאומתת. בדקנו: **אין ב-data.gov.il מאגר CKAN פתוח וניתן-לשליפה** של מקלטים ציבוריים (שאילתת API רשמית מחזירה 0 תוצאות); המידע קיים כשכבת GovMap פנימית ללא API מתועד. לכן לא הצגנו את הנקודות כ"נתונים רשמיים" — דיוק מזויף מסוכן יותר מהיעדר דיוק באפליקציית בטיחות. **לנתונים אמיתיים**, הגדר `SHELTERS_URL` שמצביע ל-API של הרשות המקומית שלך או מאגר עירוני מאומת.
 
 ### פורמט `SHELTERS_URL`
 
@@ -425,6 +432,12 @@ scrape_configs:
 ## 🔒 אבטחה
 
 ראו [SECURITY.md](SECURITY.md) — נוהל דיווח פגיעויות, checklist hardening לפריסה ציבורית, והחלטות עיצוב מכוונות (CORS פתוח, CSP עם `unsafe-inline`).
+
+---
+
+## 🤝 תרומה לפרויקט
+
+PRs מתקבלים בברכה! ראו [CONTRIBUTING.md](CONTRIBUTING.md) — הגדרת סביבת פיתוח, הרצת בדיקות, מוסכמות סגנון, ותבניות ל-issues/PRs. היסטוריית שינויים ב-[CHANGELOG.md](CHANGELOG.md).
 
 ---
 
