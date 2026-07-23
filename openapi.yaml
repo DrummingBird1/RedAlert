@@ -163,6 +163,29 @@ paths:
                   shelters_url: { type: string, nullable: true }
                   web_push: { type: boolean }
 
+  /api/shelters/tel-aviv:
+    get:
+      tags: [ops]
+      summary: Real Tel Aviv-Yafo municipal shelter data (live proxy, cached ~24h)
+      description: >
+        Proxies and transforms Tel Aviv-Yafo's public ArcGIS shelter layer into
+        `[{lat,lng,n}]`. Used client-side only when no `SHELTERS_URL` is configured,
+        to supplement the illustrative SHELTERS_DEFAULT samples with real data for
+        Tel Aviv specifically. Other cities remain illustrative.
+      responses:
+        '200':
+          description: Array of real shelter points (may be empty on first-ever fetch failure)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    lat: { type: number }
+                    lng: { type: number }
+                    n: { type: string }
+
   /api/logs:
     get:
       tags: [ops]

@@ -238,11 +238,11 @@ html.embed .defense.below-banner{top:38px!important}
     <div class="cnt"><span>היום</span><span class="n" id="todayC" style="color:var(--red)">0</span></div>
     <div class="cnt"><span>סה״כ</span><span class="n" id="totalC" style="color:var(--orange)">0</span></div>
     <div class="badge connecting" id="sBadge" role="status" aria-live="polite"><div class="dot"></div><span id="sText">מתחבר...</span></div>
-    <button class="ib" onclick="tglPush()" id="pushB" aria-label="התראות Push">🔔</button>
-    <button class="btn" onclick="tglSnd()" id="sndB" aria-label="השתק/הפעל צליל">🔊</button>
-    <button class="btn btn-d" onclick="demo()" id="demoB" style="display:none" aria-label="הרץ הדגמה">▶</button>
-    <button class="ib" onclick="openSet()" aria-label="הגדרות">⚙️</button>
-    <button class="ib" onclick="tglTheme()" id="themeB" aria-label="מצב כהה/בהיר">🌙</button>
+    <button class="ib" onclick="tglPush()" id="pushB" aria-label="התראות Push" title="התראות Push">🔔</button>
+    <button class="btn" onclick="tglSnd()" id="sndB" aria-label="השתק/הפעל צליל" title="השתק/הפעל צליל">🔊</button>
+    <button class="btn btn-d" onclick="demo()" id="demoB" style="display:none" aria-label="הרץ הדגמה" title="הרץ הדגמה">▶</button>
+    <button class="ib" onclick="openSet()" aria-label="הגדרות" title="הגדרות">⚙️</button>
+    <button class="ib" onclick="tglTheme()" id="themeB" aria-label="מצב כהה/בהיר" title="מצב כהה/בהיר">🌙</button>
   </div>
 </div>
 <div class="banner" id="banner" role="alert" aria-live="assertive"><span>⚠️</span><span id="banTxt">צבע אדום</span><span>⚠️</span></div>
@@ -250,11 +250,11 @@ html.embed .defense.below-banner{top:38px!important}
 <div class="offline" id="offBar">📵 אין חיבור — נתונים מהמטמון</div>
 <div class="overlay" id="overlay"></div>
 <div id="map"></div>
-<div class="sb"><div class="stabs" role="tablist"><div class="stab active" role="tab" onclick="swTab('alerts',this)">🔔 אזעקות</div><div class="stab" role="tab" onclick="swTab('stats',this)">📊</div><div class="stab" role="tab" onclick="swTab('history',this)">📜</div><div class="stab" role="tab" onclick="swTab('updates',this)">🆕</div><div class="stab" role="tab" onclick="swTab('about',this)">ℹ️</div></div><div class="sc" id="sbC"></div></div>
+<div class="sb"><div class="stabs" role="tablist"><div class="stab active" role="tab" tabindex="0" onclick="swTab('alerts',this)" aria-label="אזעקות" title="אזעקות">🔔 אזעקות</div><div class="stab" role="tab" tabindex="0" onclick="swTab('stats',this)" aria-label="סטטיסטיקה" title="סטטיסטיקה">📊</div><div class="stab" role="tab" tabindex="0" onclick="swTab('history',this)" aria-label="היסטוריה" title="היסטוריה">📜</div><div class="stab" role="tab" tabindex="0" onclick="swTab('updates',this)" aria-label="עדכונים" title="עדכונים">🆕</div><div class="stab" role="tab" tabindex="0" onclick="swTab('about',this)" aria-label="אודות" title="אודות">ℹ️</div></div><div class="sc" id="sbC"></div></div>
 <div class="mn"><div class="mn-i"><button class="mn-b active" onclick="mobTab('alerts',this)"><span class="ni">🔔</span>אזעקות</button><button class="mn-b" onclick="mobTab('stats',this)"><span class="ni">📊</span>סטטיסטיקה</button><button class="mn-b" onclick="mobTab('history',this)"><span class="ni">📜</span>היסטוריה</button><button class="mn-b" onclick="mobTab('updates',this)"><span class="ni">🆕</span>עדכונים</button><button class="mn-b" onclick="mobTab('about',this)"><span class="ni">ℹ️</span>אודות</button><button class="mn-b" onclick="openSet()"><span class="ni">⚙️</span>הגדרות</button></div></div>
 <div class="ms" id="mSheet"></div>
 <div class="ptr-ind" id="ptrInd" aria-hidden="true">🔄</div>
-<div class="mc" role="toolbar" aria-label="פעולות מפה"><button class="mb" onclick="map.setView([31.5,34.8],8)" aria-label="חזור למבט בית">🏠</button><button class="mb" onclick="geoLoc()" id="geoB" aria-label="המיקום שלי">📍</button><button class="mb" onclick="manualRefresh()" aria-label="רענון">🔄</button><button class="mb" onclick="tglHeat()" id="heatB" aria-label="מפת חום">🔥</button><button class="mb" onclick="tglCls()" id="clsB" aria-label="קיבוץ מרקרים">🧲</button><button class="mb" onclick="tglShl()" id="shlB" aria-label="מקלטים">🏛️</button><button class="mb" onclick="tglSat()" id="satB" aria-label="תצוגת לוויין">🛰️</button><button class="mb" onclick="clrHist()" aria-label="מחק היסטוריה">🗑️</button></div>
+<div class="mc" role="toolbar" aria-label="פעולות מפה"><button class="mb" onclick="map.setView([31.5,34.8],8)" aria-label="חזור למבט בית" title="חזור למבט בית">🏠</button><button class="mb" onclick="geoLoc()" id="geoB" aria-label="המיקום שלי" title="המיקום שלי">📍</button><button class="mb" onclick="manualRefresh()" aria-label="רענון" title="רענון">🔄</button><button class="mb" onclick="tglHeat()" id="heatB" aria-label="מפת חום" title="מפת חום">🔥</button><button class="mb" onclick="tglCls()" id="clsB" aria-label="קיבוץ מרקרים" title="קיבוץ מרקרים">🧲</button><button class="mb" onclick="tglShl()" id="shlB" aria-label="מקלטים" title="מקלטים">🏛️</button><button class="mb" onclick="tglSat()" id="satB" aria-label="תצוגת לוויין" title="תצוגת לוויין">🛰️</button><button class="mb" id="satLblB" onclick="tglSatLabels()" aria-label="שמות מקומות בלוויין" title="שמות מקומות בלוויין" style="display:none">🏷️</button><button class="mb" onclick="clrHist()" aria-label="מחק היסטוריה" title="מחק היסטוריה">🗑️</button></div>
 <div class="ci" id="cInfo">⏳</div>
 <div class="tb" id="tBox"></div>
 <div class="smod" id="setMod"><div class="sbox" role="dialog" aria-modal="true" aria-label="הגדרות"><div class="sh2"><span>⚙️ הגדרות</span><button class="sx" onclick="closeSet()" aria-label="סגור הגדרות">✕</button></div><div class="sg2"><div class="sgt">🌐 שפה</div><select class="ls" id="langS" onchange="setLang(this.value)"></select></div><div class="sg2"><div class="sgt">🔔 התראות</div><div class="sr"><div><div class="sl">מצב שקט</div><div class="sd">ללא צליל 23:00-07:00</div></div><label class="tg"><input type="checkbox" id="dndT" onchange="tglDND()"><span class="tgs"></span></label></div><div class="sr"><div><div class="sl">הכרזה קולית</div><div class="sd">TTS</div></div><label class="tg"><input type="checkbox" id="ttsT" onchange="tglTTS()"><span class="tgs"></span></label></div><div class="sr"><div><div class="sl">לולאת צופר</div><div class="sd">סירנה רציפה</div></div><label class="tg"><input type="checkbox" id="sirT" onchange="tglSir()"><span class="tgs"></span></label></div></div><div class="sg2"><div class="sgt">🔕 השתקה זמנית</div><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="snbtn" onclick="snooze(30)">30 דק׳</button><button class="snbtn" onclick="snooze(60)">שעה</button><button class="snbtn" onclick="snooze(180)">3 שעות</button><button class="snbtn cancel" onclick="snoozeCancel()">ביטול</button></div><div id="snoozeStatus" style="font-size:10px;color:var(--orange);margin-top:8px;text-align:center;display:none"></div></div><div class="sg2"><div class="sgt">♿ נגישות</div><div class="sr"><div><div class="sl">ניגודיות גבוהה</div></div><label class="tg"><input type="checkbox" id="hcT" onchange="tglHC()"><span class="tgs"></span></label></div></div><div class="sg2"><div class="sgt">⭐ מועדפות</div><div id="favL" style="font-size:9px;color:var(--txtm);text-align:center;padding:6px">לחץ ⭐ ליד עיר</div></div><div id="setDn" style="padding:0 14px 12px"></div></div></div>
@@ -263,7 +263,7 @@ html.embed .defense.below-banner{top:38px!important}
 <script src="/lib.js"></script>
 <script>
 const API=location.origin,MH=500,MM=200,AD=90000;
-const APP_VERSION='3.3.0'; // bump alongside package.json; drives the "what's new" popup in checkWhatsNew()
+const APP_VERSION='3.4.0'; // bump alongside package.json; drives the "what's new" popup in checkWhatsNew()
 // Donation link — set to your Patreon (or any URL). Empty string hides the donate card.
 const PATREON_URL='https://www.patreon.com/cw/MrIdan';
 // Shared data + pure functions live in lib.js (loaded synchronously above; also used by test.js)
@@ -289,11 +289,38 @@ const TM=AlertLib.TM;
 const RS=AlertLib.RS;
 let SHL=AlertLib.SHELTERS_DEFAULT.slice();
 // Optionally fetch a richer shelter dataset configured server-side via SHELTERS_URL
-async function loadExternalShelters(){try{const cfg=await fetch(`${API}/api/config`).then(r=>r.json());if(!cfg.shelters_url)return;const r=await fetch(cfg.shelters_url);if(!r.ok)return;const arr=await r.json();if(!Array.isArray(arr))return;const valid=arr.filter(s=>typeof s?.lat==='number'&&typeof s?.lng==='number').map(s=>({lat:s.lat,lng:s.lng,n:String(s.n||s.name||'מקלט').slice(0,120)})).slice(0,5000);if(valid.length)SHL=valid}catch{}}
+async function loadExternalShelters(){
+  try{
+    const cfg=await fetch(`${API}/api/config`).then(r=>r.json());
+    if(cfg.shelters_url){
+      const r=await fetch(cfg.shelters_url);
+      if(!r.ok)return;
+      const arr=await r.json();
+      if(!Array.isArray(arr))return;
+      const valid=arr.filter(s=>typeof s?.lat==='number'&&typeof s?.lng==='number').map(s=>({lat:s.lat,lng:s.lng,n:String(s.n||s.name||'מקלט').slice(0,120)})).slice(0,5000);
+      if(valid.length)SHL=valid;
+      return; // explicit deployer override — don't also merge the Tel Aviv feed below
+    }
+  }catch{}
+  // No SHELTERS_URL configured — enrich the illustrative defaults with real, live Tel
+  // Aviv-Yafo municipal shelter data (server.js proxies /api/shelters/tel-aviv). Best-effort:
+  // on failure the illustrative Tel Aviv placeholders in SHELTERS_DEFAULT remain as a fallback.
+  try{
+    const r=await fetch(`${API}/api/shelters/tel-aviv`);
+    if(!r.ok)return;
+    const real=await r.json();
+    if(Array.isArray(real)&&real.length)SHL=SHL.filter(s=>!/תל אביב/.test(s.n)).concat(real);
+  }catch{}
+}
 
 // Fuzzy matching (core logic in lib.js; findC returns the resolved city object or null)
 const normC=AlertLib.normalizeCity;
 function findC(name){const k=AlertLib.fuzzyMatch(name,C);return k?{name:k,...C[k]}:null}
+// Scrollable/browsable alternative to the free-text city search — a plain <select> lists every
+// known city; native dropdowns already scroll once they have more options than fit on screen.
+let citySelCache=null;
+function citySelOptions(){if(!citySelCache)citySelCache=Object.keys(C).sort((a,b)=>a.localeCompare(b,'he')).map(n=>`<option value="${X(n)}">${X(n)}</option>`).join('');return citySelCache}
+function jumpToCity(name){if(!name)return;const c=C[name];if(c)map.flyTo([c.lat,c.lng],12,{duration:1});const sel=document.getElementById('citySel');if(sel)sel.value=''}
 
 // State
 let hist=[],act=new Map(),mrk=new Map(),known=new Set();
@@ -301,9 +328,17 @@ let sndOn=true,pushOn=false,isDem=false,demTO=null,es=null,reconTO=null,sseOK=fa
 let map,tileL,heatV=false,heatC=[],clsG=null,clsOn=JSON.parse(localStorage.getItem('alertmap-cls')||'true');
 // Satellite basemap — Esri World Imagery, free, no API key (keeps the project's zero-key philosophy)
 const SAT_URL='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+// Esri's free companion overlay — place/road/border labels with a transparent background, meant
+// to sit on top of World_Imagery (which is pure photography with no text of its own).
+const SAT_LABELS_URL='https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}';
 let satOn=JSON.parse(localStorage.getItem('alertmap-sat')||'false');
+let satLabelsOn=JSON.parse(localStorage.getItem('alertmap-sat-labels')||'true');
+let tileLabels=null;
 function curTileUrl(){return satOn?SAT_URL:(theme==='light'?'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png':'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png')}
-function tglSat(){satOn=!satOn;localStorage.setItem('alertmap-sat',JSON.stringify(satOn));document.getElementById('satB')?.classList.toggle('active',satOn);if(!map||!tileL)return;map.removeLayer(tileL);tileL=L.tileLayer(curTileUrl(),{maxZoom:19,attribution:satOn?'Esri':''}).addTo(map)}
+// Adds/removes the labels overlay + shows/hides its toggle button, matching current satOn/satLabelsOn.
+function syncSatLabels(){const btn=document.getElementById('satLblB');if(btn)btn.style.display=satOn?'':'none';if(!map)return;if(satOn&&satLabelsOn){if(!tileLabels){tileLabels=L.tileLayer(SAT_LABELS_URL,{maxZoom:19,pane:'labelsPane'})}if(!map.hasLayer(tileLabels))tileLabels.addTo(map)}else if(tileLabels&&map.hasLayer(tileLabels)){map.removeLayer(tileLabels)}}
+function tglSatLabels(){satLabelsOn=!satLabelsOn;localStorage.setItem('alertmap-sat-labels',JSON.stringify(satLabelsOn));document.getElementById('satLblB')?.classList.toggle('active',satLabelsOn);syncSatLabels()}
+function tglSat(){satOn=!satOn;localStorage.setItem('alertmap-sat',JSON.stringify(satOn));document.getElementById('satB')?.classList.toggle('active',satOn);if(!map||!tileL)return;map.removeLayer(tileL);tileL=L.tileLayer(curTileUrl(),{maxZoom:19,attribution:satOn?'Esri':''}).addTo(map);syncSatLabels()}
 let flt={r:'',t:'',time:'all',q:''},lastFly=0,actx=null,lastS=0,uiP=false,tlP=false;
 let uLoc=null,uMark=null,favs=JSON.parse(localStorage.getItem('alertmap-favs')||'[]');
 let dndOn=JSON.parse(localStorage.getItem('alertmap-dnd')||'false');
@@ -335,7 +370,7 @@ function applyTh(th){theme=th;document.documentElement.classList.toggle('light',
 function tglTheme(){const next=theme==='dark'?'light':'dark';if(document.startViewTransition){document.startViewTransition(()=>applyTh(next))}else{applyTh(next)}}
 function tglHC(){hcOn=!hcOn;localStorage.setItem('alertmap-hc',JSON.stringify(hcOn));document.documentElement.classList.toggle('high-contrast',hcOn);document.getElementById('hcT').checked=hcOn}
 
-function initMap(){map=L.map('map',{center:[31.5,34.8],zoom:8,zoomControl:false,attributionControl:false});tileL=L.tileLayer(curTileUrl(),{maxZoom:19,attribution:satOn?'Esri':''}).addTo(map);if(satOn)document.getElementById('satB')?.classList.add('active');L.control.zoom({position:'bottomleft'}).addTo(map);clsG=L.markerClusterGroup({chunkedLoading:true,maxClusterRadius:50,disableClusteringAtZoom:12});if(clsOn)map.addLayer(clsG);updCls()}
+function initMap(){map=L.map('map',{center:[31.5,34.8],zoom:8,zoomControl:false,attributionControl:false});map.createPane('labelsPane');const lp=map.getPane('labelsPane');lp.style.zIndex=450;lp.style.pointerEvents='none';tileL=L.tileLayer(curTileUrl(),{maxZoom:19,attribution:satOn?'Esri':''}).addTo(map);if(satOn){document.getElementById('satB')?.classList.add('active');document.getElementById('satLblB')?.classList.toggle('active',satLabelsOn);syncSatLabels()}L.control.zoom({position:'bottomleft'}).addTo(map);clsG=L.markerClusterGroup({chunkedLoading:true,maxClusterRadius:50,disableClusteringAtZoom:12});if(clsOn)map.addLayer(clsG);updCls()}
 function tglCls(){clsOn=!clsOn;localStorage.setItem('alertmap-cls',JSON.stringify(clsOn));updCls();if(!clsG)return;if(clsOn){map.addLayer(clsG);mrk.forEach((m,id)=>{if(!act.has(id)){if(map.hasLayer(m))map.removeLayer(m);clsG.addLayer(m)}})}else{clsG.eachLayer(l=>map.addLayer(l));clsG.clearLayers();map.removeLayer(clsG)}}
 function updCls(){document.getElementById('clsB').classList.toggle('active',clsOn)}
 
@@ -440,12 +475,17 @@ function clearF(){const a=document.getElementById('fR'),b=document.getElementByI
 function filterH2(list){const now=Date.now();let cut=0;if(flt.time==='hour')cut=now-36e5;else if(flt.time==='day')cut=now-864e5;else if(flt.time==='week')cut=now-6048e5;const q=flt.q?flt.q.toLowerCase():'';return list.filter(a=>{if(flt.r&&a.region!==flt.r)return false;if(flt.t&&a.typeKey!==flt.t)return false;if(cut&&a.timestamp.getTime()<cut)return false;if(q&&!a.city.toLowerCase().includes(q))return false;return true})}
 
 function schedUI(){if(uiP)return;uiP=true;requestAnimationFrame(()=>{uiP=false;updUI()})}
-function updUI(){renderSB();updBanner();updStats();updDef()}
+function updUI(){refreshCurrentTab();updBanner();updStats();updDef()}
 function renderSB(){const el=document.getElementById('sbC');const all=filterH2(hist),ac=all.filter(a=>a.active),hi=all.filter(a=>!a.active);
-let h=`<div class="fbar"><div class="fr"><input class="fs" id="fQ" type="text" placeholder="${X(t('searchPlaceholder'))}" oninput="applyF()" style="flex:1"></div><div class="fr"><select class="fs" id="fR" onchange="applyF()"><option value="">כל האזורים</option><option value="צפון">צפון</option><option value="חיפה">חיפה</option><option value="שרון">שרון</option><option value="מרכז">מרכז</option><option value="ירושלים">ירושלים</option><option value="שפלה">שפלה</option><option value="דרום">דרום</option><option value="עוטף עזה">עוטף עזה</option><option value="ערבה">ערבה</option><option value="יו״ש">יו״ש</option></select><select class="fs" id="fT" onchange="applyF()"><option value="">הכל</option><option value="rockets">רקטות</option><option value="uav">כטב״מ</option></select></div><div class="fr"><select class="fs" id="fTime" onchange="applyF()"><option value="all">הכל</option><option value="hour">שעה</option><option value="day">יום</option><option value="week">שבוע</option></select><button class="fc" onclick="clearF()">נקה</button></div></div>`;
+// Re-rendering replaces #sbC's whole innerHTML, including the #fQ input itself — if it's
+// mid-typing, capture focus + cursor position here and restore them after, or every
+// keystroke would kick focus out of the field (the input node is destroyed and recreated).
+const prevQ=document.getElementById('fQ');const hadFocus=!!prevQ&&document.activeElement===prevQ;const selStart=hadFocus?prevQ.selectionStart:null,selEnd=hadFocus?prevQ.selectionEnd:null;
+let h=`<div class="fbar"><div class="fr"><input class="fs" id="fQ" type="text" placeholder="${X(t('searchPlaceholder'))}" oninput="applyF()" style="flex:1"></div><div class="fr"><select class="fs" id="citySel" onchange="jumpToCity(this.value)" style="flex:1"><option value="">🗺️ קפוץ ליישוב...</option>${citySelOptions()}</select></div><div class="fr"><select class="fs" id="fR" onchange="applyF()"><option value="">כל האזורים</option><option value="צפון">צפון</option><option value="חיפה">חיפה</option><option value="שרון">שרון</option><option value="מרכז">מרכז</option><option value="ירושלים">ירושלים</option><option value="שפלה">שפלה</option><option value="דרום">דרום</option><option value="עוטף עזה">עוטף עזה</option><option value="ערבה">ערבה</option><option value="יו״ש">יו״ש</option></select><select class="fs" id="fT" onchange="applyF()"><option value="">הכל</option><option value="rockets">רקטות</option><option value="uav">כטב״מ</option></select></div><div class="fr"><select class="fs" id="fTime" onchange="applyF()"><option value="all">הכל</option><option value="hour">שעה</option><option value="day">יום</option><option value="week">שבוע</option></select><button class="fc" onclick="clearF()">נקה</button></div></div>`;
 if(!all.length){h+=`<div class="empty"><div class="icon">✅</div><h3>${t(hist.length?'noResults':'allClear')}</h3><p>${t('noAlerts')}</p></div>`}else{if(ac.length)h+=`<div class="st">${t('active')} <span class="cb">${ac.length}</span></div><div class="al">${ac.slice(0,20).map(a=>rItem(a,true)).join('')}</div>`;if(hi.length)h+=`<div class="st">${t('history')} <span class="cb off">${hi.length}</span></div><div class="hl2">${hi.slice(0,30).map(a=>rItem(a,false)).join('')}</div>`}
 h+=donateMini();
-el.innerHTML=h;const a=document.getElementById('fR'),b=document.getElementById('fT'),c=document.getElementById('fTime'),d=document.getElementById('fQ');if(a)a.value=flt.r;if(b)b.value=flt.t;if(c)c.value=flt.time;if(d)d.value=flt.q}
+el.innerHTML=h;const a=document.getElementById('fR'),b=document.getElementById('fT'),c=document.getElementById('fTime'),d=document.getElementById('fQ');if(a)a.value=flt.r;if(b)b.value=flt.t;if(c)c.value=flt.time;if(d)d.value=flt.q;
+if(hadFocus&&d){d.focus();try{d.setSelectionRange(selStart,selEnd)}catch{}}}
 function rItem(a,isAct){const sc=X(a.city),sl=shC(a.shelter),sf=fSh(a.shelter),isFav=favs.includes(a.city);let dH='';if(uLoc&&!a.noLoc)dH=`<span class="di">📍 ${distK(uLoc.lat,uLoc.lng,a.lat,a.lng).toFixed(1)} ${t('km')}</span>`;if(a.noLoc)dH+=`<span class="di nl">📍 ${t('unknownLoc')}</span>`;let cdH='';if(isAct&&a.detectedAt){const rem=a.shelter-Math.floor((Date.now()-a.detectedAt)/1000);cdH=`<span class="cd cdt ${rem<=0?'done':''}" data-det="${a.detectedAt}" data-sh="${a.shelter}">${rem>0?`⏳ ${t('remaining')} ${rem}${t('sec')}`:`✓ ${t('passed')}`}</span>`}const click=a.noLoc?'':`onclick="map.flyTo([${a.lat},${a.lng}],12)"`;
 return`<div class="ai ${isAct?'act':''} ${a.noLoc?'noloc':''}" ${click}><div class="ai-h"><div class="ai-c"><button class="fs2 ${isFav?'on':''}" onclick="event.stopPropagation();tglFav('${X(a.city)}')">${isFav?'⭐':'☆'}</button>${a.type.icon} ${sc}</div><div class="ai-t">${fTime(a.timestamp)}</div></div><div class="ai-tp"><span class="td ${a.type.css}"></span>${t(a.typeKey)}${isAct?`<span style="color:var(--red);margin-right:auto">● ${t('active')}</span>`:''}</div><div class="ai-m"><span class="sh ${sl}">⏱️ ${sf}</span>${cdH}${dH}</div></div>`}
 function updBanner(){const b=document.getElementById('banner'),o=document.getElementById('overlay'),s=document.getElementById('sBadge'),d=document.getElementById('defP');if(act.size){const cities=[...act.values()].map(a=>a.city);document.getElementById('banTxt').textContent=`צבע אדום — ${cities.slice(0,4).join(' | ')}${cities.length>4?' +'+(cities.length-4):''}`;b.classList.add('active');o.classList.add('active');s.className='badge alert-on';d.classList.add('below-banner')}else{b.classList.remove('active');o.classList.remove('active');s.className=sseOK?'badge live':'badge';d.classList.remove('below-banner')}}
@@ -454,7 +494,7 @@ function updStats(){const now=new Date(),ts=new Date(now.getFullYear(),now.getMo
 // Tabs — track currentTab so the 10s refresh interval doesn't clobber the user's chosen tab
 let currentTab='alerts';
 function swTab(tab,el){currentTab=tab;document.querySelectorAll('.stab').forEach(t=>t.classList.remove('active'));el.classList.add('active');if(tab==='alerts')renderSB();else if(tab==='stats')renderStatTab();else if(tab==='history')renderHistoryTab();else if(tab==='updates')renderUpdatesTab();else renderAboutTab();if(tab==='stats')schedTL()}
-function refreshCurrentTab(){if(currentTab==='alerts'){if(document.activeElement?.id==='fQ')return;renderSB()}else if(currentTab==='stats'){/* stats tab repaints itself via schedTL */}}
+function refreshCurrentTab(){if(currentTab==='alerts'){if(document.activeElement?.id==='fQ')return;renderSB()}else if(currentTab==='history'){if(document.activeElement?.id==='hQ')return;renderHistoryTab()}else if(currentTab==='stats'){/* stats tab repaints itself via schedTL */}}
 function renderStatTab(){if(!preloadDone&&hist.length===0){document.getElementById('sbC').innerHTML='<div class="sg"><div class="skel skel-card"></div><div class="skel skel-card"></div><div class="skel skel-card"></div><div class="skel skel-card"></div></div><div class="skel skel-tl"></div><div class="skel skel-tl"></div><div class="skel skel-row"></div><div class="skel skel-row"></div><div class="skel skel-row"></div>';return}const now=new Date(),ts=new Date(now.getFullYear(),now.getMonth(),now.getDate()),ha=new Date(now-36e5);const rk=hist.filter(a=>a.typeKey==='rockets'),uav=hist.filter(a=>a.typeKey==='uav'),lh=hist.filter(a=>a.timestamp>=ha);const regions={};hist.forEach(a=>{regions[a.region]=(regions[a.region]||0)+1});const anomalyHtml=anomalyBadge();document.getElementById('sbC').innerHTML=`${anomalyHtml}<div class="sg"><div class="sc2 r"><div class="v">${rk.length}</div><div class="l">${t('rockets')}</div></div><div class="sc2 o"><div class="v">${uav.length}</div><div class="l">${t('uav')}</div></div><div class="sc2 y"><div class="v">${Object.keys(regions).length}</div><div class="l">אזורים</div></div><div class="sc2 g"><div class="v">${lh.length}</div><div class="l">שעה</div></div></div><div class="tls"><div class="tlt"><span>📊 24h</span><span class="m" id="tlM">0</span></div><div class="tlw"><canvas id="tlC"></canvas></div></div><div class="tls"><div class="tlt"><span>📈 ${t('todayL')} / ${t('yesterdayL')}</span><span class="m" id="compM"></span></div><div class="tlw"><canvas id="compC"></canvas></div></div><div class="rs">${Object.entries(regions).sort((a,b)=>b[1]-a[1]).map(([r,c])=>`<div class="rsi"><span>${X(r)}</span><span class="rc">${c}</span></div>`).join('')}</div><div class="eb"><button class="ebt" onclick="expCSV()">📄 CSV</button><button class="ebt" onclick="expJSON()">📋 JSON</button></div>${donateMini()}`;setTimeout(()=>{drawTL();drawComp()},50)}
 function donateCard(){if(!PATREON_URL)return'';const en=AlertLib.LN.en,bi=lang!=='en';const url=X(PATREON_URL);return`<div class="dn"><div class="dn-t">💛 ${t('donate')}${bi?` · ${en.donate}`:''}</div><div class="dn-d">${t('donateD')}</div>${bi?`<div class="dn-d" style="margin-top:-3px">${en.donateD}</div>`:''}<a class="dn-b" href="${url}" target="_blank" rel="noopener">❤️ ${t('donateBtn')}</a></div>`}
 // Compact one-line variant shown in tabs other than About (which keeps the full donateCard)
@@ -463,11 +503,20 @@ function renderAboutTab(){document.getElementById('sbC').innerHTML=`<div class="
 
 // History tab — full IndexedDB-backed history (unlike the Alerts tab's inline history section,
 // which only shows what's still in the capped in-memory `hist` array), with its own date range + search.
-let histRange='all';
+let histRange='all',historySeq=0;
 async function renderHistoryTab(){
+  const mySeq=++historySeq; // guards against a slower, superseded call overwriting a faster later one
   const el=document.getElementById('sbC');
-  el.innerHTML='<div class="sg"><div class="skel skel-card"></div></div><div class="skel skel-row"></div><div class="skel skel-row"></div><div class="skel skel-row"></div>';
+  // Same focus/skeleton concern as renderSB(): only show the loading skeleton on the very
+  // first paint. A refilter (typing in #hQ, changing the range) keeps the current list on
+  // screen and the input focused until the fresh data is ready, instead of flashing to a
+  // skeleton and kicking focus out of the field on every keystroke.
+  const prevQ=document.getElementById('hQ');
+  const hadFocus=!!prevQ&&document.activeElement===prevQ;
+  const selStart=hadFocus?prevQ.selectionStart:null,selEnd=hadFocus?prevQ.selectionEnd:null;
+  if(!prevQ)el.innerHTML='<div class="sg"><div class="skel skel-card"></div></div><div class="skel skel-row"></div><div class="skel skel-row"></div><div class="skel skel-row"></div>';
   const all=await gDB();
+  if(mySeq!==historySeq)return;
   all.forEach(a=>{if(!(a.timestamp instanceof Date))a.timestamp=new Date(a.timestamp)});
   const now=Date.now();
   let list=all;
@@ -487,12 +536,14 @@ async function renderHistoryTab(){
   const qEl=document.getElementById('hQ'),rEl=document.getElementById('hRange');
   if(qEl)qEl.value=flt.q;
   if(rEl)rEl.value=histRange;
+  if(hadFocus&&qEl){qEl.focus();try{qEl.setSelectionRange(selStart,selEnd)}catch{}}
 }
 function applyHF(){flt.q=document.getElementById('hQ')?.value.trim()||'';histRange=document.getElementById('hRange')?.value||'all';renderHistoryTab()}
 
 // Updates tab — mirrors CHANGELOG.md's newest entries (update this array by hand on release,
 // same as the CHANGELOG.md file; kept short on purpose, full history lives in the repo).
 const CHANGES=[
+  {v:'3.4.0',d:'2026-07-24',items:['🐛 תוקן: שדה חיפוש היישוב הוציא את הפוקוס אחרי כל אות — עכשיו אפשר להקליד ברצף','🐛 תוקן: מעבר לכרטיסייה אחרת בדפדפן וחזרה החזיר את התצוגה לטאב אזעקות במקום להישאר בטאב האחרון','🐛 תוקן: לחצני התפריטים והמפה קיבלו שם גלוי בהעברת עכבר (title), לא רק לכפתור אזעקות','🏷️ שכבת שמות מקומות ניתנת להצגה/הסתרה מעל תצוגת הלוויין','🗺️ מקלטים אמיתיים בתל אביב-יפו (~374, מהעירייה) מוצגים אוטומטית במקום הדוגמאות הכלליות; שאר הארץ נשארת מסומנת "לדוגמה" באופן שקוף','🔽 תיבה נפתחת עם כל היישובים — לקפוץ ישירות לעיר על המפה']},
   {v:'3.3.0',d:'2026-07-23',items:['🏷️ מיתוג מחודש: הפרויקט נקרא כעת "צפיר"','🌍 10 שפות נוספות: אמהרית, תיגרינית, תאילנדית, טאגלוג, אוקראינית, צרפתית, ספרדית, רומנית, הינדי וסינית','📜 טאב היסטוריה חדש — כל האזעקות מ-IndexedDB, לא רק ה-500 האחרונות בזיכרון','🔍 חיפוש לפי יישוב','🎙️ תוקן באג בהכרזה הקולית — כעת מקריאה יחד את כל הערים החדשות, לא רק את האחרונה','🛰️ שכבת לוויין חינמית למפה (Esri, ללא מפתח API)','🕐 שעון דיגיטלי בכותרת','📢 אינטגרציית Discord webhook (הגדרה עצמאית בצד השרת)','💛 כפתור תרומת Patreon מופיע כעת בכל התפריטים','🆕 טאב "עדכונים" הזה, כולל פופאפ "מה חדש" חד-פעמי']},
 ];
 function renderUpdatesTab(){

@@ -5,6 +5,39 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+## [3.4.0]
+
+### Fixed
+- **City search input (`#fQ`/`#hQ`) kicked focus out of the field after one keystroke.**
+  `renderSB()`/`renderHistoryTab()` fully replace `#sbC`'s innerHTML — including the input
+  itself — on every filter change, so the DOM node the user was typing into was destroyed
+  and recreated each time. Both now capture focus + cursor position before re-rendering and
+  restore them after. `renderHistoryTab()` also skips its loading skeleton on refilters
+  (only shown on first paint) and guards against a slower request overwriting a newer one.
+- **Switching away to another browser tab and back reset the view to the Alerts tab**,
+  discarding whatever tab (Stats/History/Updates/About) the user had actually been on.
+  Caused by the 3.2.0 visibility-restore fix calling `renderSB()` unconditionally; `updUI()`
+  now goes through `refreshCurrentTab()`, which only repaints the tab that's actually active.
+- **Most tab and map-toolbar icons had no visible name on hover.** Only the Alerts tab had
+  a text label; every other tab and every map-control button (home, locate, refresh, heatmap,
+  cluster, shelters, satellite, clear) had `aria-label` for screen readers but no `title`, so
+  hovering with a mouse showed nothing. Added matching `title` attributes throughout, plus
+  `aria-label`/`tabindex` on the previously-unlabeled, unfocusable tab elements.
+
+### Added
+- **Satellite place-name labels.** Esri World Imagery (added in 3.3.0) has no text of its
+  own; a free companion Esri overlay (place/road/border labels) can now be toggled on top of
+  it via a new 🏷️ button that appears only while satellite mode is active.
+- **Real Tel Aviv-Yafo shelter data.** Re-investigated shelter-data availability: the
+  national data.gov.il catalog still has no open shelter dataset, but Tel Aviv-Yafo
+  municipality publishes its own public GIS layer (~374 shelters with real addresses and
+  fitness status). The server now proxies and caches it (`GET /api/shelters/tel-aviv`,
+  refreshed at most daily) and the client merges it in automatically — replacing the two
+  generic illustrative Tel Aviv points — whenever a deployer hasn't set their own
+  `SHELTERS_URL`. Every other city remains explicitly illustrative; this doesn't change.
+- A scrollable city picker (`<select>` listing every known city) next to the free-text
+  search, for jumping the map straight to a city without typing.
+
 ## [3.3.0]
 
 ### Added
@@ -136,7 +169,8 @@ All notable changes to this project are documented here. Format loosely follows
   (he/en/ar/ru), Docker + docker-compose, admin dashboard with Basic auth,
   health-check webhook, rate limiting, and file-based alert logging with rotation.
 
-[Unreleased]: https://github.com/DrummingBird1/RedAlert/compare/v3.3.0...HEAD
+[Unreleased]: https://github.com/DrummingBird1/RedAlert/compare/v3.4.0...HEAD
+[3.4.0]: https://github.com/DrummingBird1/RedAlert/compare/v3.3.0...v3.4.0
 [3.3.0]: https://github.com/DrummingBird1/RedAlert/compare/v3.2.0...v3.3.0
 [3.2.0]: https://github.com/DrummingBird1/RedAlert/compare/v3.1.0...v3.2.0
 [3.1.0]: https://github.com/DrummingBird1/RedAlert/compare/v3.0.0...v3.1.0

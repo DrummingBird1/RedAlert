@@ -282,7 +282,7 @@ function getLib() { const p = path.join(__dirname, 'lib.js'); try { const s = fs
 const MANIFEST = JSON.stringify({ name: 'צפיר', short_name: 'צפיר', description: 'ניטור התרעות פיקוד העורף בזמן אמת', start_url: '/', display: 'standalone', background_color: '#0a0e17', theme_color: '#ef4444', orientation: 'any', lang: 'he', dir: 'rtl', icons: [{ src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' }] }, null, 2);
 // NOTE: bump CN whenever the client (index.html) or SW logic changes, otherwise users keep cached version
 const SW = `
-const CN='red-alert-v10';
+const CN='red-alert-v11';
 const TILE='red-alert-tiles-v1';
 const AS=['/','/index.html','/lib.js','/manifest.json','/icon.svg'];
 const CDN=['https://unpkg.com/leaflet@1.9.4/dist/leaflet.css','https://unpkg.com/leaflet@1.9.4/dist/leaflet.js','https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css','https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css','https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js'];
@@ -354,6 +354,38 @@ function proxyOref(key, url, ttlMs, req, res, p) {
   inflight.then(body => { track(p, 200); gz(req, res, body, 'application/json; charset=utf-8'); }).catch(() => { orefCache.delete(key); track(p, 502); res.writeHead(502); res.end('{"error":"fail"}'); });
 }
 
+// ── Tel Aviv real shelter data (live proxy, cached) ───────────────────
+// Verified 2026-07: unlike the national data.gov.il CKAN catalog (which returns 0 results for
+// public shelters), Tel Aviv-Yafo's own GIS backend publishes a real, queryable public-shelter
+// layer (~374 records: lat/lon, address, fitness status) — see opendata.tel-aviv.gov.il and the
+// underlying ArcGIS REST service below. This is the one concrete real-data source found so far;
+// other cities still rely on the illustrative SHELTERS_DEFAULT samples in lib.js until a similar
+// municipal feed is found and wired up for them too. Client merges this in via loadExternalShelters()
+// only when the deployer hasn't set their own SHELTERS_URL (see index.html).
+const TLV_SHELTERS_URL = 'https://gisn.tel-aviv.gov.il/arcgis/rest/services/WM/IView2WM/MapServer/592/query?where=1%3D1&outFields=lat,lon,Full_Address,t_sug,pail&f=json&resultRecordCount=1000&returnGeometry=false';
+let tlvSheltersCache = null, tlvSheltersFetchedAt = 0, tlvSheltersInflight = null;
+const TLV_SHELTERS_TTL = 24 * 3600 * 1000; // refresh at most once a day — considerate to the municipality's server
+async function getTelAvivShelters() {
+  const now = Date.now();
+  if (tlvSheltersCache && (now - tlvSheltersFetchedAt) < TLV_SHELTERS_TTL) return tlvSheltersCache;
+  if (tlvSheltersInflight) return tlvSheltersInflight;
+  tlvSheltersInflight = (async () => {
+    try {
+      const { status, body } = await fetchUrl(TLV_SHELTERS_URL, { 'Accept': 'application/json' });
+      if (status === 200) {
+        const data = JSON.parse(body);
+        const out = (data.features || []).map(f => f.attributes)
+          .filter(a => typeof a.lat === 'number' && typeof a.lon === 'number' && (!a.pail || a.pail === 'כשיר לשימוש'))
+          .map(a => ({ lat: a.lat, lng: a.lon, n: `${a.t_sug || 'מקלט'} — ${String(a.Full_Address || '').trim()}`.slice(0, 120) }));
+        if (out.length) { tlvSheltersCache = out; tlvSheltersFetchedAt = Date.now(); }
+      }
+    } catch { /* keep serving stale cache, if any */ }
+    tlvSheltersInflight = null;
+    return tlvSheltersCache;
+  })();
+  return tlvSheltersInflight;
+}
+
 // ── HTTP Server ──────────────────────────────────────────────
 const server = http.createServer(async (req, res) => {
   if (!rateOK(getIP(req))) { res.writeHead(429, { 'Retry-After': '60' }); track(req.url, 429); return res.end('{"error":"Rate limit"}'); }
@@ -383,6 +415,7 @@ const server = http.createServer(async (req, res) => {
 
   if (p === '/api/health') { const mem = process.memoryUsage(); track(p, 200); return gz(req, res, JSON.stringify({ status: 'ok', uptime_seconds: Math.floor((Date.now() - SERVER_START) / 1000), memory_mb: Math.round(mem.rss / 1024 / 1024), sse_clients: sseClients.size, alerts_stored: store.length, fallback: useFB, web_push: !!webpush, push_subs: pushSubs.size, last_poll_ago: lastPoll ? Math.floor((Date.now() - lastPoll) / 1000) : null, health_webhook: !!HEALTH_WEBHOOK }), 'application/json; charset=utf-8'); }
   if (p === '/api/config') { track(p, 200); return gz(req, res, JSON.stringify({ shelters_url: SHELTERS_URL || null, web_push: !!webpush }), 'application/json; charset=utf-8'); }
+  if (p === '/api/shelters/tel-aviv') { const s = await getTelAvivShelters(); track(p, 200); return gz(req, res, JSON.stringify(s || []), 'application/json; charset=utf-8'); }
   if (p === '/api/spec' || p === '/openapi.yaml') { try { const spec = fs.readFileSync(path.join(__dirname, 'openapi.yaml'), 'utf8'); track(p, 200); return gz(req, res, spec, 'application/yaml; charset=utf-8'); } catch { track(p, 404); res.writeHead(404); return res.end('{"error":"spec not found"}'); } }
   if (p === '/api/alerts') { const a = [...activeAlerts.values()]; track(p, 200); return gz(req, res, JSON.stringify({ alerts: a, count: a.length, ts: new Date().toISOString() }), 'application/json; charset=utf-8'); }
   if (p === '/api/history') { const lim = Math.min(Math.max(parseInt(url.searchParams.get('limit')) || 200, 1), 1000); track(p, 200); return gz(req, res, JSON.stringify({ alerts: store.slice(0, lim), total: store.length }), 'application/json; charset=utf-8'); }
