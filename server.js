@@ -2,7 +2,7 @@
 //  שרת Proxy לאזעקות פיקוד העורף — v3
 //  node server.js
 //  אופציונלי: npm install web-push
-//  אדמין: /admin  |  ENV: ADMIN_PASS, FALLBACK_ALERT_URL, HEALTH_WEBHOOK
+//  אדמין: /admin  |  ENV: ADMIN_PASS, FALLBACK_ALERT_URL, HEALTH_WEBHOOK, DISCORD_WEBHOOK_URL
 // ============================================================
 const http = require('http');
 const https = require('https');
@@ -23,6 +23,7 @@ const ADMIN_PASS_GENERATED = !ADMIN_PASS;
 if (ADMIN_PASS_GENERATED) ADMIN_PASS = crypto.randomBytes(12).toString('base64url');
 const HEALTH_WEBHOOK = process.env.HEALTH_WEBHOOK || ''; // URL to POST when health degrades
 const SHELTERS_URL = process.env.SHELTERS_URL || ''; // Optional external shelters JSON (e.g. data.gov.il export)
+const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL || ''; // Discord channel webhook (Channel Settings → Integrations → Webhooks) — posts an embed per new real alert batch
 
 let webpush = null;
 try { webpush = require('web-push'); } catch {}
@@ -47,7 +48,8 @@ function secHeaders(res, html, allowFrame) {
   if (!allowFrame) res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   // CSP frame-ancestors *: required for /embed.js use cases; X-Frame-Options is the old-school equivalent
-  if (html) res.setHeader('Content-Security-Policy', `default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://unpkg.com https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://*.basemaps.cartocdn.com; connect-src 'self'; frame-ancestors ${allowFrame ? '*' : "'self'"}`);
+  // img-src also allows Esri World Imagery (free, no API key) — the satellite basemap layer
+  if (html) res.setHeader('Content-Security-Policy', `default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://unpkg.com https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://*.basemaps.cartocdn.com https://server.arcgisonline.com; connect-src 'self'; frame-ancestors ${allowFrame ? '*' : "'self'"}`);
 }
 
 // ── Metrics ──────────────────────────────────────────────────
@@ -190,6 +192,7 @@ async function pollAlerts() {
     if (store.length > MAX_STORE) store = store.slice(0, MAX_STORE);
     console.log(`\x1b[31m🚨 ${cleanTitle || type} — ${areas.join(', ')}\x1b[0m`);
     if (webpush && pushSubs.size) pushAll({ title: `🚨 צבע אדום — ${areas.slice(0, 3).join(', ')}${areas.length > 3 ? ' +' + (areas.length - 3) : ''}`, body: cleanTitle || type, icon: '/icon.svg', tag: `alert-${Date.now()}` }, areas).catch(() => {});
+    sendDiscord(cleanTitle, type, areas);
   } catch { orefFail(); }
 }
 function orefFail() {
@@ -252,6 +255,18 @@ function sendHealthWebhook(status, issues) {
 }
 setInterval(checkHealth, 30000);
 
+// ── Discord webhook — posts an embed per new real-alert batch (zero deps: plain HTTPS POST) ──
+function sendDiscord(cleanTitle, type, areas) {
+  if (!DISCORD_WEBHOOK_URL || !areas.length) return;
+  const payload = JSON.stringify({ embeds: [{ title: `🚨 ${cleanTitle || 'צבע אדום'}`, description: areas.slice(0, 20).join(', ') + (areas.length > 20 ? ` +${areas.length - 20}` : ''), color: 15158332, timestamp: new Date().toISOString(), footer: { text: `Tzafir · ${type}` } }] });
+  let url; try { url = new URL(DISCORD_WEBHOOK_URL); } catch { return; }
+  const mod = url.protocol === 'https:' ? https : http;
+  const req = mod.request(url, { method: 'POST', timeout: 5000, headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) } }, r => r.resume());
+  req.on('error', () => {});
+  req.on('timeout', () => req.destroy());
+  req.write(payload); req.end();
+}
+
 // ── Gzip ─────────────────────────────────────────────────────
 function gz(req, res, data, ct, sc = 200) { const ae = req.headers['accept-encoding'] || ''; if (/^(text\/|application\/(json|javascript|manifest))/i.test(ct) && ae.includes('gzip') && data.length > 1024) { zlib.gzip(typeof data === 'string' ? Buffer.from(data) : data, (err, z) => { if (err) { res.writeHead(sc, { 'Content-Type': ct }); res.end(data); return; } res.writeHead(sc, { 'Content-Type': ct, 'Content-Encoding': 'gzip' }); res.end(z); }); } else { res.writeHead(sc, { 'Content-Type': ct }); res.end(data); } }
 
@@ -264,10 +279,10 @@ let libCache = null, libMt = 0;
 function getLib() { const p = path.join(__dirname, 'lib.js'); try { const s = fs.statSync(p); if (!libCache || s.mtimeMs !== libMt) { libCache = fs.readFileSync(p, 'utf8'); libMt = s.mtimeMs; } return libCache; } catch { return null; } }
 
 // ── PWA ─────────────────────────────────────────────────────
-const MANIFEST = JSON.stringify({ name: 'מפת אזעקות ישראל', short_name: 'אזעקות', description: 'ניטור אזעקות בזמן אמת', start_url: '/', display: 'standalone', background_color: '#0a0e17', theme_color: '#ef4444', orientation: 'any', lang: 'he', dir: 'rtl', icons: [{ src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' }] }, null, 2);
+const MANIFEST = JSON.stringify({ name: 'צפיר', short_name: 'צפיר', description: 'ניטור התרעות פיקוד העורף בזמן אמת', start_url: '/', display: 'standalone', background_color: '#0a0e17', theme_color: '#ef4444', orientation: 'any', lang: 'he', dir: 'rtl', icons: [{ src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' }] }, null, 2);
 // NOTE: bump CN whenever the client (index.html) or SW logic changes, otherwise users keep cached version
 const SW = `
-const CN='red-alert-v9';
+const CN='red-alert-v10';
 const TILE='red-alert-tiles-v1';
 const AS=['/','/index.html','/lib.js','/manifest.json','/icon.svg'];
 const CDN=['https://unpkg.com/leaflet@1.9.4/dist/leaflet.css','https://unpkg.com/leaflet@1.9.4/dist/leaflet.js','https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css','https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css','https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js'];
@@ -276,8 +291,8 @@ self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.
 self.addEventListener('fetch',e=>{
   const u=new URL(e.request.url);
   if(e.request.method!=='GET'||u.pathname.startsWith('/api/'))return;
-  // Map basemap tiles → cache-first so previously-viewed areas work offline (capped ~500 tiles)
-  if(u.hostname.endsWith('basemaps.cartocdn.com')){
+  // Map basemap tiles (incl. satellite) → cache-first so previously-viewed areas work offline (capped ~500 tiles)
+  if(u.hostname.endsWith('basemaps.cartocdn.com')||u.hostname==='server.arcgisonline.com'){
     e.respondWith((async()=>{
       const c=await caches.open(TILE);
       const hit=await c.match(e.request);

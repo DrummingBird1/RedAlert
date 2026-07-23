@@ -5,6 +5,45 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+## [3.3.0]
+
+### Added
+- **Rebranded to "Tzafir" (צפיר)** — the project's display name, PWA manifest,
+  page title, and `package.json` (npm name: `tzafir`, formerly `israel-alert-map`).
+  The GitHub repo itself is intentionally left as-is (`RedAlert`).
+- **10 additional languages**: Amharic, Tigrinya, Thai, Tagalog, Ukrainian, French,
+  Spanish, Romanian, Hindi, and Chinese — chosen for real communities in Israel
+  (recent olim, foreign workers, and asylum seekers), bringing the total to 14.
+  All languages share an identical key set. Amharic/Tigrinya translations are
+  best-effort (lower-resource languages) and would benefit from native-speaker
+  review before being relied on operationally. The language `<select>` is now
+  generated dynamically from `lib.js`'s new `LANG_META` export instead of being
+  hand-edited in `index.html`.
+- **History tab** — a dedicated view backed by the full IndexedDB history (not
+  just the capped in-memory list), with its own date range (today / yesterday /
+  week / month / all) and city search.
+- **Search by city** — a text filter alongside the existing region/type/time
+  filters on the Alerts tab.
+- **Updates tab** — an in-app changelog (mirroring this file) plus a one-time
+  "what's new" popup shown to returning visitors after a version bump.
+- **Satellite map layer** — a free toggle (Esri World Imagery, no API key)
+  alongside the existing light/dark basemap, keeping the project's zero-key
+  philosophy intact. (Real Google Maps was considered but requires a
+  user-supplied API key + billing account, so it was intentionally not used.)
+- **Digital clock** with seconds in the header (24h format).
+- **Discord webhook** (`DISCORD_WEBHOOK_URL`) — posts an embed to a Discord
+  channel for every new real alert batch, mirroring the existing health-webhook
+  POST mechanics. No SDK; plain HTTPS POST, entirely optional.
+- Patreon donation link now appears in every tab/menu (Alerts, Stats, History,
+  Updates, and the Settings dialog footer), not just the About tab.
+
+### Fixed
+- **TTS announcer only ever read the last city in a multi-city alert batch.**
+  `speak()` was called once per new alert inside a loop, and each call started
+  by cancelling the in-progress utterance — so a burst of several simultaneous
+  cities meant only the final one was ever audible. It now collects every new
+  city in a batch and speaks them together in a single utterance.
+
 ## [3.2.0]
 
 ### Fixed
@@ -97,7 +136,8 @@ All notable changes to this project are documented here. Format loosely follows
   (he/en/ar/ru), Docker + docker-compose, admin dashboard with Basic auth,
   health-check webhook, rate limiting, and file-based alert logging with rotation.
 
-[Unreleased]: https://github.com/DrummingBird1/RedAlert/compare/v3.2.0...HEAD
+[Unreleased]: https://github.com/DrummingBird1/RedAlert/compare/v3.3.0...HEAD
+[3.3.0]: https://github.com/DrummingBird1/RedAlert/compare/v3.2.0...v3.3.0
 [3.2.0]: https://github.com/DrummingBird1/RedAlert/compare/v3.1.0...v3.2.0
 [3.1.0]: https://github.com/DrummingBird1/RedAlert/compare/v3.0.0...v3.1.0
 [3.0.0]: https://github.com/DrummingBird1/RedAlert/releases/tag/v3.0.0

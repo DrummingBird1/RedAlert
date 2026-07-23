@@ -1,9 +1,10 @@
-# 🚨 מפת אזעקות ישראל — צבע אדום | Israel Alert Map
+# 🚨 צפיר — Tzafir | ניטור אזעקות פיקוד העורף בזמן אמת
 
 <div align="center">
 
 **מערכת ניטור אזעקות בזמן אמת עם מפה אינטראקטיבית**
 **Real-time alert monitoring with interactive map**
+*(לשעבר "מפת אזעקות ישראל" / israel-alert-map — אותו פרויקט, מיתוג חדש)*
 
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-green?logo=node.js)](https://nodejs.org/)
 [![Zero Dependencies](https://img.shields.io/badge/Core_Dependencies-Zero-blue)]()
@@ -26,8 +27,8 @@
 ## 🚀 הפעלה מהירה
 
 ```bash
-git clone https://github.com/YOUR_USER/israel-alert-map.git
-cd israel-alert-map
+git clone https://github.com/DrummingBird1/RedAlert.git tzafir
+cd tzafir
 node server.js
 # → http://localhost:3000
 ```
@@ -56,21 +57,24 @@ ADMIN_PASS=secret node server.js
 - 🔥 **מפת חום** — שכבה ויזואלית לאזורים עם ריכוז אזעקות
 - 🏛️ **מקלטים ציבוריים** — שכבת מקלטים על המפה (~34 דוגמאות illustrative; ל-נתונים אמיתיים ראה `SHELTERS_URL`)
 - 📍 **המיקום שלי** — GPS + מרחק בק"מ מכל אזעקה
+- 🛰️ **תצוגת לוויין** — שכבת Esri World Imagery חינמית (ללא מפתח API), toggle בכפתור 🛰️
 
 ### אזעקות ומידע
 - ⏱️ **זמן מיגון** — לכל ישוב (~57 ישובים מובנים) לפי נתוני פיקוד העורף
 - ⏳ **ספירה לאחור חיה** — "נותרו 23 שניות" על כל אזעקה פעילה
 - 🛡️ **הנחיות התגוננות** — פאנל ירוק עם הנחיות + countdown מרכזי
 - 🔍 **Fuzzy city matching** — "תל אביב - יפו" מוצא "תל אביב"
-- 🔎 **סינון** — לפי אזור, סוג אזעקה, וטווח זמן
+- 🔎 **סינון וחיפוש** — לפי אזור, סוג אזעקה, טווח זמן, וחיפוש חופשי לפי שם יישוב
+- 📜 **טאב היסטוריה** — כל האזעקות שנשמרו ב-IndexedDB (לא רק האחרונות בזיכרון), עם טווח תאריכים (היום/אתמול/שבוע/חודש/הכל) וחיפוש
 
 ### התראות
 - 🔔 **Push Notifications** — התראות מערכת (Browser Notification API)
 - 📡 **Web Push** — VAPID keys + Service Worker (עם `npm i web-push`); ⭐ מועדפות עוברות לשרת ומסננות את הפושים אוטומטית
-- 🗣️ **TTS הכרזה קולית** — הקראת "צבע אדום ב..." בעברית/אנגלית/ערבית/רוסית
+- 🗣️ **TTS הכרזה קולית** — הקראת שמות הערים בהתרעה, בכל אחת מ-14 השפות הנתמכות; כל הערים החדשות באותו batch נקראות יחד בקריאה אחת
 - 📢 **לולאת צופר** — סירנה ישראלית (400-900Hz) בזמן אזעקה פעילה
 - 🌙 **מצב שקט (DND)** — ללא צליל בין 23:00-07:00
 - ⭐ **ערים מועדפות** — Push רק על ערים שבחרת
+- 📢 **Discord webhook** — שליחת embed לערוץ Discord על כל אזעקה אמיתית חדשה (`DISCORD_WEBHOOK_URL`)
 
 ### סטטיסטיקה
 - 📊 **ציר זמן 24 שעות** — גרף Canvas בזמן אמת
@@ -78,13 +82,15 @@ ADMIN_PASS=secret node server.js
 - 📥 **ייצוא CSV/JSON** — עם BOM לעברית ב-Excel
 
 ### נגישות ורב-לשוניות
-- 🌐 **4 שפות** — עברית, ערבית, אנגלית, רוסית + RTL/LTR אוטומטי
+- 🌐 **14 שפות** — עברית, אנגלית, ערבית, רוסית, אמהרית, תיגרינית, תאילנדית, טאגלוג, אוקראינית, צרפתית, ספרדית, רומנית, הינדי, סינית + RTL/LTR אוטומטי (נבחרו לפי קהילות משמעותיות בישראל — עולים, עובדים זרים ומבקשי מקלט; תרגומי אמהרית/תיגרינית הם best-effort ומומלץ אימות ע״י דובר native)
+- 🕐 **שעון דיגיטלי** — שעון 24 שעות עם שניות בכותרת
 - ♿ **ARIA** — roles, aria-live, sr-only, keyboard navigation
 - 🔲 **ניגודיות גבוהה** — מצב high contrast לכבדי ראייה
 - 🎬 **Reduced motion** — כיבוד `prefers-reduced-motion`
 - 🌙 **Auto dark mode** — `prefers-color-scheme` + זיהוי שעת לילה
 
 ### מובייל ו-PWA
+- 🆕 **טאב "עדכונים"** — רשימת השינויים האחרונים בתוך האפליקציה עצמה, כולל פופאפ "מה חדש" חד-פעמי אחרי כל עדכון גרסה
 - 📱 **Bottom navigation** — סרגל ניווט תחתון למובייל עם bottom sheet
 - 📲 **PWA** — ניתן להתקנה ממובייל ודסקטופ ("הוסף למסך הבית")
 - 🔄 **Service Worker** — network-first + cache fallback
@@ -169,6 +175,7 @@ israel-alert-map/
 | `FALLBACK_ALERT_URL` | (ריק) | URL חלופי לאזעקות (יחיד, legacy) |
 | `FALLBACK_ALERT_URLS` | (ריק) | רשימת URLs מופרדת בפסיק — sequence של mirrors. אם הראשון נכשל 5 פעמים השרת מסתובב לבא בתור |
 | `HEALTH_WEBHOOK` | (ריק) | URL ל-POST כשהמערכת degraded |
+| `DISCORD_WEBHOOK_URL` | (ריק) | Webhook של ערוץ Discord (Channel Settings → Integrations → Webhooks בדיסקורד) — שולח embed על כל batch אזעקות אמיתי חדש |
 | `OREF_URL_OVERRIDE` | (ריק) | החלף את URL של פיקוד העורף (לטסטים בלבד) |
 | `OREF_HIST_OVERRIDE` | (ריק) | החלף את URL של ההיסטוריה (לטסטים בלבד) |
 | `SHELTERS_URL` | (ריק) | URL חיצוני ל-JSON של מקלטים אמיתיים (למשל מ-API של הרשות המקומית שלך). הקליינט מאחה אם זמין; אחרת fallback ל-~34 דוגמאות illustrative |
@@ -410,7 +417,7 @@ scrape_configs:
 
 | פרמטר | דוגמה | פעולה |
 |---|---|---|
-| `?lang=` | `?lang=en` | שפה (he/en/ar/ru) |
+| `?lang=` | `?lang=en` | שפה — אחת מ-14 (he/en/ar/ru/am/ti/th/tl/uk/fr/es/ro/hi/zh) |
 | `?theme=` | `?theme=light` | ערכת נושא |
 | `?city=` | `?city=שדרות` | flyTo לעיר בטעינה |
 | `?embed=1` | `?embed=1` | מצב iframe מצומצם |

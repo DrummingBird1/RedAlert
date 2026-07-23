@@ -4,7 +4,7 @@
 
 ## מה הפרויקט
 
-`israel-alert-map` (v3.2.0) — שרת Node.js + קליינט HTML עצמאי שמציג בזמן אמת את אזעקות פיקוד העורף על מפת Leaflet. תלות בליבה: אפס (רק `node` ≥ 18). תלויות אופציונליות: `web-push`, `node-telegram-bot-api`.
+**צפיר** (Tzafir; חבילת npm: `tzafir`, לשעבר `israel-alert-map`, v3.3.0) — שרת Node.js + קליינט HTML עצמאי שמציג בזמן אמת את אזעקות פיקוד העורף על מפת Leaflet. תלות בליבה: אפס (רק `node` ≥ 18). תלויות אופציונליות: `web-push`, `node-telegram-bot-api`. שם ה-repo ב-GitHub נשאר `RedAlert` במכוון (המיתוג שונה, ה-repo לא שונה).
 
 מקור הנתונים: `https://www.oref.org.il/WarningMessages/alert/alerts.json` (polling כל 2 שניות). אין מפתחות, אין הרשמה.
 
@@ -58,6 +58,7 @@ npm run docker:run          # docker run -p 3000:3000 ...
 | `ADMIN_USER` / `ADMIN_PASS` | `admin` / *(אקראי)* | אם `ADMIN_PASS` לא מוגדרת — מוגרלת בהפעלה ומודפסת ללוג פעם אחת (משתנה בכל restart עד הגדרת ערך קבוע). |
 | `FALLBACK_ALERT_URL` | (ריק) | URL חלופי שמופעל אחרי 5 כשלונות OREF |
 | `HEALTH_WEBHOOK` | (ריק) | URL ל-POST כשהשרת degraded/recovered |
+| `DISCORD_WEBHOOK_URL` | (ריק) | Webhook של ערוץ Discord (Channel Settings → Integrations → Webhooks) — שולח embed לכל batch אזעקות אמיתי חדש מ-`pollAlerts()`. אין SDK, POST רגיל דרך `https`. |
 | `TELEGRAM_TOKEN` / `TELEGRAM_CHANNEL` | (ריק) | לבוט בלבד |
 | `OREF_URL_OVERRIDE` / `OREF_HIST_OVERRIDE` | (ריק) | החלף את URL של OREF (לטסטים בלבד; `test-integration.js` משתמש בזה) |
 | `SHELTERS_URL` | (ריק) | JSON חיצוני של מקלטים אמיתיים (`[{lat,lng,n}]`); הקליינט מחליף את ~34 הדוגמאות ה-illustrative אם נמצא. **אין מאגר CKAN פתוח של מקלטים ב-data.gov.il** (נבדק — 0 תוצאות); ה-default הוא נקודות מרכז-עיר גסות ומסומנות "לדוגמה", לא כתובות מאומתות |
@@ -87,15 +88,17 @@ npm run docker:run          # docker run -p 3000:3000 ...
 - **SSE + fallback polling**: `connectSSE()` + `startPoll()` רץ כל 5s רק אם `sseOK=false`.
 - **Cities (`C`)**: dict סטטי של ~55 ערים עם lat/lng, region, shelter time (לא 130+ כמו ב-README).
 - **Fuzzy matching (`findC`)**: exact → normalized → substring → word-by-word. תומך ב-"תל אביב - יפו" → "תל אביב".
-- **i18n (`LN`)**: 4 שפות (he/en/ar/ru), `t(key)` עם fallback ל-Hebrew. TTS משתמש בקידומת `ttsPrefix` המתורגמת ובקוד שפה תואם (`he-IL/en-US/ar-SA/ru-RU`).
-- **PWA**: SW מקודד בתוך `server.js` (משתנה `SW`), מטמון `red-alert-v8` + מטמון אריחים נפרד `red-alert-tiles-v1` (Leaflet basemap, cache-first). שינוי ל-SW דורש bump של `CN` ב-server.js.
+- **i18n (`LN`)**: 14 שפות — he/en/ar/ru + am (אמהרית) / ti (תיגרינית) / th (תאילנדית) / tl (טאגלוג) / uk (אוקראינית) / fr / es / ro / hi / zh. `t(key)` עם fallback ל-Hebrew; לכל השפות אותו סט מפתחות (נבדק ע״י test.js). התרגומים ל-am/ti הם best-effort (שפות low-resource) — מומלץ אימות ע״י דובר native לפני הסתמכות תפעולית. `<select id="langS">` נבנה דינמית ב-JS מ-`AlertLib.LANG_META` (אין יותר עריכת `<option>` ידנית ב-index.html). TTS משתמש בקידומת `ttsPrefix` המתורגמת ובלוקאל מ-`AlertLib.TTS_LOCALE[lang]`. `speak(cities)` מקבל מערך ומדבר קריאה אחת לכל batch — קריאה בלולאה לכל עיר בנפרד תבטל (`speechSynthesis.cancel()`) את הקודמת לפני שנשמעה.
+- **תפריטים/טאבים**: `alerts` (ברירת מחדל, כולל שורת חיפוש-עיר וסינון) / `stats` / `history` (חדש — טוען את **כל** ההיסטוריה מ-IndexedDB דרך `gDB()`, לא רק את ה-500 שב-`hist` בזיכרון; טווח תאריכים + חיפוש עצמאיים) / `updates` (חדש — מציג את מערך `CHANGES` הסטטי, מראה גם פופאפ "מה חדש" חד-פעמי דרך `checkWhatsNew()` שמשווה `APP_VERSION` ל-`localStorage['alertmap-lastver']`) / `about`. דסקטופ: `.stabs`/`swTab()`. מובייל: `.mn-i`/`mobTab()` (מעתיק את `#sbC` ל-`#mSheet`; טאבים אסינכרוניים כמו history מוחזרים כ-Promise כדי שההעתקה תחכה לרינדור). כפתור תרומת Patreon (`donateMini()`) מופיע בכל טאב חוץ מ-About (ששם יש את `donateCard()` המלא) + בתחתית מודל ההגדרות.
+- **מפה**: Leaflet + CartoDB light/dark (ברירת מחדל) או שכבת לוויין חינמית — Esri World Imagery (`server.arcgisonline.com`, ללא מפתח API) דרך כפתור 🛰️ ב-`.mc` (`tglSat()`). דורש allowlist גם ב-CSP `img-src` (`secHeaders()`) וגם בבדיקת ה-hostname בקאש האריחים של ה-SW.
+- **PWA**: SW מקודד בתוך `server.js` (משתנה `SW`), מטמון `red-alert-v10` + מטמון אריחים נפרד `red-alert-tiles-v1` (Leaflet basemap כולל לוויין, cache-first). שינוי ל-SW דורש bump של `CN` ב-server.js.
 
 ## איך להוסיף תכונה / לשנות קוד
 
 1. **שינויים בלוגיקת השרת** — `server.js` ערוך ישירות. אין hot reload — `node server.js` מחדש.
-2. **שינויים בקליינט** — `index.html` ערוך ישירות. השרת מזהה את שינוי ה-mtime ומגיש את הגרסה החדשה (refresh בדפדפן). זכור ש-Service Worker עלול להגיש cached גרסה — חשוב ל-bump את `CN` (כרגע `red-alert-v8`) ב-`server.js` (משתנה `SW`) כדי להפעיל invalidate, או לפתוח DevTools → Application → Service Workers → Unregister.
+2. **שינויים בקליינט** — `index.html` ערוך ישירות. השרת מזהה את שינוי ה-mtime ומגיש את הגרסה החדשה (refresh בדפדפן). זכור ש-Service Worker עלול להגיש cached גרסה — חשוב ל-bump את `CN` (כרגע `red-alert-v10`) ב-`server.js` (משתנה `SW`) כדי להפעיל invalidate, או לפתוח DevTools → Application → Service Workers → Unregister.
 3. **הוספת עיר** — ערוך את `CITIES` ב-[lib.js](lib.js). פורמט: `"שם":{lat:X,lng:Y,r:"אזור",s:זמן_מיגון}`.
-4. **הוספת שפה** — הוסף ערך ל-`LN` ב-[lib.js](lib.js) ול-`<select id="langS">` ב-index.html. וודא קידומת ב-`ttsPrefix` וקוד שפה ב-`speak()`.
+4. **הוספת שפה** — הוסף ערך ל-`LN`, ל-`LANG_META` (שם native + דגל) ול-`TTS_LOCALE` (קוד BCP-47) ב-[lib.js](lib.js) — כולל **כל** המפתחות שקיימים ב-`LN.en` (test.js/הקוד לא בודקים זאת אוטומטית, אבל חוסר מפתח נופל חזרה ל-Hebrew בשקט). `<select id="langS">` ב-index.html נבנה אוטומטית מ-`LANG_META` דרך `initLangSelect()` — אין לערוך אותו ידנית.
 5. **endpoint חדש** — הוסף `if (p === '/api/...')` ב-`server.js` ל-pipeline הקיים בתוך `http.createServer`. תזכור `track(p, code)` ו-`gz(req, res, body, ct)`.
 6. **בדיקות** — הפונקציות הפניניות חיות ב-[lib.js](lib.js) (מקור-אמת יחיד). הקליינט עוטף בשמות קצרים, ו-`test.js` מייבא `require('./lib.js')`. **אם משנים לוגיקה פנינית — עורכים את `lib.js`, וזהו.** אין יותר שכפול ידני.
 7. **הוספת data סטטי** (עיר/שפה/סוג אזעקה) — עורכים את האובייקטים ב-[lib.js](lib.js) (`CITIES`/`LN`/`TM`/`RS`). הקליינט מושך אותם דרך `AlertLib`. עיר ללא קואורדינטה (לא נמצאה ב-`fuzzyMatch`) מסומנת `noLoc:true` — **לא מוצב מרקר במיקום אקראי** (היא מופיעה ברשימה עם תווית "מיקום לא ידוע" בלבד).
