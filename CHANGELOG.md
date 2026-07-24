@@ -5,6 +5,28 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+## [3.4.1]
+
+### Fixed
+- **Critical: shelter name labels smeared into an illegible mess when zooming.** Shelter
+  markers had a permanent always-visible text label in addition to their click popup; that
+  was tolerable with ~34 sparse illustrative points but with ~374 real, densely-packed Tel
+  Aviv shelters (added in 3.4.0) the labels overlapped into unreadable smears at most zoom
+  levels. Removed the permanent label — the name is still shown via the existing click popup.
+- **Mobile bottom nav: only the Alerts button showed a visible name.** `.mn-i` (the flex
+  container holding all 6 nav buttons) had no explicit width; once `.mn` itself became a flex
+  container at mobile widths, `.mn-i` shrank to fit its content instead of spanning the bar,
+  squeezing all 6 buttons into a ~160px sliver instead of splitting the full width evenly —
+  looking like most of them had no label. Added `width:100%` to `.mn-i`.
+- **Dropdown menus were unreadable in dark mode** (light text on a light background). Native
+  `<option>` popups don't automatically inherit a `<select>`'s custom background/color — added
+  explicit `option` styling using the same theme variables.
+
+### Added
+- Autocomplete on the city search field via a shared `<datalist>`, so typing e.g. "תל"
+  suggests "תל אביב" instead of relying purely on the substring filter or the separate
+  browse-dropdown added in 3.4.0.
+
 ## [3.4.0]
 
 ### Fixed
@@ -169,7 +191,8 @@ All notable changes to this project are documented here. Format loosely follows
   (he/en/ar/ru), Docker + docker-compose, admin dashboard with Basic auth,
   health-check webhook, rate limiting, and file-based alert logging with rotation.
 
-[Unreleased]: https://github.com/DrummingBird1/RedAlert/compare/v3.4.0...HEAD
+[Unreleased]: https://github.com/DrummingBird1/RedAlert/compare/v3.4.1...HEAD
+[3.4.1]: https://github.com/DrummingBird1/RedAlert/compare/v3.4.0...v3.4.1
 [3.4.0]: https://github.com/DrummingBird1/RedAlert/compare/v3.3.0...v3.4.0
 [3.3.0]: https://github.com/DrummingBird1/RedAlert/compare/v3.2.0...v3.3.0
 [3.2.0]: https://github.com/DrummingBird1/RedAlert/compare/v3.1.0...v3.2.0

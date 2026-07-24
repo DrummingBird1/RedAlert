@@ -72,6 +72,10 @@ html.high-contrast .sm .md{background:#3b82f6;border-color:#fff;border-radius:2p
 .fbar{padding:7px 9px;border-bottom:1px solid var(--brd);display:flex;flex-direction:column;gap:4px;position:sticky;top:0;z-index:5;background:var(--bg2)}
 .fr{display:flex;gap:3px}
 .fs{flex:1;padding:4px 6px;border-radius:4px;background:var(--inp);border:1px solid var(--brd);color:var(--txt);font-family:'Heebo';font-size:9px;cursor:pointer;appearance:none}
+/* Native <option> popups don't inherit the select's background/color automatically — without
+   this, the dropdown list defaults to the browser's light popup style, which is unreadable
+   (light text on light background) in dark mode. */
+.fs option,.ls option{background:var(--bg2);color:var(--txt)}
 .fs:focus{outline:none;border-color:var(--red)}
 .fc{padding:3px 6px;border-radius:3px;font-size:8px;background:transparent;border:1px solid var(--brd);color:var(--txtm);cursor:pointer}
 .fi{font-size:8px;color:var(--txtm);text-align:center}
@@ -210,7 +214,7 @@ html.light .skel{background:linear-gradient(90deg,rgba(0,0,0,.04) 25%,rgba(0,0,0
 
 /* Mobile nav */
 .mn{display:none;position:fixed;bottom:0;left:0;right:0;height:50px;background:var(--bg2);border-top:1px solid var(--brd);z-index:1500}
-.mn-i{display:flex;height:100%}
+.mn-i{display:flex;height:100%;width:100%}
 .mn-b{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:8px;color:var(--txtm);cursor:pointer;gap:1px;border:none;background:none}
 .mn-b.active{color:var(--red)}.mn-b .ni{font-size:17px}
 .ms{display:none;position:fixed;bottom:50px;left:0;right:0;top:54px;background:var(--bg2);z-index:1400;overflow-y:auto;transform:translateY(100%);transition:transform .3s}
@@ -254,6 +258,7 @@ html.embed .defense.below-banner{top:38px!important}
 <div class="mn"><div class="mn-i"><button class="mn-b active" onclick="mobTab('alerts',this)"><span class="ni">🔔</span>אזעקות</button><button class="mn-b" onclick="mobTab('stats',this)"><span class="ni">📊</span>סטטיסטיקה</button><button class="mn-b" onclick="mobTab('history',this)"><span class="ni">📜</span>היסטוריה</button><button class="mn-b" onclick="mobTab('updates',this)"><span class="ni">🆕</span>עדכונים</button><button class="mn-b" onclick="mobTab('about',this)"><span class="ni">ℹ️</span>אודות</button><button class="mn-b" onclick="openSet()"><span class="ni">⚙️</span>הגדרות</button></div></div>
 <div class="ms" id="mSheet"></div>
 <div class="ptr-ind" id="ptrInd" aria-hidden="true">🔄</div>
+<datalist id="cityList"></datalist>
 <div class="mc" role="toolbar" aria-label="פעולות מפה"><button class="mb" onclick="map.setView([31.5,34.8],8)" aria-label="חזור למבט בית" title="חזור למבט בית">🏠</button><button class="mb" onclick="geoLoc()" id="geoB" aria-label="המיקום שלי" title="המיקום שלי">📍</button><button class="mb" onclick="manualRefresh()" aria-label="רענון" title="רענון">🔄</button><button class="mb" onclick="tglHeat()" id="heatB" aria-label="מפת חום" title="מפת חום">🔥</button><button class="mb" onclick="tglCls()" id="clsB" aria-label="קיבוץ מרקרים" title="קיבוץ מרקרים">🧲</button><button class="mb" onclick="tglShl()" id="shlB" aria-label="מקלטים" title="מקלטים">🏛️</button><button class="mb" onclick="tglSat()" id="satB" aria-label="תצוגת לוויין" title="תצוגת לוויין">🛰️</button><button class="mb" id="satLblB" onclick="tglSatLabels()" aria-label="שמות מקומות בלוויין" title="שמות מקומות בלוויין" style="display:none">🏷️</button><button class="mb" onclick="clrHist()" aria-label="מחק היסטוריה" title="מחק היסטוריה">🗑️</button></div>
 <div class="ci" id="cInfo">⏳</div>
 <div class="tb" id="tBox"></div>
@@ -263,7 +268,7 @@ html.embed .defense.below-banner{top:38px!important}
 <script src="/lib.js"></script>
 <script>
 const API=location.origin,MH=500,MM=200,AD=90000;
-const APP_VERSION='3.4.0'; // bump alongside package.json; drives the "what's new" popup in checkWhatsNew()
+const APP_VERSION='3.4.1'; // bump alongside package.json; drives the "what's new" popup in checkWhatsNew()
 // Donation link — set to your Patreon (or any URL). Empty string hides the donate card.
 const PATREON_URL='https://www.patreon.com/cw/MrIdan';
 // Shared data + pure functions live in lib.js (loaded synchronously above; also used by test.js)
@@ -397,7 +402,10 @@ async function sDB(a){try{const d=await odb();d.transaction(DBS,'readwrite').obj
 async function gDB(since){try{const d=await odb();return new Promise(res=>{const r=d.transaction(DBS,'readonly').objectStore(DBS).getAll();r.onsuccess=()=>{let x=r.result||[];if(since)x=x.filter(a=>new Date(a.timestamp)>=since);d.close();res(x)};r.onerror=()=>{d.close();res([])}})}catch{return[]}}
 async function getComp(){const now=new Date(),ts=new Date(now.getFullYear(),now.getMonth(),now.getDate()),ys=new Date(ts-864e5),wa=new Date(ts-6048e5);const all=await gDB(wa);return{today:Math.max(all.filter(a=>new Date(a.timestamp)>=ts).length,hist.filter(a=>a.timestamp>=ts).length),yesterday:all.filter(a=>{const d=new Date(a.timestamp);return d>=ys&&d<ts}).length,weekAvg:Math.round(all.length/7)}}
 
-function tglShl(){shlV=!shlV;document.getElementById('shlB').classList.toggle('active',shlV);if(shlV){SHL.forEach(s=>{shlM.push(L.marker([s.lat,s.lng],{icon:L.divIcon({className:'cm sm',html:`<div class="md"></div><div class="ml">${X(s.n)}</div>`,iconSize:[10,10],iconAnchor:[5,5]})}).addTo(map).bindPopup(`🏛️ ${X(s.n)}`))})}else{shlM.forEach(m=>map.removeLayer(m));shlM=[]}}
+// Shelter markers show their name via bindPopup() on click only — with real per-city data
+// (e.g. ~374 real Tel Aviv shelters) a permanent always-visible text label per marker
+// overlapped into an illegible smear at most zoom levels, so there's no .ml label here.
+function tglShl(){shlV=!shlV;document.getElementById('shlB').classList.toggle('active',shlV);if(shlV){SHL.forEach(s=>{shlM.push(L.marker([s.lat,s.lng],{icon:L.divIcon({className:'cm sm',html:'<div class="md"></div>',iconSize:[10,10],iconAnchor:[5,5]})}).addTo(map).bindPopup(`🏛️ ${X(s.n)}`))})}else{shlM.forEach(m=>map.removeLayer(m));shlM=[]}}
 
 // Offline
 window.addEventListener('offline',()=>{document.getElementById('offBar').classList.add('active')});
@@ -481,7 +489,7 @@ function renderSB(){const el=document.getElementById('sbC');const all=filterH2(h
 // mid-typing, capture focus + cursor position here and restore them after, or every
 // keystroke would kick focus out of the field (the input node is destroyed and recreated).
 const prevQ=document.getElementById('fQ');const hadFocus=!!prevQ&&document.activeElement===prevQ;const selStart=hadFocus?prevQ.selectionStart:null,selEnd=hadFocus?prevQ.selectionEnd:null;
-let h=`<div class="fbar"><div class="fr"><input class="fs" id="fQ" type="text" placeholder="${X(t('searchPlaceholder'))}" oninput="applyF()" style="flex:1"></div><div class="fr"><select class="fs" id="citySel" onchange="jumpToCity(this.value)" style="flex:1"><option value="">🗺️ קפוץ ליישוב...</option>${citySelOptions()}</select></div><div class="fr"><select class="fs" id="fR" onchange="applyF()"><option value="">כל האזורים</option><option value="צפון">צפון</option><option value="חיפה">חיפה</option><option value="שרון">שרון</option><option value="מרכז">מרכז</option><option value="ירושלים">ירושלים</option><option value="שפלה">שפלה</option><option value="דרום">דרום</option><option value="עוטף עזה">עוטף עזה</option><option value="ערבה">ערבה</option><option value="יו״ש">יו״ש</option></select><select class="fs" id="fT" onchange="applyF()"><option value="">הכל</option><option value="rockets">רקטות</option><option value="uav">כטב״מ</option></select></div><div class="fr"><select class="fs" id="fTime" onchange="applyF()"><option value="all">הכל</option><option value="hour">שעה</option><option value="day">יום</option><option value="week">שבוע</option></select><button class="fc" onclick="clearF()">נקה</button></div></div>`;
+let h=`<div class="fbar"><div class="fr"><input class="fs" id="fQ" type="text" list="cityList" placeholder="${X(t('searchPlaceholder'))}" oninput="applyF()" style="flex:1"></div><div class="fr"><select class="fs" id="citySel" onchange="jumpToCity(this.value)" style="flex:1"><option value="">🗺️ קפוץ ליישוב...</option>${citySelOptions()}</select></div><div class="fr"><select class="fs" id="fR" onchange="applyF()"><option value="">כל האזורים</option><option value="צפון">צפון</option><option value="חיפה">חיפה</option><option value="שרון">שרון</option><option value="מרכז">מרכז</option><option value="ירושלים">ירושלים</option><option value="שפלה">שפלה</option><option value="דרום">דרום</option><option value="עוטף עזה">עוטף עזה</option><option value="ערבה">ערבה</option><option value="יו״ש">יו״ש</option></select><select class="fs" id="fT" onchange="applyF()"><option value="">הכל</option><option value="rockets">רקטות</option><option value="uav">כטב״מ</option></select></div><div class="fr"><select class="fs" id="fTime" onchange="applyF()"><option value="all">הכל</option><option value="hour">שעה</option><option value="day">יום</option><option value="week">שבוע</option></select><button class="fc" onclick="clearF()">נקה</button></div></div>`;
 if(!all.length){h+=`<div class="empty"><div class="icon">✅</div><h3>${t(hist.length?'noResults':'allClear')}</h3><p>${t('noAlerts')}</p></div>`}else{if(ac.length)h+=`<div class="st">${t('active')} <span class="cb">${ac.length}</span></div><div class="al">${ac.slice(0,20).map(a=>rItem(a,true)).join('')}</div>`;if(hi.length)h+=`<div class="st">${t('history')} <span class="cb off">${hi.length}</span></div><div class="hl2">${hi.slice(0,30).map(a=>rItem(a,false)).join('')}</div>`}
 h+=donateMini();
 el.innerHTML=h;const a=document.getElementById('fR'),b=document.getElementById('fT'),c=document.getElementById('fTime'),d=document.getElementById('fQ');if(a)a.value=flt.r;if(b)b.value=flt.t;if(c)c.value=flt.time;if(d)d.value=flt.q;
@@ -528,7 +536,7 @@ async function renderHistoryTab(){
   if(q)list=list.filter(a=>a.city.toLowerCase().includes(q));
   list.sort((a,b)=>b.timestamp-a.timestamp);
   const shown=list.slice(0,200);
-  let h=`<div class="fbar"><div class="fr"><input class="fs" id="hQ" type="text" placeholder="${X(t('searchPlaceholder'))}" oninput="applyHF()" style="flex:1"></div><div class="fr"><select class="fs" id="hRange" onchange="applyHF()"><option value="all">${t('dateAll')}</option><option value="today">${t('dateToday')}</option><option value="yesterday">${t('dateYesterday')}</option><option value="week">${t('dateWeek')}</option><option value="month">${t('dateMonth')}</option></select></div></div>`;
+  let h=`<div class="fbar"><div class="fr"><input class="fs" id="hQ" type="text" list="cityList" placeholder="${X(t('searchPlaceholder'))}" oninput="applyHF()" style="flex:1"></div><div class="fr"><select class="fs" id="hRange" onchange="applyHF()"><option value="all">${t('dateAll')}</option><option value="today">${t('dateToday')}</option><option value="yesterday">${t('dateYesterday')}</option><option value="week">${t('dateWeek')}</option><option value="month">${t('dateMonth')}</option></select></div></div>`;
   if(!shown.length)h+=`<div class="empty"><div class="icon">📭</div><h3>${t('noResults')}</h3></div>`;
   else{h+=`<div class="st">${t('history')} <span class="cb off">${list.length}</span></div><div class="hl2">${shown.map(a=>rItem(a,false)).join('')}</div>`;if(list.length>shown.length)h+=`<div style="text-align:center;font-size:9px;color:var(--txtm);padding:8px">${shown.length} / ${list.length}</div>`}
   h+=donateMini();
@@ -543,6 +551,7 @@ function applyHF(){flt.q=document.getElementById('hQ')?.value.trim()||'';histRan
 // Updates tab — mirrors CHANGELOG.md's newest entries (update this array by hand on release,
 // same as the CHANGELOG.md file; kept short on purpose, full history lives in the repo).
 const CHANGES=[
+  {v:'3.4.1',d:'2026-07-24',items:['🐛 קריטי: תוקן — שמות מקלטים נמרחו לכתם בלתי קריא על המפה בזום (עם 374 מקלטים אמיתיים בת"א); המרקר מציג נקודה בלבד, השם עדיין מופיע בלחיצה','🐛 תוקן: בתפריט הנייד רק "אזעקות" הציג שם — שאר 5 הכפתורים נדחסו לפינה אחת ברוחב במקום להתחלק שווה בשווה','🐛 תוקן: בחירה מתוך תיבות נפתחות (אזור/סוג/וכו׳) הייתה בלתי קריאה במצב כהה — טקסט בהיר על רקע בהיר','🔍 השלמה אוטומטית בשדה חיפוש היישוב (למשל "תל" מציע "תל אביב")']},
   {v:'3.4.0',d:'2026-07-24',items:['🐛 תוקן: שדה חיפוש היישוב הוציא את הפוקוס אחרי כל אות — עכשיו אפשר להקליד ברצף','🐛 תוקן: מעבר לכרטיסייה אחרת בדפדפן וחזרה החזיר את התצוגה לטאב אזעקות במקום להישאר בטאב האחרון','🐛 תוקן: לחצני התפריטים והמפה קיבלו שם גלוי בהעברת עכבר (title), לא רק לכפתור אזעקות','🏷️ שכבת שמות מקומות ניתנת להצגה/הסתרה מעל תצוגת הלוויין','🗺️ מקלטים אמיתיים בתל אביב-יפו (~374, מהעירייה) מוצגים אוטומטית במקום הדוגמאות הכלליות; שאר הארץ נשארת מסומנת "לדוגמה" באופן שקוף','🔽 תיבה נפתחת עם כל היישובים — לקפוץ ישירות לעיר על המפה']},
   {v:'3.3.0',d:'2026-07-23',items:['🏷️ מיתוג מחודש: הפרויקט נקרא כעת "צפיר"','🌍 10 שפות נוספות: אמהרית, תיגרינית, תאילנדית, טאגלוג, אוקראינית, צרפתית, ספרדית, רומנית, הינדי וסינית','📜 טאב היסטוריה חדש — כל האזעקות מ-IndexedDB, לא רק ה-500 האחרונות בזיכרון','🔍 חיפוש לפי יישוב','🎙️ תוקן באג בהכרזה הקולית — כעת מקריאה יחד את כל הערים החדשות, לא רק את האחרונה','🛰️ שכבת לוויין חינמית למפה (Esri, ללא מפתח API)','🕐 שעון דיגיטלי בכותרת','📢 אינטגרציית Discord webhook (הגדרה עצמאית בצד השרת)','💛 כפתור תרומת Patreon מופיע כעת בכל התפריטים','🆕 טאב "עדכונים" הזה, כולל פופאפ "מה חדש" חד-פעמי']},
 ];
@@ -647,6 +656,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('ttsT').checked=ttsOn;
   document.getElementById('sirT').checked=sirOn;
   initLangSelect();
+  document.getElementById('cityList').innerHTML=citySelOptions();
   document.getElementById('langS').value=lang;
   setLang(lang);updFav();updSnoozeUI();initMap();renderSB();
   updClock();setInterval(updClock,1000);
