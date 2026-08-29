@@ -152,6 +152,7 @@ israel-alert-map/
 | `GET /api/health` | Health check |
 | `GET /api/config` | קונפיג שזמין לקליינט (`shelters_url`, `web_push`) |
 | `GET /api/shelters/tel-aviv` | מקלטים אמיתיים בתל אביב-יפו (proxy מטומן ~24h לשכבת ה-GIS העירונית) |
+| `POST /api/client-error` | דיווח שגיאת JS מהקליינט (`window.onerror`/`unhandledrejection`) — נרשם ל-`logs/client-errors.log`, לא שירות tracking מלא |
 | `GET /api/spec` | OpenAPI 3.0.3 spec (YAML) |
 | `GET /api/logs` | צפייה בלוג |
 | `GET /api/v1/*` | Alias לכל endpoint תחת `/api/*` — מומלץ לאינטגרציות יציבות |

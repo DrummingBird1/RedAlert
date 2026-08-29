@@ -25,6 +25,7 @@
 
 קבצי runtime שנוצרים אוטומטית (ב-`.gitignore`):
 - `logs/alerts.log` — לוג אזעקות עם רוטציה (10MB × 5 קבצים)
+- `logs/client-errors.log` — שגיאות JS מהקליינט (`POST /api/client-error`), אותה מדיניות רוטציה, קובץ נפרד כדי שהתקפי שגיאות מקליינטים לא ידחקו את לוג האזעקות
 - `.vapid-keys.json` — מפתחות VAPID ל-Web Push (נוצרים בהפעלה ראשונה)
 - `.push-subs.json` — הרשמות Push
 - `.store-snapshot.json` — snapshot של היסטוריית האזעקות; נטען בהפעלה (כ-history בלבד, לא active) כדי לשרוד restart/redeploy

@@ -37,6 +37,14 @@ function rotateLog() { try { if (!fs.existsSync(LOG_FILE) || fs.statSync(LOG_FIL
 function logBatch(entries) { if (!logStream || !entries.length) return; try { logStream.write(`\n=== ${new Date().toISOString()} | ${entries[0].type} | ${entries.length} | ${entries.map(e=>e.city).join(', ')} ===\n`); entries.forEach(e => logStream.write(JSON.stringify({ t: e.timestamp, id: e.id, city: e.city, type: e.type }) + '\n')); } catch {} rotateLog(); }
 openLog();
 
+// Client-side error reports (window.onerror / unhandledrejection) — same rotation policy, separate file so a
+// burst of browser errors can't crowd out the alert log. Lightweight, file-based; not a Sentry replacement.
+const CLIENT_ERR_LOG = path.join(LOG_DIR, 'client-errors.log');
+let clientErrStream = null;
+function openClientErrLog() { try { if (clientErrStream) try { clientErrStream.end(); } catch {} clientErrStream = fs.createWriteStream(CLIENT_ERR_LOG, { flags: 'a', encoding: 'utf8' }); clientErrStream.on('error', () => {}); } catch {} }
+function rotateClientErrLog() { try { if (!fs.existsSync(CLIENT_ERR_LOG) || fs.statSync(CLIENT_ERR_LOG).size < MAX_LOG_SIZE) return; for (let i = MAX_LOG_FILES - 1; i >= 1; i--) { const s = i === 1 ? CLIENT_ERR_LOG : path.join(LOG_DIR, `client-errors.${i-1}.log`), d = path.join(LOG_DIR, `client-errors.${i}.log`); if (fs.existsSync(s)) try { fs.renameSync(s, d); } catch {} } openClientErrLog(); } catch {} }
+openClientErrLog();
+
 // ── Rate limiting ────────────────────────────────────────────
 const rateMap = new Map();
 function rateOK(ip) { const now = Date.now(); let e = rateMap.get(ip); if (!e || now - e.t > 60000) { e = { t: now, c: 0 }; rateMap.set(ip, e); } return ++e.c <= 120; }
@@ -412,6 +420,7 @@ const server = http.createServer(async (req, res) => {
   if (p === '/api/push/vapid-key') { track(p, 200); return gz(req, res, JSON.stringify({ publicKey: vapidKeys?.publicKey || null, available: !!webpush }), 'application/json; charset=utf-8'); }
   if (p === '/api/push/subscribe' && req.method === 'POST') { try { if (!webpush) { track(p, 503); res.writeHead(503); return res.end('{"error":"web-push not available on server"}'); } const b = await parseBody(req); const sub = b.subscription || b; if (!sub?.endpoint) throw new Error('no endpoint'); const favs = Array.isArray(b.favs) ? b.favs.map(c => String(c).slice(0, 100)).slice(0, 200) : []; pushSubs.set(sub.endpoint, { sub, favs, dnd: !!b.dnd }); saveSubs(); track(p, 201); res.writeHead(201, { 'Content-Type': 'application/json' }); return res.end('{"ok":true}'); } catch (e) { track(p, 400); res.writeHead(400); return res.end(`{"error":"${String(e.message).replace(/"/g,"'")}"}`); } }
   if (p === '/api/push/unsubscribe' && req.method === 'POST') { try { const b = await parseBody(req); const endpoint = b.endpoint || b.subscription?.endpoint; if (endpoint) pushSubs.delete(endpoint); saveSubs(); track(p, 200); res.writeHead(200); return res.end('{"ok":true}'); } catch { track(p, 400); res.writeHead(400); return res.end('{"error":"bad"}'); } }
+  if (p === '/api/client-error' && req.method === 'POST') { try { const b = await parseBody(req); const entry = { t: new Date().toISOString(), message: String(b.message || '').slice(0, 500), stack: String(b.stack || '').slice(0, 2000), url: String(b.url || '').slice(0, 300), ua: String(req.headers['user-agent'] || '').slice(0, 300) }; if (clientErrStream) clientErrStream.write(JSON.stringify(entry) + '\n'); rotateClientErrLog(); track(p, 204); res.writeHead(204); return res.end(); } catch { track(p, 400); res.writeHead(400); return res.end(); } }
 
   if (p === '/api/health') { const mem = process.memoryUsage(); track(p, 200); return gz(req, res, JSON.stringify({ status: 'ok', uptime_seconds: Math.floor((Date.now() - SERVER_START) / 1000), memory_mb: Math.round(mem.rss / 1024 / 1024), sse_clients: sseClients.size, alerts_stored: store.length, fallback: useFB, web_push: !!webpush, push_subs: pushSubs.size, last_poll_ago: lastPoll ? Math.floor((Date.now() - lastPoll) / 1000) : null, health_webhook: !!HEALTH_WEBHOOK }), 'application/json; charset=utf-8'); }
   if (p === '/api/config') { track(p, 200); return gz(req, res, JSON.stringify({ shelters_url: SHELTERS_URL || null, web_push: !!webpush }), 'application/json; charset=utf-8'); }

@@ -285,6 +285,23 @@ paths:
       responses:
         '200': { description: Unsubscribed }
 
+  /api/client-error:
+    post:
+      tags: [client]
+      summary: Report a client-side JS error (window.onerror / unhandledrejection)
+      description: Lightweight, file-based error log (logs/client-errors.log) — not a full error-tracking service. The client caps itself to 5 reports per page load.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message: { type: string }
+                stack: { type: string }
+                url: { type: string }
+      responses:
+        '204': { description: Recorded (or silently dropped on malformed input) }
+
   /admin:
     get:
       tags: [admin]
