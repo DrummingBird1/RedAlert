@@ -36,7 +36,8 @@ flowchart LR
 | [index.html](index.html) | קליינט מונוליטי — HTML + CSS + JS באותו קובץ. כל המפה, ה-UI, IndexedDB, audio, TTS. **טוען את [lib.js](lib.js) באופן סינכרוני** (`<script src="/lib.js">`) לפני הסקריפט הפנימי. |
 | [lib.js](lib.js) | **מקור-אמת יחיד** ל-data סטטי (`CITIES`, `LN`, `TM`, `RS`, `SHELTERS_DEFAULT`) ופונקציות פניניות (`escapeHtml`, `formatShelter`, `shelterClass`, `distanceKm`, `isDND`, `normalizeCity`, `fuzzyMatch`). UMD — עובד גם כ-`<script>` בדפדפן (גלובל `AlertLib`) וגם כ-`require('./lib.js')` ב-Node. הקליינט עוטף בשמות קצרים (`X`, `C`, `findC`...), הטסטים מייבאים ישירות. |
 | [test.js](test.js) | בדיקות יחידה ל-`lib.js` דרך `node:test`. ללא תלויות. |
-| [test-integration.js](test-integration.js) | E2E — מקים mock OREF + spawned server, מאמת אזעקה זורמת ל-`/api/alerts` + SSE + `/api/health`. |
+| [test-integration.js](test-integration.js) | בדיקת אינטגרציה ברמת ה-API — מקים mock OREF + spawned server, מאמת אזעקה זורמת ל-`/api/alerts` + SSE + `/api/health`. ללא דפדפן. |
+| [test-e2e.js](test-e2e.js) | E2E בדפדפן אמיתי (Playwright, `channel:'chrome'` — משתמש ב-Chrome המותקן מקומית, בלי הורדת דפדפן bundled). מריץ spawned server + בודק רגרסיות UI אמיתיות שנתפסו בעבר (פוקוס בחיפוש, שימור טאב, רוחב ניווט מובייל, תוויות מקלטים, צבעי option במצב כהה) — כל טסט מקושר לבאג ספציפי מה-CHANGELOG. `playwright` הוא `devDependency` בלבד. |
 | [telegram-bot.js](telegram-bot.js) | בוט עצמאי — polling ל-`/api/alerts` ושליחה לערוץ טלגרם. |
 | [Dockerfile](Dockerfile) + [docker-compose.yml](docker-compose.yml) | בנייה ל-`node:20-alpine` עם healthcheck. |
 | [package.json](package.json) | scripts בלבד; ללא `dependencies` רגילים, רק `optionalDependencies`. |
@@ -53,8 +54,9 @@ flowchart LR
 
 ```bash
 node server.js              # מפעיל את השרת על פורט 3000
-node test.js                # 44+ בדיקות (כולל smoke test לשרת)
-node test-integration.js    # E2E — mock OREF → server → SSE
+node test.js                # 90+ בדיקות (כולל smoke test לשרת)
+node test-integration.js    # אינטגרציה ברמת API — mock OREF → server → SSE
+node test-e2e.js            # E2E בדפדפן אמיתי — דורש Chrome/Edge מקומי + playwright (devDependency)
 node telegram-bot.js        # בוט טלגרם (דורש משתני סביבה)
 npm install                 # התקנת web-push + telegram-bot-api (אופציונלי)
 docker-compose up -d        # פריסה ב-Docker
@@ -62,7 +64,8 @@ docker-compose up -d        # פריסה ב-Docker
 npm start                   # = node server.js
 npm test                    # = node test.js
 npm run test:integration    # = node test-integration.js
-npm run test:all            # הריצה של שניהם ברצף
+npm run test:e2e            # = node test-e2e.js
+npm run test:all            # הריצה של שלושתם ברצף
 npm run telegram            # = node telegram-bot.js
 npm run docker:build        # docker build -t alertmap .
 npm run docker:run          # docker run -p 3000:3000 ...
@@ -175,10 +178,13 @@ npm run docker:run          # docker run -p 3000:3000 ...
 
 | קובץ | סוג | runner |
 |---|---|---|
-| [test.js](test.js) | unit (פונקציות פניניות) | `node:test` המובנה |
-| [test-integration.js](test-integration.js) | E2E (mock OREF → SSE) | ידני, ללא runner |
+| [test.js](test.js) | unit (פונקציות פניניות + שלמות i18n) | `node:test` המובנה |
+| [test-integration.js](test-integration.js) | אינטגרציה ברמת API (mock OREF → SSE), בלי דפדפן | `node:test`-style ידני (assert עצמאי) |
+| [test-e2e.js](test-e2e.js) | E2E בדפדפן אמיתי (Playwright, `channel:'chrome'`) — כל טסט מקושר לבאג UI ספציפי מה-CHANGELOG | `node:test` המובנה + Playwright |
 
 `test.js` מייבא את הפונקציות מ-[lib.js](lib.js) ישירות (`require('./lib.js')`) — אותו קובץ שהקליינט טוען. אין יותר שכפול: עריכה ב-`lib.js` משפיעה גם על הקליינט וגם על הטסטים. `shelterClass` ב-lib מחזיר `immediate/fast/medium/slow`; הקליינט ממפה ל-CSS suffix קצר (`imm/fast/med/slow`) דרך `SHC_MAP`. `formatShelter(s, labels)` מקבל את מחרוזות התרגום כפרמטר (הקליינט מעביר `t(...)`, הטסטים מעבירים עברית).
+
+**⚠️ למה `test-e2e.js` קיים בנוסף לשני האחרים**: `test.js`/`test-integration.js` בודקים לוגיקה טהורה ותשובות API — אף אחד מהם לא מריץ דפדפן אמיתי, ולכן אף אחד לא היה תופס את רוב באגי ה-UI שתוקנו בפועל בין 3.2.0 ל-3.4.1 (פוקוס שנעלם, טאב שמתאפס, רוחב CSS שקורס, תוויות שנמרחות, צבעי option לא קריאים) — כל אלה התגלו רק כי המשתמש בדק ידנית וצילם מסך. `test-e2e.js` סוגר את הפער: כל טסט שם משחזר תרחיש אמיתי שהיה שבור בעבר. **חובה** להוסיף טסט E2E חדש כשמתקנים כל באג UI עתידי מהסוג הזה — אחרת הוא יחזור בשקט בריפקטור הבא. `channel:'chrome'` מונע הורדת דפדפן bundled של Playwright (יש Chrome/Edge מותקן מקומית ממילא); ב-CI (`.github/workflows/test.yml`, job `e2e`) זה נשען על ה-Chrome המובנה של runner ה-ubuntu-latest.
 
 ## API versioning
 

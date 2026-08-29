@@ -388,15 +388,16 @@ TELEGRAM_TOKEN=123:ABC TELEGRAM_CHANNEL=@my_channel node telegram-bot.js
 ## 🧪 בדיקות + CI
 
 ```bash
-node test.js                # node:test runner — 37 unit tests
-node test-integration.js    # end-to-end: mock OREF → server → SSE (12 assertions)
-npm run test:all            # שניהם
+node test.js                # node:test runner — 90+ unit tests (incl. full i18n key-parity)
+node test-integration.js    # API-level integration: mock OREF → server → SSE (12 assertions)
+node test-e2e.js            # real-browser E2E via Playwright (needs Chrome/Edge installed locally)
+npm run test:all            # כל השלושה
 npm run lint                # ESLint (אופציונלי, npm i -D eslint)
 ```
 
-CI ב-[.github/workflows/test.yml](.github/workflows/test.yml) — מריץ unit + integration על Node 18/20/22 (Ubuntu) + Node 20 (Windows + macOS). Dependabot ב-[.github/dependabot.yml](.github/dependabot.yml) — שבועי ל-npm, חודשי ל-GitHub Actions ול-Docker.
+CI ב-[.github/workflows/test.yml](.github/workflows/test.yml) — מריץ unit + integration על Node 18/20/22 (Ubuntu) + Node 20 (Windows + macOS), ועוד job נפרד ל-E2E על Chrome המובנה של ה-runner. Dependabot ב-[.github/dependabot.yml](.github/dependabot.yml) — שבועי ל-npm, חודשי ל-GitHub Actions ול-Docker.
 
-`test.js` משתמש ב-`node:test` המובנה (Node 18+) ובודק פונקציות פניניות (escapeHtml, formatShelter, shelterClass, distanceKm, isDND, fuzzyMatch). `test-integration.js` מקים שרת mock של OREF, מצביע אליו דרך `OREF_URL_OVERRIDE`, ובודק שאזעקה זורמת ל-`/api/alerts`, ל-SSE, ול-`/api/health` (12 assertions).
+`test.js` משתמש ב-`node:test` המובנה (Node 18+) ובודק פונקציות פניניות (escapeHtml, formatShelter, shelterClass, distanceKm, isDND, fuzzyMatch, isRTL) וכן ששלל 14 השפות ב-`LN` חולקות בדיוק את אותו סט מפתחות. `test-integration.js` מקים שרת mock של OREF, מצביע אליו דרך `OREF_URL_OVERRIDE`, ובודק שאזעקה זורמת ל-`/api/alerts`, ל-SSE, ול-`/api/health` (12 assertions) — הכל ברמת API, בלי דפדפן. `test-e2e.js` מריץ Chrome אמיתי דרך Playwright (`channel:'chrome'`, לא מוריד דפדפן bundled) ובודק רגרסיות UI קונקרטיות מהיסטוריית הפרויקט (פוקוס בחיפוש, שימור טאב, רוחב ניווט מובייל, תוויות מקלטים, צבעי option).
 
 קונפיג ESLint ב-[.eslintrc.json](.eslintrc.json) — מינימלי, מתמקד בחיפוש באגים אמיתיים (`no-unused-vars`, `no-undef`, `no-redeclare`, `eqeqeq`); לא אכפתי לסגנון בכוונה כי הקוד דחוס במכוון.
 

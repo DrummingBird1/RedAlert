@@ -34,6 +34,7 @@ jobs:
           node --check server.js
           node --check test.js
           node --check test-integration.js
+          node --check test-e2e.js
           node --check telegram-bot.js
 
       - name: Unit tests (node:test)
@@ -41,6 +42,20 @@ jobs:
 
       - name: Integration tests
         run: node test-integration.js
+
+  e2e:
+    name: E2E (Playwright + Chrome)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Syntax check
+        run: node --check test-e2e.js
+      - run: npm install --no-save playwright
+      - name: E2E tests (uses the runner's preinstalled Chrome — no bundled-browser download)
+        run: node test-e2e.js
 
   lint:
     name: ESLint
@@ -52,4 +67,4 @@ jobs:
         with:
           node-version: '20'
       - run: npm install --no-save eslint@9
-      - run: npx eslint server.js test.js test-integration.js telegram-bot.js
+      - run: npx eslint server.js test.js test-integration.js test-e2e.js telegram-bot.js

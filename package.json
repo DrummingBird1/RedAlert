@@ -7,8 +7,9 @@
     "start": "node server.js",
     "test": "node test.js",
     "test:integration": "node test-integration.js",
-    "test:all": "node test.js && node test-integration.js",
-    "lint": "eslint server.js test.js test-integration.js telegram-bot.js",
+    "test:e2e": "node test-e2e.js",
+    "test:all": "node test.js && node test-integration.js && node test-e2e.js",
+    "lint": "eslint server.js test.js test-integration.js test-e2e.js telegram-bot.js",
     "telegram": "node telegram-bot.js",
     "docker:build": "docker build -t alertmap .",
     "docker:run": "docker run -p 3000:3000 --name alertmap alertmap"
@@ -26,11 +27,12 @@
   "author": "",
   "license": "MIT",
   "optionalDependencies": {
-    "web-push": "^3.6.0",
-    "node-telegram-bot-api": "^0.66.0"
+    "node-telegram-bot-api": "^0.66.0",
+    "web-push": "^3.6.0"
   },
   "devDependencies": {
-    "eslint": "^9.0.0"
+    "eslint": "^9.0.0",
+    "playwright": "^1.62.1"
   },
   "engines": {
     "node": ">=18.0.0"
