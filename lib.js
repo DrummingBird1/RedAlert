@@ -87,6 +87,12 @@
     return hour >= 23 || hour < 7;
   }
 
+  // Right-to-left language codes (subset of LN's 14 keys). Hebrew + Arabic are RTL; the rest are LTR.
+  const RTL_LANGS = ['he', 'ar'];
+  function isRTL(lang) {
+    return RTL_LANGS.includes(lang);
+  }
+
   // Normalize a city name for fuzzy comparison (strip separators/quotes, collapse spaces).
   function normalizeCity(n) {
     return n.trim().replace(/[-–—]/g, ' ').replace(/['"״׳]/g, '').replace(/\s+/g, ' ');
@@ -105,7 +111,7 @@
   }
 
   return {
-    CITIES, TM, RS, SHELTERS_DEFAULT, LN, LANG_META, TTS_LOCALE,
-    escapeHtml, formatShelter, shelterClass, distanceKm, isDND, normalizeCity, fuzzyMatch,
+    CITIES, TM, RS, SHELTERS_DEFAULT, LN, LANG_META, TTS_LOCALE, RTL_LANGS,
+    escapeHtml, formatShelter, shelterClass, distanceKm, isDND, normalizeCity, fuzzyMatch, isRTL,
   };
 }));

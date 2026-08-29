@@ -29,6 +29,34 @@ describe('lib exports', () => {
   });
 });
 
+describe('i18n completeness', () => {
+  const langs = Object.keys(lib.LN);
+  const refKeys = Object.keys(lib.LN.en).sort();
+  test('at least 14 languages', () => assert.ok(langs.length >= 14, `expected >=14, got ${langs.length}`));
+  for (const l of langs) {
+    test(`${l}: has every key en has`, () => {
+      assert.deepEqual(Object.keys(lib.LN[l]).sort(), refKeys, `${l} key set differs from en`);
+    });
+    test(`${l}: has a LANG_META entry`, () => assert.ok(lib.LANG_META[l], `LANG_META.${l} missing`));
+    test(`${l}: has a TTS_LOCALE entry`, () => assert.ok(lib.TTS_LOCALE[l], `TTS_LOCALE.${l} missing`));
+  }
+  test('LANG_META has no orphan entries beyond LN', () => {
+    for (const l of Object.keys(lib.LANG_META)) assert.ok(lib.LN[l], `LANG_META has orphan ${l}`);
+  });
+  test('TTS_LOCALE has no orphan entries beyond LN', () => {
+    for (const l of Object.keys(lib.TTS_LOCALE)) assert.ok(lib.LN[l], `TTS_LOCALE has orphan ${l}`);
+  });
+});
+
+describe('isRTL', () => {
+  test('Hebrew is RTL', () => assert.equal(lib.isRTL('he'), true));
+  test('Arabic is RTL', () => assert.equal(lib.isRTL('ar'), true));
+  test('English is LTR', () => assert.equal(lib.isRTL('en'), false));
+  test('every language in LN matches RTL_LANGS', () => {
+    for (const l of Object.keys(lib.LN)) assert.equal(lib.isRTL(l), lib.RTL_LANGS.includes(l), `isRTL(${l})`);
+  });
+});
+
 describe('escapeHtml', () => {
   test('escapes HTML tags', () => assert.equal(escapeHtml('<script>'), '&lt;script&gt;'));
   test('escapes quotes', () => assert.equal(escapeHtml('"hello"'), '&quot;hello&quot;'));

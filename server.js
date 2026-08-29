@@ -418,7 +418,7 @@ const server = http.createServer(async (req, res) => {
   if (p === '/api/shelters/tel-aviv') { const s = await getTelAvivShelters(); track(p, 200); return gz(req, res, JSON.stringify(s || []), 'application/json; charset=utf-8'); }
   if (p === '/api/spec' || p === '/openapi.yaml') { try { const spec = fs.readFileSync(path.join(__dirname, 'openapi.yaml'), 'utf8'); track(p, 200); return gz(req, res, spec, 'application/yaml; charset=utf-8'); } catch { track(p, 404); res.writeHead(404); return res.end('{"error":"spec not found"}'); } }
   if (p === '/api/alerts') { const a = [...activeAlerts.values()]; track(p, 200); return gz(req, res, JSON.stringify({ alerts: a, count: a.length, ts: new Date().toISOString() }), 'application/json; charset=utf-8'); }
-  if (p === '/api/history') { const lim = Math.min(Math.max(parseInt(url.searchParams.get('limit')) || 200, 1), 1000); track(p, 200); return gz(req, res, JSON.stringify({ alerts: store.slice(0, lim), total: store.length }), 'application/json; charset=utf-8'); }
+  if (p === '/api/history') { const lim = Math.min(Math.max(parseInt(url.searchParams.get('limit')) || 200, 1), 1000); const off = Math.max(parseInt(url.searchParams.get('offset')) || 0, 0); track(p, 200); return gz(req, res, JSON.stringify({ alerts: store.slice(off, off + lim), total: store.length, offset: off, limit: lim }), 'application/json; charset=utf-8'); }
   if (p === '/api/oref/live') { proxyOref('live', OREF_URL, 1000, req, res, p); return; }
   if (p === '/api/oref/history') { proxyOref('history', OREF_HIST, 30000, req, res, p); return; }
   if (p === '/api/stream') {

@@ -153,6 +153,8 @@ html.light .mb{background:rgba(255,255,255,.92)}.mb:hover{background:var(--bgch)
 .ci{position:fixed;bottom:56px;right:332px;z-index:600;background:rgba(26,34,54,.95);border:1px solid var(--brd);border-radius:6px;padding:4px 9px;font-size:8px;display:flex;align-items:center;gap:4px;backdrop-filter:blur(10px)}
 .ci.ok{color:var(--green);border-color:rgba(34,197,94,.3)}.ci.dc{color:var(--yellow);border-color:rgba(234,179,8,.3)}
 .tb{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:2000;display:flex;flex-direction:column;gap:4px;align-items:center;pointer-events:none}
+.ios-install{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:1999;background:var(--bgc);border:1px solid var(--brda);border-radius:10px;padding:10px 14px;display:none;align-items:center;gap:10px;font-size:11px;color:var(--txt);box-shadow:0 8px 24px rgba(0,0,0,.35);max-width:92vw}
+.ios-install button{background:none;border:none;color:var(--txtm);cursor:pointer;font-size:15px;padding:2px 4px;flex-shrink:0}
 .t{background:var(--bgc);border:1px solid var(--brd);border-radius:6px;padding:7px 12px;font-size:10px;box-shadow:0 6px 24px rgba(0,0,0,.4);animation:ti .3s;display:flex;align-items:center;gap:5px;backdrop-filter:blur(15px);pointer-events:auto;max-width:320px}
 .t.info{border-color:rgba(59,130,246,.4);background:rgba(59,130,246,.08)}
 .t.warn{border-color:rgba(234,179,8,.5);background:rgba(234,179,8,.1);color:var(--txt)}
@@ -230,7 +232,7 @@ html.light .skel{background:linear-gradient(90deg,rgba(0,0,0,.04) 25%,rgba(0,0,0
 .ptr-ind.spin{animation:ptrspin .6s linear infinite}
 @keyframes ptrspin{to{transform:translateX(-50%) translateY(10px) rotate(360deg)}}
 
-@media(max-width:768px){.sb{display:none}#map,.overlay,.banner,.defense,.offline{right:0}#map{bottom:50px}.mn{display:flex}.hdr{padding:0 8px}.cnt{display:none!important}.ci{right:6px;bottom:66px}.mc{bottom:66px;left:8px}.tb{bottom:62px}}
+@media(max-width:768px){.sb{display:none}#map,.overlay,.banner,.defense,.offline{right:0}#map{bottom:50px}.mn{display:flex}.hdr{padding:0 8px}.cnt{display:none!important}.ci{right:6px;bottom:66px}.mc{bottom:66px;left:8px}.tb{bottom:62px}.ios-install{bottom:62px}}
 /* Embed mode — minimal chrome for iframe embedding */
 html.embed .hdr,html.embed .sb,html.embed .mn,html.embed .mc,html.embed .ci{display:none!important}
 html.embed #map,html.embed .banner,html.embed .defense,html.embed .offline,html.embed .overlay{top:0!important;right:0!important;bottom:0!important;left:0!important}
@@ -267,6 +269,7 @@ html.embed .defense.below-banner{top:38px!important}
 <div class="mc" role="toolbar" aria-label="פעולות מפה"><button class="mb" onclick="map.setView([31.5,34.8],8)" aria-label="חזור למבט בית" title="חזור למבט בית">🏠</button><button class="mb" onclick="geoLoc()" id="geoB" aria-label="המיקום שלי" title="המיקום שלי">📍</button><button class="mb" onclick="manualRefresh()" aria-label="רענון" title="רענון">🔄</button><button class="mb" onclick="tglHeat()" id="heatB" aria-label="מפת חום" title="מפת חום">🔥</button><button class="mb" onclick="tglCls()" id="clsB" aria-label="קיבוץ מרקרים" title="קיבוץ מרקרים">🧲</button><button class="mb" onclick="tglShl()" id="shlB" aria-label="מקלטים" title="מקלטים">🏛️</button><button class="mb" onclick="tglSat()" id="satB" aria-label="תצוגת לוויין" title="תצוגת לוויין">🛰️</button><button class="mb" id="satLblB" onclick="tglSatLabels()" aria-label="שמות מקומות בלוויין" title="שמות מקומות בלוויין" style="display:none">🏷️</button><button class="mb" onclick="clrHist()" aria-label="מחק היסטוריה" title="מחק היסטוריה">🗑️</button></div>
 <div class="ci" id="cInfo">⏳</div>
 <div class="tb" id="tBox"></div>
+<div class="ios-install" id="iosInstall" role="note"><span>📲 להתקנת צפיר כאפליקציה: הקש <b>שיתוף</b> ⬆️ ואז <b>הוסף למסך הבית</b></span><button onclick="dismissIosInstall()" aria-label="סגור הודעה" title="סגור">✕</button></div>
 <div class="smod" id="setMod"><div class="sbox" role="dialog" aria-modal="true" aria-label="הגדרות"><div class="sh2"><span>⚙️ הגדרות</span><button class="sx" onclick="closeSet()" aria-label="סגור הגדרות">✕</button></div><div class="sg2"><div class="sgt">🌐 שפה</div><select class="ls" id="langS" onchange="setLang(this.value)"></select></div><div class="sg2"><div class="sgt">🔔 התראות</div><div class="sr"><div><div class="sl">מצב שקט</div><div class="sd">ללא צליל 23:00-07:00</div></div><label class="tg"><input type="checkbox" id="dndT" onchange="tglDND()"><span class="tgs"></span></label></div><div class="sr"><div><div class="sl">הכרזה קולית</div><div class="sd">TTS</div></div><label class="tg"><input type="checkbox" id="ttsT" onchange="tglTTS()"><span class="tgs"></span></label></div><div class="sr"><div><div class="sl">לולאת צופר</div><div class="sd">סירנה רציפה</div></div><label class="tg"><input type="checkbox" id="sirT" onchange="tglSir()"><span class="tgs"></span></label></div></div><div class="sg2"><div class="sgt">🔕 השתקה זמנית</div><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="snbtn" onclick="snooze(30)">30 דק׳</button><button class="snbtn" onclick="snooze(60)">שעה</button><button class="snbtn" onclick="snooze(180)">3 שעות</button><button class="snbtn cancel" onclick="snoozeCancel()">ביטול</button></div><div id="snoozeStatus" style="font-size:10px;color:var(--orange);margin-top:8px;text-align:center;display:none"></div></div><div class="sg2"><div class="sgt">♿ נגישות</div><div class="sr"><div><div class="sl">ניגודיות גבוהה</div></div><label class="tg"><input type="checkbox" id="hcT" onchange="tglHC()"><span class="tgs"></span></label></div></div><div class="sg2"><div class="sgt">⭐ מועדפות</div><div id="favL" style="font-size:9px;color:var(--txtm);text-align:center;padding:6px">לחץ ⭐ ליד עיר</div></div><div id="setDn" style="padding:0 14px 12px"></div></div></div>
 <div class="smod" id="updMod"><div class="sbox" role="dialog" aria-modal="true" aria-label="מה חדש"><div class="sh2"><span data-i18n="whatsNew">מה חדש</span><button class="sx" onclick="closeUpdMod()" aria-label="סגור">✕</button></div><div class="sg2" id="updModBody"></div><div class="sg2" style="border-bottom:none"><button class="snbtn" style="width:100%" onclick="closeUpdMod()" data-i18n="gotIt">הבנתי</button></div></div></div>
 
@@ -289,13 +292,20 @@ const LN=AlertLib.LN;
 const URL_PARAMS=new URLSearchParams(location.search);
 const URL_EMBED=URL_PARAMS.get('embed')==='1';
 const URL_CITY=URL_PARAMS.get('city');
-let lang=URL_PARAMS.get('lang')||localStorage.getItem('alertmap-lang')||'he';
+let lang=URL_PARAMS.get('lang')||localStorage.getItem('alertmap-lang')||detectBrowserLang()||'he';
 function syncURL(){const p=new URLSearchParams(location.search);if(lang!=='he')p.set('lang',lang);else p.delete('lang');if(theme==='light')p.set('theme',theme);else p.delete('theme');const ns=p.toString();const nu=location.pathname+(ns?'?'+ns:'');if(nu!==location.pathname+location.search)history.replaceState(null,'',nu)}
 async function shareLink(){const u=location.href;try{if(navigator.share){await navigator.share({url:u,title:document.title})}else if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(u);toast('🔗 הקישור הועתק')}else{prompt('העתק:',u)}}catch{}}
 function t(k){return(LN[lang]&&LN[lang][k])||LN.he[k]||k}
-function setLang(l){lang=l;localStorage.setItem('alertmap-lang',l);document.documentElement.lang=l;document.documentElement.dir=(l==='he'||l==='ar')?'rtl':'ltr';document.querySelectorAll('[data-i18n]').forEach(e=>{const v=t(e.dataset.i18n);if(v)e.textContent=v});document.getElementById('langS').value=l;schedUI();syncURL()}
+function setLang(l){lang=l;localStorage.setItem('alertmap-lang',l);document.documentElement.lang=l;document.documentElement.dir=AlertLib.isRTL(l)?'rtl':'ltr';document.querySelectorAll('[data-i18n]').forEach(e=>{const v=t(e.dataset.i18n);if(v)e.textContent=v});document.getElementById('langS').value=l;schedUI();syncURL()}
+// First-ever visit (no ?lang= and no saved preference): guess from the browser's language list.
+function detectBrowserLang(){for(const nl of (navigator.languages||[navigator.language||''])){const code=nl.slice(0,2).toLowerCase();if(AlertLib.LN[code])return code}return null}
 function initLangSelect(){document.getElementById('langS').innerHTML=Object.entries(AlertLib.LANG_META).map(([code,m])=>`<option value="${code}">${m.f} ${X(m.n)}</option>`).join('')}
 function updClock(){const el=document.getElementById('clk');if(el)el.textContent=new Date().toLocaleTimeString('en-GB',{hour12:false})}
+// iOS/iPadOS Safari never fires beforeinstallprompt, so it's the one platform with zero
+// built-in hint that this is installable — a small dismissible banner fills that gap.
+function isStandalone(){return window.navigator.standalone===true||window.matchMedia('(display-mode: standalone)').matches}
+function dismissIosInstall(){localStorage.setItem('alertmap-ios-install-dismissed','1');const el=document.getElementById('iosInstall');if(el)el.style.display='none'}
+function maybeShowIosInstall(){const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent)&&!window.MSStream;if(!isIOS||isStandalone()||localStorage.getItem('alertmap-ios-install-dismissed')==='1')return;const el=document.getElementById('iosInstall');if(el)el.style.display='flex'}
 
 // Static data (cities/types/regions/shelters live in lib.js)
 const C=AlertLib.CITIES;
@@ -414,7 +424,8 @@ async function getComp(){const now=new Date(),ts=new Date(now.getFullYear(),now.
 // Shelter markers show their name via bindPopup() on click only — with real per-city data
 // (e.g. ~374 real Tel Aviv shelters) a permanent always-visible text label per marker
 // overlapped into an illegible smear at most zoom levels, so there's no .ml label here.
-function tglShl(){shlV=!shlV;document.getElementById('shlB').classList.toggle('active',shlV);if(shlV){SHL.forEach(s=>{shlM.push(L.marker([s.lat,s.lng],{icon:L.divIcon({className:'cm sm',html:'<div class="md"></div>',iconSize:[10,10],iconAnchor:[5,5]})}).addTo(map).bindPopup(`🏛️ ${X(s.n)}`))})}else{shlM.forEach(m=>map.removeLayer(m));shlM=[]}}
+function shelterPopup(s){return `<div style="text-align:center"><div style="margin-bottom:5px">🏛️ ${X(s.n)}</div><a href="https://waze.com/ul?ll=${s.lat},${s.lng}&navigate=yes" target="_blank" rel="noopener" style="font-size:10px;margin-inline-end:10px">🚗 Waze</a><a href="https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}" target="_blank" rel="noopener" style="font-size:10px">🗺️ Google Maps</a></div>`}
+function tglShl(){shlV=!shlV;document.getElementById('shlB').classList.toggle('active',shlV);if(shlV){SHL.forEach(s=>{shlM.push(L.marker([s.lat,s.lng],{icon:L.divIcon({className:'cm sm',html:'<div class="md"></div>',iconSize:[10,10],iconAnchor:[5,5]})}).addTo(map).bindPopup(shelterPopup(s)))})}else{shlM.forEach(m=>map.removeLayer(m));shlM=[]}}
 
 // Offline
 window.addEventListener('offline',()=>{document.getElementById('offBar').classList.add('active')});
@@ -505,7 +516,8 @@ el.innerHTML=h;const a=document.getElementById('fR'),b=document.getElementById('
 if(hadFocus&&d){d.focus();try{d.setSelectionRange(selStart,selEnd)}catch{}}}
 function rItem(a,isAct){const sc=X(a.city),sl=shC(a.shelter),sf=fSh(a.shelter),isFav=favs.includes(a.city);let dH='';if(uLoc&&!a.noLoc)dH=`<span class="di">📍 ${distK(uLoc.lat,uLoc.lng,a.lat,a.lng).toFixed(1)} ${t('km')}</span>`;if(a.noLoc)dH+=`<span class="di nl">📍 ${t('unknownLoc')}</span>`;let cdH='';if(isAct&&a.detectedAt){const rem=a.shelter-Math.floor((Date.now()-a.detectedAt)/1000);cdH=`<span class="cd cdt ${rem<=0?'done':''}" data-det="${a.detectedAt}" data-sh="${a.shelter}">${rem>0?`⏳ ${t('remaining')} ${rem}${t('sec')}`:`✓ ${t('passed')}`}</span>`}const click=a.noLoc?'':`onclick="map.flyTo([${a.lat},${a.lng}],12)"`;
 return`<div class="ai ${isAct?'act':''} ${a.noLoc?'noloc':''}" ${click}><div class="ai-h"><div class="ai-c"><button class="fs2 ${isFav?'on':''}" onclick="event.stopPropagation();tglFav('${X(a.city)}')">${isFav?'⭐':'☆'}</button>${a.type.icon} ${sc}</div><div class="ai-t">${fTime(a.timestamp)}</div></div><div class="ai-tp"><span class="td ${a.type.css}"></span>${t(a.typeKey)}${isAct?`<span style="color:var(--red);margin-right:auto">● ${t('active')}</span>`:''}</div><div class="ai-m"><span class="sh ${sl}">⏱️ ${sf}</span>${cdH}${dH}</div></div>`}
-function updBanner(){const b=document.getElementById('banner'),o=document.getElementById('overlay'),s=document.getElementById('sBadge'),d=document.getElementById('defP');if(act.size){const cities=[...act.values()].map(a=>a.city);document.getElementById('banTxt').textContent=`צבע אדום — ${cities.slice(0,4).join(' | ')}${cities.length>4?' +'+(cities.length-4):''}`;b.classList.add('active');o.classList.add('active');s.className='badge alert-on';d.classList.add('below-banner')}else{b.classList.remove('active');o.classList.remove('active');s.className=sseOK?'badge live':'badge';d.classList.remove('below-banner')}}
+function updAppBadge(){if(!('setAppBadge' in navigator))return;try{act.size?navigator.setAppBadge(act.size):navigator.clearAppBadge()}catch{}}
+function updBanner(){const b=document.getElementById('banner'),o=document.getElementById('overlay'),s=document.getElementById('sBadge'),d=document.getElementById('defP');if(act.size){const cities=[...act.values()].map(a=>a.city);document.getElementById('banTxt').textContent=`צבע אדום — ${cities.slice(0,4).join(' | ')}${cities.length>4?' +'+(cities.length-4):''}`;b.classList.add('active');o.classList.add('active');s.className='badge alert-on';d.classList.add('below-banner')}else{b.classList.remove('active');o.classList.remove('active');s.className=sseOK?'badge live':'badge';d.classList.remove('below-banner')}updAppBadge()}
 function updStats(){const now=new Date(),ts=new Date(now.getFullYear(),now.getMonth(),now.getDate());document.getElementById('todayC').textContent=hist.filter(a=>a.timestamp>=ts).length;document.getElementById('totalC').textContent=hist.length}
 
 // Tabs — track currentTab so the 10s refresh interval doesn't clobber the user's chosen tab
@@ -671,6 +683,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   setLang(lang);updFav();updSnoozeUI();initMap();renderSB();
   updClock();setInterval(updClock,1000);
   checkWhatsNew();
+  setTimeout(maybeShowIosInstall,2500);
   // ?city=שדרות — fly to that city after map is ready
   if(URL_CITY){setTimeout(()=>{const c=findC(URL_CITY);if(c&&c.lat)map.flyTo([c.lat,c.lng],11,{duration:1.5})},500)}
   // Refresh snooze status display every minute so the countdown stays accurate
