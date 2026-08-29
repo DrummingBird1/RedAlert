@@ -5,6 +5,16 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+## [3.5.0]
+
+### Changed
+- **Replaced the single Patreon donation link with three donation options** — Ko-fi,
+  Buy Me a Coffee, and a new Patreon account — shown as a row of buttons everywhere the
+  donate card/mini used to show one. The old Patreon URL (`patreon.com/cw/MrIdan`) has
+  been removed from the app, README, and docs.
+- README now includes a screenshot of the app; going forward, new GitHub releases include
+  one too.
+
 ## [3.4.1]
 
 ### Fixed
@@ -191,7 +201,8 @@ All notable changes to this project are documented here. Format loosely follows
   (he/en/ar/ru), Docker + docker-compose, admin dashboard with Basic auth,
   health-check webhook, rate limiting, and file-based alert logging with rotation.
 
-[Unreleased]: https://github.com/DrummingBird1/RedAlert/compare/v3.4.1...HEAD
+[Unreleased]: https://github.com/DrummingBird1/RedAlert/compare/v3.5.0...HEAD
+[3.5.0]: https://github.com/DrummingBird1/RedAlert/compare/v3.4.1...v3.5.0
 [3.4.1]: https://github.com/DrummingBird1/RedAlert/compare/v3.4.0...v3.4.1
 [3.4.0]: https://github.com/DrummingBird1/RedAlert/compare/v3.3.0...v3.4.0
 [3.3.0]: https://github.com/DrummingBird1/RedAlert/compare/v3.2.0...v3.3.0

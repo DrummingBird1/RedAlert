@@ -12,9 +12,13 @@
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker)](Dockerfile)
 [![PWA](https://img.shields.io/badge/PWA-Installable-5A0FC8)]()
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
-[![Patreon](https://img.shields.io/badge/Patreon-Support-FF424D?logo=patreon&logoColor=white)](https://www.patreon.com/cw/MrIdan)
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-Support-FF5E5B?logo=kofi&logoColor=white)](https://ko-fi.com/idanlights)
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy_Me_a_Coffee-Support-FFDD00?logo=buymeacoffee&logoColor=000)](https://buymeacoffee.com/MrIdan)
+[![Patreon](https://img.shields.io/badge/Patreon-Support-FF424D?logo=patreon&logoColor=white)](https://www.patreon.com/c/IdanLights)
 
 </div>
+
+<p align="center"><img src="screenshot.jpg" alt="מסך ראשי של צפיר — מפת אזעקות בזמן אמת" width="800"></p>
 
 > ⚠️ **מערכת זו למטרות מידע בלבד ואינה מחליפה הנחיות פיקוד העורף.**
 
@@ -431,11 +435,13 @@ scrape_configs:
 
 ## 💛 תמיכה בפרויקט / Support
 
-הפרויקט חינמי וקוד פתוח. אם הוא עוזר לכם — אפשר לתמוך ב-Patreon כדי לכסות שרתים ופיתוח:
+הפרויקט חינמי וקוד פתוח. אם הוא עוזר לכם — אפשר לתמוך באחת מהדרכים הבאות כדי לכסות שרתים ופיתוח:
 
-**[❤️ patreon.com/cw/MrIdan](https://www.patreon.com/cw/MrIdan)**
+- **[☕ ko-fi.com/idanlights](https://ko-fi.com/idanlights)**
+- **[🍵 buymeacoffee.com/MrIdan](https://buymeacoffee.com/MrIdan)**
+- **[💛 patreon.com/c/IdanLights](https://www.patreon.com/c/IdanLights)**
 
-כפתור התרומה מופיע גם בטאב "אודות" באפליקציה (דו-לשוני). להחלפת הקישור — ערכו את `PATREON_URL` ב-[index.html](index.html) (מחרוזת ריקה מסתירה את הכרטיס).
+כפתורי התרומה מופיעים גם בכל טאב באפליקציה (הכרטיס המלא, דו-לשוני, בטאב "אודות"). לשינוי הקישורים — ערכו את `DONATE_LINKS` ב-[index.html](index.html) (מערך ריק מסתיר את הכרטיס לגמרי).
 
 ---
 
