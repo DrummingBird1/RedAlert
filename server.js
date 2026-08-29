@@ -21,6 +21,7 @@ const ADMIN_USER = process.env.ADMIN_USER || 'admin';
 let ADMIN_PASS = process.env.ADMIN_PASS;
 const ADMIN_PASS_GENERATED = !ADMIN_PASS;
 if (ADMIN_PASS_GENERATED) ADMIN_PASS = crypto.randomBytes(12).toString('base64url');
+const ADMIN_TOTP_SECRET = process.env.ADMIN_TOTP_SECRET || ''; // Optional base32 TOTP secret — enables 2FA on /admin + /metrics when set
 const HEALTH_WEBHOOK = process.env.HEALTH_WEBHOOK || ''; // URL to POST when health degrades
 const SHELTERS_URL = process.env.SHELTERS_URL || ''; // Optional external shelters JSON (e.g. data.gov.il export)
 const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL || ''; // Discord channel webhook (Channel Settings → Integrations → Webhooks) — posts an embed per new real alert batch
@@ -44,6 +45,14 @@ let clientErrStream = null;
 function openClientErrLog() { try { if (clientErrStream) try { clientErrStream.end(); } catch {} clientErrStream = fs.createWriteStream(CLIENT_ERR_LOG, { flags: 'a', encoding: 'utf8' }); clientErrStream.on('error', () => {}); } catch {} }
 function rotateClientErrLog() { try { if (!fs.existsSync(CLIENT_ERR_LOG) || fs.statSync(CLIENT_ERR_LOG).size < MAX_LOG_SIZE) return; for (let i = MAX_LOG_FILES - 1; i >= 1; i--) { const s = i === 1 ? CLIENT_ERR_LOG : path.join(LOG_DIR, `client-errors.${i-1}.log`), d = path.join(LOG_DIR, `client-errors.${i}.log`); if (fs.existsSync(s)) try { fs.renameSync(s, d); } catch {} } openClientErrLog(); } catch {} }
 openClientErrLog();
+
+// Admin auth audit trail — every /admin + /metrics auth attempt (success or failure), same rotation policy.
+const ADMIN_AUDIT_LOG = path.join(LOG_DIR, 'admin-audit.log');
+let adminAuditStream = null;
+function openAdminAuditLog() { try { if (adminAuditStream) try { adminAuditStream.end(); } catch {} adminAuditStream = fs.createWriteStream(ADMIN_AUDIT_LOG, { flags: 'a', encoding: 'utf8' }); adminAuditStream.on('error', () => {}); } catch {} }
+function rotateAdminAuditLog() { try { if (!fs.existsSync(ADMIN_AUDIT_LOG) || fs.statSync(ADMIN_AUDIT_LOG).size < MAX_LOG_SIZE) return; for (let i = MAX_LOG_FILES - 1; i >= 1; i--) { const s = i === 1 ? ADMIN_AUDIT_LOG : path.join(LOG_DIR, `admin-audit.${i-1}.log`), d = path.join(LOG_DIR, `admin-audit.${i}.log`); if (fs.existsSync(s)) try { fs.renameSync(s, d); } catch {} } openAdminAuditLog(); } catch {} }
+openAdminAuditLog();
+const adminAuditLog = { write(line) { try { if (adminAuditStream) adminAuditStream.write(line); } catch {} rotateAdminAuditLog(); } };
 
 // ── Rate limiting ────────────────────────────────────────────
 const rateMap = new Map();
@@ -346,7 +355,25 @@ const EMBED_JS = `(function(){var s=document.currentScript;if(!s)return;var d=s.
 
 // ── Admin ───────────────────────────────────────────────────
 function adminPage() { return `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Admin</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:system-ui;background:#0a0e17;color:#f1f5f9;padding:20px}h1{font-size:20px;margin-bottom:14px}.g{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:16px}.c{background:#1a2236;border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:12px;text-align:center}.c .v{font-size:24px;font-weight:800;margin-bottom:2px}.c .l{font-size:10px;color:#94a3b8}.c.r .v{color:#ef4444}.c.g2 .v{color:#22c55e}.c.b .v{color:#3b82f6}.c.o .v{color:#f97316}.c.y .v{color:#eab308}.c.p .v{color:#a855f7}table{width:100%;border-collapse:collapse;background:#1a2236;border-radius:6px;overflow:hidden;font-size:11px;margin-bottom:12px}th,td{padding:6px 10px;text-align:right;border-bottom:1px solid rgba(255,255,255,.05)}th{background:rgba(0,0,0,.3);color:#94a3b8}</style></head><body><h1>🛡️ Admin</h1><div class="g" id="cards"></div><table id="rt"><thead><tr><th>Route</th><th>#</th></tr></thead><tbody></tbody></table><script>async function L(){try{const r=await fetch('/api/admin/metrics');const d=await r.json();document.getElementById('cards').innerHTML=[{v:d.up,l:'Uptime',c:'g2'},{v:d.mem+'MB',l:'Memory',c:'b'},{v:d.sse,l:'SSE',c:'p'},{v:d.stored,l:'Alerts',c:'r'},{v:d.reqs,l:'Requests',c:'o'},{v:d.polls,l:'Polls',c:'b'},{v:d.errs,l:'Errors',c:'y'},{v:d.subs,l:'Push',c:'g2'},{v:d.fb?'YES':'NO',l:'Fallback',c:d.fb?'y':'g2'},{v:d.lat+'ms',l:'Latency',c:'b'},{v:d.wp?'✅':'❌',l:'web-push',c:d.wp?'g2':'r'},{v:d.hw?'✅':'❌',l:'Health WH',c:d.hw?'g2':'r'}].map(c=>'<div class="c '+c.c+'"><div class="v">'+c.v+'</div><div class="l">'+c.l+'</div></div>').join('');document.querySelector('#rt tbody').innerHTML=Object.entries(d.routes||{}).sort((a,b)=>b[1]-a[1]).map(([r,c])=>'<tr><td>'+r+'</td><td>'+c+'</td></tr>').join('')}catch{}}L();setInterval(L,5000)</script></body></html>`; }
-function checkAuth(req) { const a = req.headers.authorization; if (!a || !a.startsWith('Basic ')) return false; try { const [u, p] = Buffer.from(a.slice(6), 'base64').toString().split(':'); return u === ADMIN_USER && p === ADMIN_PASS; } catch { return false; } }
+// Optional TOTP 2FA (RFC 6238) — active only if ADMIN_TOTP_SECRET is set, so existing deployments
+// see no behavior change. When enabled, the Basic Auth password becomes ADMIN_PASS + the current
+// 6-digit code (e.g. "hunter2483726"), compatible with any standard authenticator app.
+function base32Decode(str) { const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'; let bits = '', bytes = []; for (const c of String(str).replace(/=+$/, '').toUpperCase()) { const val = alphabet.indexOf(c); if (val === -1) continue; bits += val.toString(2).padStart(5, '0'); } for (let i = 0; i + 8 <= bits.length; i += 8) bytes.push(parseInt(bits.slice(i, i + 8), 2)); return Buffer.from(bytes); }
+function totpAt(secretB32, timeStep) { const key = base32Decode(secretB32); const buf = Buffer.alloc(8); buf.writeBigUInt64BE(BigInt(timeStep)); const hmac = crypto.createHmac('sha1', key).update(buf).digest(); const offset = hmac[hmac.length - 1] & 0xf; const code = ((hmac[offset] & 0x7f) << 24 | (hmac[offset + 1] & 0xff) << 16 | (hmac[offset + 2] & 0xff) << 8 | (hmac[offset + 3] & 0xff)) % 1000000; return String(code).padStart(6, '0'); }
+function verifyTOTP(secretB32, token) { if (!/^\d{6}$/.test(token || '')) return false; const step = Math.floor(Date.now() / 30000); for (const drift of [-1, 0, 1]) if (totpAt(secretB32, step + drift) === token) return true; return false; }
+function checkAuth(req) {
+  const a = req.headers.authorization;
+  if (!a || !a.startsWith('Basic ')) return false;
+  let ok = false;
+  try {
+    const [u, p] = Buffer.from(a.slice(6), 'base64').toString().split(':');
+    if (u !== ADMIN_USER) ok = false;
+    else if (!ADMIN_TOTP_SECRET) ok = p === ADMIN_PASS;
+    else if (p.length > 6) ok = p.slice(0, -6) === ADMIN_PASS && verifyTOTP(ADMIN_TOTP_SECRET, p.slice(-6));
+  } catch { ok = false; }
+  adminAuditLog.write(`${new Date().toISOString()} ${ok ? 'OK  ' : 'FAIL'} ip=${getIP(req)} path=${req.url}\n`);
+  return ok;
+}
 function getIP(req) { return req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || '0.0.0.0'; }
 
 // ── OREF proxy cache ─────────────────────────────────────────
@@ -457,6 +484,10 @@ server.listen(PORT, () => {
     console.log(`     Save it now — it changes on every restart until you set ADMIN_PASS.\n`);
   } else {
     console.log(`\n  🔑 /admin password: set via ADMIN_PASS env (hidden)\n`);
+  }
+  if (ADMIN_TOTP_SECRET) {
+    console.log(`  🔐 Admin 2FA enabled — Basic Auth password is ADMIN_PASS + current 6-digit code.`);
+    console.log(`     otpauth://totp/Tzafir:${ADMIN_USER}?secret=${ADMIN_TOTP_SECRET}&issuer=Tzafir (paste into any authenticator app)\n`);
   }
 });
 

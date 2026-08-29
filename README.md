@@ -140,6 +140,26 @@ israel-alert-map/
 
 ---
 
+## 🏗️ ארכיטקטורה
+
+```mermaid
+flowchart LR
+  OREF["פיקוד העורף<br/>alerts.json"] -->|polling כל 2s| SRV["server.js"]
+  SRV -->|SSE /api/stream| CLIENT["index.html"]
+  SRV -->|REST /api/*| CLIENT
+  SRV --> STORE[("store בזיכרון<br/>עד 5000")]
+  STORE -.snapshot.-> SNAP[".store-snapshot.json"]
+  SRV -.אופציונלי.-> DISCORD["Discord webhook"]
+  SRV -.אופציונלי.-> PUSH["Web Push subscribers"]
+  SRV -.אחרי 5 כשלונות.-> FALLBACK["FALLBACK_ALERT_URL(S)"]
+  BOT["telegram-bot.js"] -->|polling עצמאי| SRV
+  ADMIN["/admin dashboard"] -->|Basic Auth| SRV
+  CLIENT --> IDB[("IndexedDB<br/>היסטוריה ארוכת-טווח")]
+  CLIENT --> MAP["Leaflet<br/>+ לוויין/שמות מקומות"]
+```
+
+---
+
 ## 🔌 API Endpoints
 
 | Endpoint | תיאור |
@@ -178,6 +198,7 @@ israel-alert-map/
 | `PORT` | `3000` | פורט השרת |
 | `ADMIN_USER` | `admin` | שם משתמש לאדמין |
 | `ADMIN_PASS` | *(אקראי)* | סיסמת אדמין. אם לא מוגדרת — השרת **מגריל סיסמה חזקה בהפעלה** ומדפיס אותה פעם אחת ללוג (משתנה בכל restart עד שתגדיר ערך קבוע). |
+| `ADMIN_TOTP_SECRET` | (ריק) | סוד TOTP (base32) ל-2FA אופציונלי על `/admin`+`/metrics`. כשמוגדר — הסיסמה ב-Basic Auth היא `ADMIN_PASS` + קוד בן 6 ספרות מכל אפליקציית authenticator תואמת. |
 | `FALLBACK_ALERT_URL` | (ריק) | URL חלופי לאזעקות (יחיד, legacy) |
 | `FALLBACK_ALERT_URLS` | (ריק) | רשימת URLs מופרדת בפסיק — sequence של mirrors. אם הראשון נכשל 5 פעמים השרת מסתובב לבא בתור |
 | `HEALTH_WEBHOOK` | (ריק) | URL ל-POST כשהמערכת degraded |

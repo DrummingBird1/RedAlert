@@ -8,6 +8,24 @@
 
 מקור הנתונים: `https://www.oref.org.il/WarningMessages/alert/alerts.json` (polling כל 2 שניות). אין מפתחות, אין הרשמה.
 
+## ארכיטקטורה — תרשים
+
+```mermaid
+flowchart LR
+  OREF["פיקוד העורף<br/>alerts.json"] -->|polling כל 2s| SRV["server.js"]
+  SRV -->|SSE /api/stream| CLIENT["index.html"]
+  SRV -->|REST /api/*| CLIENT
+  SRV --> STORE[("store בזיכרון<br/>עד 5000")]
+  STORE -.snapshot.-> SNAP[".store-snapshot.json"]
+  SRV -.אופציונלי.-> DISCORD["Discord webhook"]
+  SRV -.אופציונלי.-> PUSH["Web Push subscribers"]
+  SRV -.אחרי 5 כשלונות.-> FALLBACK["FALLBACK_ALERT_URL(S)"]
+  BOT["telegram-bot.js"] -->|polling עצמאי| SRV
+  ADMIN["/admin dashboard"] -->|Basic Auth| SRV
+  CLIENT --> IDB[("IndexedDB<br/>היסטוריה ארוכת-טווח")]
+  CLIENT --> MAP["Leaflet<br/>+ לוויין/שמות מקומות"]
+```
+
 ## מבנה הקבצים
 
 הפרויקט שטוח לחלוטין (אין `src/`, אין תיקיות משנה לקוד):
@@ -26,6 +44,7 @@
 קבצי runtime שנוצרים אוטומטית (ב-`.gitignore`):
 - `logs/alerts.log` — לוג אזעקות עם רוטציה (10MB × 5 קבצים)
 - `logs/client-errors.log` — שגיאות JS מהקליינט (`POST /api/client-error`), אותה מדיניות רוטציה, קובץ נפרד כדי שהתקפי שגיאות מקליינטים לא ידחקו את לוג האזעקות
+- `logs/admin-audit.log` — כל ניסיון אימות ל-`/admin`/`/metrics` (הצלחה/כישלון + IP), אותה מדיניות רוטציה
 - `.vapid-keys.json` — מפתחות VAPID ל-Web Push (נוצרים בהפעלה ראשונה)
 - `.push-subs.json` — הרשמות Push
 - `.store-snapshot.json` — snapshot של היסטוריית האזעקות; נטען בהפעלה (כ-history בלבד, לא active) כדי לשרוד restart/redeploy
@@ -57,6 +76,7 @@ npm run docker:run          # docker run -p 3000:3000 ...
 |---|---|---|
 | `PORT` | `3000` | פורט השרת |
 | `ADMIN_USER` / `ADMIN_PASS` | `admin` / *(אקראי)* | אם `ADMIN_PASS` לא מוגדרת — מוגרלת בהפעלה ומודפסת ללוג פעם אחת (משתנה בכל restart עד הגדרת ערך קבוע). |
+| `ADMIN_TOTP_SECRET` | (ריק) | סוד TOTP (base32) — כשמוגדר, הפעלת 2FA על `/admin`+`/metrics`: סיסמת ה-Basic Auth הופכת ל-`ADMIN_PASS` + קוד בן 6 ספרות מאפליקציית authenticator. ה-URI ל-QR מודפס ללוג בהפעלה. ללא תלות npm — `crypto` HMAC-SHA1 מובנה. |
 | `FALLBACK_ALERT_URL` | (ריק) | URL חלופי שמופעל אחרי 5 כשלונות OREF |
 | `HEALTH_WEBHOOK` | (ריק) | URL ל-POST כשהשרת degraded/recovered |
 | `DISCORD_WEBHOOK_URL` | (ריק) | Webhook של ערוץ Discord (Channel Settings → Integrations → Webhooks) — שולח embed לכל batch אזעקות אמיתי חדש מ-`pollAlerts()`. אין SDK, POST רגיל דרך `https`. |
