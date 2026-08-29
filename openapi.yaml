@@ -177,7 +177,51 @@ paths:
         Proxies and transforms Tel Aviv-Yafo's public ArcGIS shelter layer into
         `[{lat,lng,n}]`. Used client-side only when no `SHELTERS_URL` is configured,
         to supplement the illustrative SHELTERS_DEFAULT samples with real data for
-        Tel Aviv specifically. Other cities remain illustrative.
+        Tel Aviv specifically. Other cities remain illustrative unless listed below.
+      responses:
+        '200':
+          description: Array of real shelter points (may be empty on first-ever fetch failure)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    lat: { type: number }
+                    lng: { type: number }
+                    n: { type: string }
+
+  /api/shelters/jerusalem:
+    get:
+      tags: [ops]
+      summary: Real Jerusalem municipal shelter data (live proxy, cached ~24h)
+      description: >
+        Proxies Jerusalem's open-data GeoJSON export of public shelters into
+        `[{lat,lng,n}]`. The source only publishes a shelter number, not a street
+        address, so `n` is just "מקלט <number>".
+      responses:
+        '200':
+          description: Array of real shelter points (may be empty on first-ever fetch failure)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    lat: { type: number }
+                    lng: { type: number }
+                    n: { type: string }
+
+  /api/shelters/haifa:
+    get:
+      tags: [ops]
+      summary: Real Haifa municipal shelter/protected-space data (live proxy, cached ~24h)
+      description: >
+        Proxies Haifa's open-data GeoJSON ("מיגון בעיר") into `[{lat,lng,n}]`,
+        with a real street address and shelter/protected-space type per record —
+        the richest of the three verified city feeds.
       responses:
         '200':
           description: Array of real shelter points (may be empty on first-ever fetch failure)

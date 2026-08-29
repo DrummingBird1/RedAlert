@@ -317,6 +317,9 @@ const C=AlertLib.CITIES;
 const TM=AlertLib.TM;
 const RS=AlertLib.RS;
 let SHL=AlertLib.SHELTERS_DEFAULT.slice();
+// Cities with a verified real municipal shelter feed (server.js proxies each under /api/shelters/<key>).
+// `re` matches that city's illustrative "(לדוגמה)" placeholder in SHELTERS_DEFAULT so it gets replaced.
+const REAL_SHELTER_CITIES=[{key:'tel-aviv',re:/תל אביב/},{key:'jerusalem',re:/ירושלים/},{key:'haifa',re:/חיפה/}];
 // Optionally fetch a richer shelter dataset configured server-side via SHELTERS_URL
 async function loadExternalShelters(){
   try{
@@ -331,15 +334,22 @@ async function loadExternalShelters(){
       return; // explicit deployer override — don't also merge the Tel Aviv feed below
     }
   }catch{}
-  // No SHELTERS_URL configured — enrich the illustrative defaults with real, live Tel
-  // Aviv-Yafo municipal shelter data (server.js proxies /api/shelters/tel-aviv). Best-effort:
-  // on failure the illustrative Tel Aviv placeholders in SHELTERS_DEFAULT remain as a fallback.
-  try{
-    const r=await fetch(`${API}/api/shelters/tel-aviv`);
-    if(!r.ok)return;
-    const real=await r.json();
-    if(Array.isArray(real)&&real.length)SHL=SHL.filter(s=>!/תל אביב/.test(s.n)).concat(real);
-  }catch{}
+  // No SHELTERS_URL configured — enrich the illustrative defaults with real, live municipal shelter
+  // data wherever server.js has a verified feed (see REAL_SHELTER_CITIES). Best-effort per city:
+  // a single city's fetch failing leaves that city's illustrative placeholder as a fallback.
+  for(const {key,re} of REAL_SHELTER_CITIES){
+    try{
+      const r=await fetch(`${API}/api/shelters/${key}`);
+      if(!r.ok)continue;
+      const real=await r.json();
+      if(Array.isArray(real)&&real.length)SHL=SHL.filter(s=>!re.test(s.n)).concat(real);
+    }catch{}
+  }
+  // Some municipal source datasets list the same physical shelter twice (e.g. a school that
+  // doubles as a kindergarten reception point) — dedupe by exact coordinate so the map doesn't
+  // stack two markers on top of each other.
+  const seen=new Set();
+  SHL=SHL.filter(s=>{const k=s.lat+','+s.lng;if(seen.has(k))return false;seen.add(k);return true});
 }
 
 // Fuzzy matching (core logic in lib.js; findC returns the resolved city object or null)

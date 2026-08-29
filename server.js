@@ -173,7 +173,25 @@ function noteFormatMiss() {
 }
 loadSnapshot();
 
-function fetchUrl(url, headers) { return new Promise((resolve, reject) => { const t0 = Date.now(); const mod = url.startsWith('https:') ? https : http; const req = mod.get(url, { headers: headers || OREF_H }, r => { const ch = []; r.on('data', c => ch.push(c)); r.on('end', () => { M.latMs = Date.now() - t0; let b = Buffer.concat(ch).toString('utf8'); if (b.charCodeAt(0) === 0xFEFF) b = b.slice(1); resolve({ status: r.statusCode, body: b }); }); }); req.on('error', reject); req.setTimeout(5000, () => { req.destroy(); reject(new Error('timeout')); }); }); }
+// Follows up to 5 redirects (some municipal open-data downloads 302 through a presigned,
+// short-lived storage URL — e.g. Haifa's shelter GeoJSON) — harmless for OREF, which never redirects.
+function fetchUrl(url, headers, redirectsLeft) {
+  if (redirectsLeft == null) redirectsLeft = 5;
+  return new Promise((resolve, reject) => {
+    const t0 = Date.now();
+    const mod = url.startsWith('https:') ? https : http;
+    const req = mod.get(url, { headers: headers || OREF_H }, r => {
+      if (r.statusCode >= 300 && r.statusCode < 400 && r.headers.location && redirectsLeft > 0) {
+        r.resume();
+        try { return resolve(fetchUrl(new URL(r.headers.location, url).toString(), headers, redirectsLeft - 1)); }
+        catch (e) { return reject(e); }
+      }
+      const ch = []; r.on('data', c => ch.push(c)); r.on('end', () => { M.latMs = Date.now() - t0; let b = Buffer.concat(ch).toString('utf8'); if (b.charCodeAt(0) === 0xFEFF) b = b.slice(1); resolve({ status: r.statusCode, body: b }); });
+    });
+    req.on('error', reject);
+    req.setTimeout(5000, () => { req.destroy(); reject(new Error('timeout')); });
+  });
+}
 
 async function pollAlerts() {
   M.orefPolls++;
@@ -393,33 +411,77 @@ function proxyOref(key, url, ttlMs, req, res, p) {
 // Verified 2026-07: unlike the national data.gov.il CKAN catalog (which returns 0 results for
 // public shelters), Tel Aviv-Yafo's own GIS backend publishes a real, queryable public-shelter
 // layer (~374 records: lat/lon, address, fitness status) — see opendata.tel-aviv.gov.il and the
-// underlying ArcGIS REST service below. This is the one concrete real-data source found so far;
-// other cities still rely on the illustrative SHELTERS_DEFAULT samples in lib.js until a similar
-// municipal feed is found and wired up for them too. Client merges this in via loadExternalShelters()
-// only when the deployer hasn't set their own SHELTERS_URL (see index.html).
-const TLV_SHELTERS_URL = 'https://gisn.tel-aviv.gov.il/arcgis/rest/services/WM/IView2WM/MapServer/592/query?where=1%3D1&outFields=lat,lon,Full_Address,t_sug,pail&f=json&resultRecordCount=1000&returnGeometry=false';
-let tlvSheltersCache = null, tlvSheltersFetchedAt = 0, tlvSheltersInflight = null;
-const TLV_SHELTERS_TTL = 24 * 3600 * 1000; // refresh at most once a day — considerate to the municipality's server
-async function getTelAvivShelters() {
-  const now = Date.now();
-  if (tlvSheltersCache && (now - tlvSheltersFetchedAt) < TLV_SHELTERS_TTL) return tlvSheltersCache;
-  if (tlvSheltersInflight) return tlvSheltersInflight;
-  tlvSheltersInflight = (async () => {
-    try {
-      const { status, body } = await fetchUrl(TLV_SHELTERS_URL, { 'Accept': 'application/json' });
-      if (status === 200) {
-        const data = JSON.parse(body);
-        const out = (data.features || []).map(f => f.attributes)
-          .filter(a => typeof a.lat === 'number' && typeof a.lon === 'number' && (!a.pail || a.pail === 'כשיר לשימוש'))
-          .map(a => ({ lat: a.lat, lng: a.lon, n: `${a.t_sug || 'מקלט'} — ${String(a.Full_Address || '').trim()}`.slice(0, 120) }));
-        if (out.length) { tlvSheltersCache = out; tlvSheltersFetchedAt = Date.now(); }
-      }
-    } catch { /* keep serving stale cache, if any */ }
-    tlvSheltersInflight = null;
-    return tlvSheltersCache;
-  })();
-  return tlvSheltersInflight;
+// underlying ArcGIS REST service below. Jerusalem and Haifa (added later) each publish their own
+// real open-data GIS layer too — every other city still relies on the illustrative SHELTERS_DEFAULT
+// samples in lib.js until a similar municipal feed is found and verified for them. Client merges
+// these in via loadExternalShelters() only when the deployer hasn't set their own SHELTERS_URL.
+//
+// makeShelterFetcher: shared cache/inflight-dedup/TTL wrapper — each city just supplies its query
+// URL and a mapper from the raw response body to [{lat,lng,n}]. Fails soft: on error it keeps
+// serving whatever was last cached (or null on a cold start) rather than throwing.
+const SHELTER_FETCH_TTL = 24 * 3600 * 1000; // refresh at most once a day — considerate to each municipality's server
+function makeShelterFetcher(url, headers, mapBody) {
+  let cache = null, fetchedAt = 0, inflight = null;
+  return async function get() {
+    const now = Date.now();
+    if (cache && (now - fetchedAt) < SHELTER_FETCH_TTL) return cache;
+    if (inflight) return inflight;
+    inflight = (async () => {
+      try {
+        const { status, body } = await fetchUrl(url, headers);
+        if (status === 200) {
+          const out = mapBody(body);
+          if (out && out.length) { cache = out; fetchedAt = Date.now(); }
+        }
+      } catch { /* keep serving stale cache, if any */ }
+      inflight = null;
+      return cache;
+    })();
+    return inflight;
+  };
 }
+
+const getTelAvivShelters = makeShelterFetcher(
+  'https://gisn.tel-aviv.gov.il/arcgis/rest/services/WM/IView2WM/MapServer/592/query?where=1%3D1&outFields=lat,lon,Full_Address,t_sug,pail&f=json&resultRecordCount=1000&returnGeometry=false',
+  { 'Accept': 'application/json' },
+  body => {
+    const data = JSON.parse(body);
+    return (data.features || []).map(f => f.attributes)
+      .filter(a => typeof a.lat === 'number' && typeof a.lon === 'number' && (!a.pail || a.pail === 'כשיר לשימוש'))
+      .map(a => ({ lat: a.lat, lng: a.lon, n: `${a.t_sug || 'מקלט'} — ${String(a.Full_Address || '').trim()}`.slice(0, 120) }));
+  }
+);
+
+// Jerusalem municipality's open-data GeoJSON export (jerusalem.datacity.org.il, package
+// 3e97d0fc-4268-4aea-844d-12588f55d809 — "מקלטים ציבוריים"). Fields are limited to a shelter
+// number (no street address) since that's all the source publishes; coordinates verified real
+// (WGS84, matches known Jerusalem geography). NOTE: this CKAN platform assigns a new resource_id
+// on each re-upload rather than updating in place — if this starts 404ing, look up the current
+// GeoJSON resource under that package id and update the URL below.
+const getJerusalemShelters = makeShelterFetcher(
+  'https://jerusalem.datacity.org.il/dataset/3e97d0fc-4268-4aea-844d-12588f55d809/resource/b9bd9575-d431-4f9d-af4b-1413d3c13590/download/data.geojson',
+  { 'Accept': 'application/geo+json' },
+  body => {
+    const data = JSON.parse(body);
+    return (data.features || [])
+      .filter(f => f.geometry?.type === 'Point' && Array.isArray(f.geometry.coordinates))
+      .map(f => ({ lng: f.geometry.coordinates[0], lat: f.geometry.coordinates[1], n: `מקלט ${f.properties?.['מספר מקלט'] ?? ''}`.trim().slice(0, 120) }));
+  }
+);
+
+// Haifa municipality's open-data GeoJSON (opendata.haifa.muni.il, dataset "מיגון בעיר") — the
+// richest of the three: real street addresses + a shelter/protected-space type per record. The
+// download URL 302-redirects through a short-lived presigned storage link (fetchUrl follows it).
+const getHaifaShelters = makeShelterFetcher(
+  'https://opendata.haifa.muni.il/dataset/5d0cd14d-c738-488f-84fa-310270ef5d0b/resource/cdd1571a-c55f-4d5d-aef1-0135a68d8d9e/download/gis.geojson',
+  { 'Accept': 'application/geo+json' },
+  body => {
+    const data = JSON.parse(body);
+    return (data.features || [])
+      .filter(f => f.geometry?.type === 'Point' && Array.isArray(f.geometry.coordinates))
+      .map(f => { const p = f.properties || {}; return { lng: f.geometry.coordinates[0], lat: f.geometry.coordinates[1], n: `${p.Migun_Type || 'מקלט'} — ${String(p.Migun_FullAddress || '').trim()}`.slice(0, 120) }; });
+  }
+);
 
 // ── HTTP Server ──────────────────────────────────────────────
 const server = http.createServer(async (req, res) => {
@@ -452,6 +514,8 @@ const server = http.createServer(async (req, res) => {
   if (p === '/api/health') { const mem = process.memoryUsage(); track(p, 200); return gz(req, res, JSON.stringify({ status: 'ok', uptime_seconds: Math.floor((Date.now() - SERVER_START) / 1000), memory_mb: Math.round(mem.rss / 1024 / 1024), sse_clients: sseClients.size, alerts_stored: store.length, fallback: useFB, web_push: !!webpush, push_subs: pushSubs.size, last_poll_ago: lastPoll ? Math.floor((Date.now() - lastPoll) / 1000) : null, health_webhook: !!HEALTH_WEBHOOK }), 'application/json; charset=utf-8'); }
   if (p === '/api/config') { track(p, 200); return gz(req, res, JSON.stringify({ shelters_url: SHELTERS_URL || null, web_push: !!webpush }), 'application/json; charset=utf-8'); }
   if (p === '/api/shelters/tel-aviv') { const s = await getTelAvivShelters(); track(p, 200); return gz(req, res, JSON.stringify(s || []), 'application/json; charset=utf-8'); }
+  if (p === '/api/shelters/jerusalem') { const s = await getJerusalemShelters(); track(p, 200); return gz(req, res, JSON.stringify(s || []), 'application/json; charset=utf-8'); }
+  if (p === '/api/shelters/haifa') { const s = await getHaifaShelters(); track(p, 200); return gz(req, res, JSON.stringify(s || []), 'application/json; charset=utf-8'); }
   if (p === '/api/spec' || p === '/openapi.yaml') { try { const spec = fs.readFileSync(path.join(__dirname, 'openapi.yaml'), 'utf8'); track(p, 200); return gz(req, res, spec, 'application/yaml; charset=utf-8'); } catch { track(p, 404); res.writeHead(404); return res.end('{"error":"spec not found"}'); } }
   if (p === '/api/alerts') { const a = [...activeAlerts.values()]; track(p, 200); return gz(req, res, JSON.stringify({ alerts: a, count: a.length, ts: new Date().toISOString() }), 'application/json; charset=utf-8'); }
   if (p === '/api/history') { const lim = Math.min(Math.max(parseInt(url.searchParams.get('limit')) || 200, 1), 1000); const off = Math.max(parseInt(url.searchParams.get('offset')) || 0, 0); track(p, 200); return gz(req, res, JSON.stringify({ alerts: store.slice(off, off + lim), total: store.length, offset: off, limit: lim }), 'application/json; charset=utf-8'); }
