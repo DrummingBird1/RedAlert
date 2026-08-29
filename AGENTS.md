@@ -105,7 +105,7 @@ npm run docker:run          # docker run -p 3000:3000 ...
 5. **endpoint חדש** — הוסף `if (p === '/api/...')` ב-`server.js` ל-pipeline הקיים בתוך `http.createServer`. תזכור `track(p, code)` ו-`gz(req, res, body, ct)`.
 6. **בדיקות** — הפונקציות הפניניות חיות ב-[lib.js](lib.js) (מקור-אמת יחיד). הקליינט עוטף בשמות קצרים, ו-`test.js` מייבא `require('./lib.js')`. **אם משנים לוגיקה פנינית — עורכים את `lib.js`, וזהו.** אין יותר שכפול ידני.
 7. **הוספת data סטטי** (עיר/שפה/סוג אזעקה) — עורכים את האובייקטים ב-[lib.js](lib.js) (`CITIES`/`LN`/`TM`/`RS`). הקליינט מושך אותם דרך `AlertLib`. עיר ללא קואורדינטה (לא נמצאה ב-`fuzzyMatch`) מסומנת `noLoc:true` — **לא מוצב מרקר במיקום אקראי** (היא מופיעה ברשימה עם תווית "מיקום לא ידוע" בלבד).
-8. **פרסום release** — עדכנו `package.json`/`APP_VERSION`/`CN` (server.js), הוסיפו סעיף ל-CHANGELOG.md + ל-`CHANGES` (index.html), והריצו את הטסטים. כל release חדש ב-GitHub כולל את `screenshot.jpg` (בשורש הריפו, מוצג גם ב-README) בגוף ה-release notes — עדכנו אותו כשה-UI משתנה משמעותית (למשל דרך צילום מסך אמיתי של השרת המקומי במצב לוויין + `demo()` פעיל, לא mockup).
+8. **פרסום release** — עדכנו `package.json`/`APP_VERSION`/`CN` (server.js), הוסיפו סעיף ל-CHANGELOG.md + ל-`CHANGES` (index.html), והריצו את הטסטים. כל release חדש ב-GitHub כולל שתי תמונות בגוף ה-release notes: (א) `screenshot.jpg` (בשורש הריפו, מוצג גם ב-README) — עדכנו אותו כשה-UI משתנה משמעותית (דרך צילום מסך אמיתי של השרת המקומי במצב לוויין + `demo()` פעיל, לא mockup); (ב) `release-banners/vX.Y.Z.png` — לוגו ממותג עם מספר הגרסה, נוצר אוטומטית ע״י `node scripts/release-banner.mjs <version>` (headless Chrome, ללא תלות npm חדשה — דורש Chrome/Edge מותקן מקומית).
 
 ## מוסכמות סגנון
 
