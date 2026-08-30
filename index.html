@@ -283,7 +283,7 @@ let clientErrSent=0;
 function reportClientError(message,stack){if(clientErrSent>=5)return;clientErrSent++;try{fetch(`${API}/api/client-error`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:String(message||'').slice(0,500),stack:String(stack||'').slice(0,2000),url:location.href})}).catch(()=>{})}catch{}}
 window.addEventListener('error',e=>reportClientError(e.message,e.error?.stack));
 window.addEventListener('unhandledrejection',e=>reportClientError('unhandledrejection: '+String(e.reason?.message||e.reason),e.reason?.stack));
-const APP_VERSION='3.5.0'; // bump alongside package.json; drives the "what's new" popup in checkWhatsNew()
+const APP_VERSION='3.6.0'; // bump alongside package.json; drives the "what's new" popup in checkWhatsNew()
 // Donation links — rendered as a row of buttons everywhere the donate card/mini appears. Empty array hides them.
 const DONATE_LINKS=[
   {n:'Ko-fi',i:'☕',url:'https://ko-fi.com/idanlights',cls:'kofi'},
@@ -618,6 +618,7 @@ function stopReplay(){
 // Updates tab — mirrors CHANGELOG.md's newest entries (update this array by hand on release,
 // same as the CHANGELOG.md file; kept short on purpose, full history lives in the repo).
 const CHANGES=[
+  {v:'3.6.0',d:'2026-08-30',items:['🐛 קריטי: תוקן קריסה ארוכת-טווח בטאב היסטוריה — רשומות מ-IndexedDB חסרו שדה שהתצוגה דרשה, והטאב נתקע על טעינה לכל משתמש עם היסטוריה אמיתית שמורה','🗺️ מקלטים אמיתיים נוספו לירושלים ולחיפה (בנוסף לתל אביב), עם קישורי ניווט Waze/Google Maps מכל מקלט על המפה','▶ Replay בטאב היסטוריה — צפייה כרונולוגית באזעקות ישירות על המפה','🔐 2FA אופציונלי לאדמין (קוד TOTP) + יומן ביקורת התחברויות','🌍 ייצוא GeoJSON/KML להיסטוריה, פאג\'ינציה אמיתית ל-API, מדיניות שמירת היסטוריה ניתנת להגדרה','🌐 זיהוי שפה אוטומטי מהדפדפן בביקור ראשון (במקום נפילה ישירה לעברית)','🔴 באדג׳ מספר אזעקות פעילות על אייקון האפליקציה, הודעת התקנה ל-iPhone/iPad','🧪 בדיקות E2E בדפדפן אמיתי (Playwright) בנוסף ליחידה ואינטגרציה','📉 דיווח שגיאות קליינט לשרת, ותרשים ארכיטקטורה חדש ב-README']},
   {v:'3.5.0',d:'2026-08-29',items:['💛 3 אפשרויות תרומה במקום אחת: Ko-fi, Buy Me a Coffee ו-Patreon (חשבון חדש) — מוצגות כשורת כפתורים בכל מקום שהיה כפתור תרומה יחיד','🖼️ צילום מסך של האפליקציה נוסף ל-README ולכל release חדש ב-GitHub']},
   {v:'3.4.1',d:'2026-07-24',items:['🐛 קריטי: תוקן — שמות מקלטים נמרחו לכתם בלתי קריא על המפה בזום (עם 374 מקלטים אמיתיים בת"א); המרקר מציג נקודה בלבד, השם עדיין מופיע בלחיצה','🐛 תוקן: בתפריט הנייד רק "אזעקות" הציג שם — שאר 5 הכפתורים נדחסו לפינה אחת ברוחב במקום להתחלק שווה בשווה','🐛 תוקן: בחירה מתוך תיבות נפתחות (אזור/סוג/וכו׳) הייתה בלתי קריאה במצב כהה — טקסט בהיר על רקע בהיר','🔍 השלמה אוטומטית בשדה חיפוש היישוב (למשל "תל" מציע "תל אביב")']},
   {v:'3.4.0',d:'2026-07-24',items:['🐛 תוקן: שדה חיפוש היישוב הוציא את הפוקוס אחרי כל אות — עכשיו אפשר להקליד ברצף','🐛 תוקן: מעבר לכרטיסייה אחרת בדפדפן וחזרה החזיר את התצוגה לטאב אזעקות במקום להישאר בטאב האחרון','🐛 תוקן: לחצני התפריטים והמפה קיבלו שם גלוי בהעברת עכבר (title), לא רק לכפתור אזעקות','🏷️ שכבת שמות מקומות ניתנת להצגה/הסתרה מעל תצוגת הלוויין','🗺️ מקלטים אמיתיים בתל אביב-יפו (~374, מהעירייה) מוצגים אוטומטית במקום הדוגמאות הכלליות; שאר הארץ נשארת מסומנת "לדוגמה" באופן שקוף','🔽 תיבה נפתחת עם כל היישובים — לקפוץ ישירות לעיר על המפה']},

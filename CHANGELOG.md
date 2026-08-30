@@ -5,6 +5,56 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+## [3.6.0]
+
+### Fixed
+- **Critical: the History tab crashed for any user with real persisted history.**
+  `sDB()` has always saved IndexedDB alert records with only `typeKey` (a string), never
+  the full `type` object (icon/css/color) that `rItem()` reads from. Any visit to the
+  History tab against a browser that actually had IndexedDB data threw
+  `Cannot read properties of undefined (reading 'icon')` and got stuck on the loading
+  skeleton forever. This predates this release by a long way — traced back through the
+  whole git history, not something introduced recently. `renderHistoryTab()` now
+  reconstructs `type` from `typeKey`, the same fallback `procSA()`/`preloadHistory()`
+  already use. Added an E2E test that seeds IndexedDB in `sDB()`'s exact on-disk shape
+  and verifies the tab renders it without throwing.
+
+### Added
+- **Real shelter data for Jerusalem and Haifa**, alongside the existing Tel Aviv feed —
+  Jerusalem's open-data GeoJSON (~215 shelters, shelter number only — no address in the
+  source) and Haifa's (~276 records, real street address + type, the richest of the
+  three). Every shelter marker's popup now also has Waze/Google Maps navigation links.
+  Investigated Beer Sheva (real ArcGIS Hub catalog entry, but its endpoint didn't
+  respond — likely geo-restricted), Rishon LeZion and Petah Tikva (confirmed: no open
+  shelter GIS layer for either, only static PDFs).
+- **History timeline replay** — a "▶ הפעל" control on the History tab flies the map
+  through the currently-filtered list in chronological order, one alert at a time.
+- **Optional admin 2FA** (`ADMIN_TOTP_SECRET`) — RFC 6238 TOTP implemented with Node's
+  built-in `crypto`, no new dependency. When set, `/admin` and `/metrics` require
+  `ADMIN_PASS` + a live 6-digit authenticator code. Every auth attempt is now logged to
+  `logs/admin-audit.log`.
+- **Client-side error reporting** (`POST /api/client-error`) — `window.onerror`/
+  `unhandledrejection` report to a small rotated log file, capped at 5 reports per page
+  load. Not a full error-tracking service, just enough visibility without waiting for a
+  bug report.
+- GeoJSON and KML export on the Stats tab, alongside the existing CSV/JSON (both skip
+  `noLoc:true` alerts, since a point geometry can't be fabricated for an unlocated city).
+- Configurable automatic history retention (unlimited by default, or 30/90/180/365 days).
+- Real `offset` pagination on `/api/history`, alongside the existing `limit`.
+- First-ever visit with no `?lang=`/saved preference now guesses the UI language from
+  `navigator.languages` before falling back to Hebrew. `isRTL()`/`RTL_LANGS` extracted
+  into `lib.js` (was inline in `index.html`); `test.js` now actually verifies every
+  language shares the same key set + a `LANG_META` + `TTS_LOCALE` entry.
+- App icon badge (`navigator.setAppBadge`) showing the active-alert count; a dismissible
+  install hint for iOS/iPadOS Safari, which never fires `beforeinstallprompt`.
+- **A real-browser E2E test suite** (`test-e2e.js`, Playwright via the system Chrome
+  install — no bundled-browser download) covering concrete UI regressions from past
+  releases that pure unit/integration tests can't see.
+- `.github/FUNDING.yml` (Ko-fi/Buy Me a Coffee/Patreon) and GitHub repo topics.
+- A Mermaid architecture diagram in the README/CLAUDE.md/AGENTS.md.
+- A per-version release banner generator (`scripts/release-banner.mjs`) — every future
+  release gets a branded logo image alongside the app screenshot.
+
 ## [3.5.0]
 
 ### Changed
@@ -201,7 +251,8 @@ All notable changes to this project are documented here. Format loosely follows
   (he/en/ar/ru), Docker + docker-compose, admin dashboard with Basic auth,
   health-check webhook, rate limiting, and file-based alert logging with rotation.
 
-[Unreleased]: https://github.com/DrummingBird1/RedAlert/compare/v3.5.0...HEAD
+[Unreleased]: https://github.com/DrummingBird1/RedAlert/compare/v3.6.0...HEAD
+[3.6.0]: https://github.com/DrummingBird1/RedAlert/compare/v3.5.0...v3.6.0
 [3.5.0]: https://github.com/DrummingBird1/RedAlert/compare/v3.4.1...v3.5.0
 [3.4.1]: https://github.com/DrummingBird1/RedAlert/compare/v3.4.0...v3.4.1
 [3.4.0]: https://github.com/DrummingBird1/RedAlert/compare/v3.3.0...v3.4.0
