@@ -5,6 +5,26 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+## [1.6.1]
+
+### Fixed
+- **Critical: the default (non-satellite) map showed "API KEY REQUIRED" watermarked over
+  every tile.** CartoDB started requiring a paid API key for the `basemaps.cartocdn.com`
+  raster endpoint this app used for light/dark tiles. Replaced with Esri's free, keyless
+  "Canvas" basemaps (`World_Dark_Gray_Base`/`World_Light_Gray_Base` + a separate
+  `..._Reference` layer for place names/roads/borders, same split-layer pattern already
+  used for the satellite view's optional labels) — same domain already allowlisted in CSP
+  and the service worker's tile cache, so no config changes needed.
+- **Only the Alerts tab had a visible text label; the other four tabs
+  (Stats/History/Updates/About) were icon-only**, with a name only on hover. All five now
+  show a translated label. Doing this with the tabs' original inline layout made longer
+  words wrap to a second line while short ones didn't, so tab height became inconsistent —
+  switched `.stab` to a small icon-on-top/label-below column layout instead, which keeps
+  every tab the same height regardless of label length.
+- The v1.5.0/v1.6.0 release banners still showed the pre-renumbering "v3.5.0"/"v3.6.0" text
+  baked into the image — the renumbering commit renamed the files but didn't regenerate
+  their contents. Regenerated both.
+
 ## [1.6.0]
 
 ### Fixed
@@ -251,7 +271,8 @@ All notable changes to this project are documented here. Format loosely follows
   (he/en/ar/ru), Docker + docker-compose, admin dashboard with Basic auth,
   health-check webhook, rate limiting, and file-based alert logging with rotation.
 
-[Unreleased]: https://github.com/DrummingBird1/RedAlert/compare/v1.6.0...HEAD
+[Unreleased]: https://github.com/DrummingBird1/RedAlert/compare/v1.6.1...HEAD
+[1.6.1]: https://github.com/DrummingBird1/RedAlert/compare/v1.6.0...v1.6.1
 [1.6.0]: https://github.com/DrummingBird1/RedAlert/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/DrummingBird1/RedAlert/compare/v1.4.1...v1.5.0
 [1.4.1]: https://github.com/DrummingBird1/RedAlert/compare/v1.4.0...v1.4.1

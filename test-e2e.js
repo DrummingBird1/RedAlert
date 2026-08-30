@@ -114,6 +114,16 @@ test('select options have explicit dark-mode-safe colors (v1.4.1 regression)', a
   assert.equal(hasRule, true, 'expected an explicit "select option { background; color }" rule');
 });
 
+// Regression: only the Alerts tab had a literal text label in its markup; every other desktop
+// tab (Stats/History/Updates/About) was icon-only with just a hover title/aria-label, so at a
+// glance only "אזעקות" looked like it had a name. All 5 now render a visible, translated label.
+test('every desktop tab shows a visible text label (v1.6.1 regression)', async () => {
+  await page.goto(ORIGIN, { waitUntil: 'load' });
+  const labels = await page.$$eval('.stab', tabs => tabs.map(t => t.textContent.trim()));
+  assert.equal(labels.length, 5, `expected 5 tabs, found ${labels.length}`);
+  for (const label of labels) assert.ok(label.length > 0, `a .stab has no visible text: "${label}"`);
+});
+
 // Regression: sDB() persists IndexedDB records with only `typeKey` (a string), never the full
 // `type` object (icon/css/color) that rItem() reads from — so any History tab visit with real
 // persisted history threw "Cannot read properties of undefined (reading 'icon')" and got stuck
