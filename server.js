@@ -378,7 +378,15 @@ function adminPage() { return `<!DOCTYPE html><html><head><meta charset="UTF-8">
 // 6-digit code (e.g. "hunter2483726"), compatible with any standard authenticator app.
 function base32Decode(str) { const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'; let bits = '', bytes = []; for (const c of String(str).replace(/=+$/, '').toUpperCase()) { const val = alphabet.indexOf(c); if (val === -1) continue; bits += val.toString(2).padStart(5, '0'); } for (let i = 0; i + 8 <= bits.length; i += 8) bytes.push(parseInt(bits.slice(i, i + 8), 2)); return Buffer.from(bytes); }
 function totpAt(secretB32, timeStep) { const key = base32Decode(secretB32); const buf = Buffer.alloc(8); buf.writeBigUInt64BE(BigInt(timeStep)); const hmac = crypto.createHmac('sha1', key).update(buf).digest(); const offset = hmac[hmac.length - 1] & 0xf; const code = ((hmac[offset] & 0x7f) << 24 | (hmac[offset + 1] & 0xff) << 16 | (hmac[offset + 2] & 0xff) << 8 | (hmac[offset + 3] & 0xff)) % 1000000; return String(code).padStart(6, '0'); }
-function verifyTOTP(secretB32, token) { if (!/^\d{6}$/.test(token || '')) return false; const step = Math.floor(Date.now() / 30000); for (const drift of [-1, 0, 1]) if (totpAt(secretB32, step + drift) === token) return true; return false; }
+function verifyTOTP(secretB32, token) { if (!/^\d{6}$/.test(token || '')) return false; const step = Math.floor(Date.now() / 30000); for (const drift of [-1, 0, 1]) if (safeEqual(totpAt(secretB32, step + drift), token)) return true; return false; }
+// Plain === short-circuits on the first mismatched byte, which in principle leaks a timing
+// signal an attacker could use to guess the password character-by-character. crypto.timingSafeEqual
+// requires equal-length buffers (throws otherwise), so lengths are compared first — that leaks only
+// the password's length, not its content, which is the standard accepted tradeoff for this check.
+function safeEqual(a, b) {
+  const bufA = Buffer.from(String(a)), bufB = Buffer.from(String(b));
+  return bufA.length === bufB.length && crypto.timingSafeEqual(bufA, bufB);
+}
 function checkAuth(req) {
   const a = req.headers.authorization;
   if (!a || !a.startsWith('Basic ')) return false;
@@ -386,8 +394,8 @@ function checkAuth(req) {
   try {
     const [u, p] = Buffer.from(a.slice(6), 'base64').toString().split(':');
     if (u !== ADMIN_USER) ok = false;
-    else if (!ADMIN_TOTP_SECRET) ok = p === ADMIN_PASS;
-    else if (p.length > 6) ok = p.slice(0, -6) === ADMIN_PASS && verifyTOTP(ADMIN_TOTP_SECRET, p.slice(-6));
+    else if (!ADMIN_TOTP_SECRET) ok = safeEqual(p, ADMIN_PASS);
+    else if (p.length > 6) ok = safeEqual(p.slice(0, -6), ADMIN_PASS) && verifyTOTP(ADMIN_TOTP_SECRET, p.slice(-6));
   } catch { ok = false; }
   adminAuditLog.write(`${new Date().toISOString()} ${ok ? 'OK  ' : 'FAIL'} ip=${getIP(req)} path=${req.url}\n`);
   return ok;
