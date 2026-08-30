@@ -6,7 +6,7 @@
 //
 //  Covers UI regressions that unit/integration tests can't see —
 //  each test here targets an actual bug fixed in a past release
-//  (see CHANGELOG.md v3.4.0/v3.4.1), so a future refactor that
+//  (see CHANGELOG.md v1.4.0/v1.4.1), so a future refactor that
 //  reintroduces one of these fails loudly instead of waiting for
 //  a user bug report.
 //
@@ -51,7 +51,7 @@ test('app boots with no console errors', async () => {
 
 // Regression: renderSB()/renderHistoryTab() used to replace #sbC's innerHTML (including the
 // search input itself) on every keystroke, kicking focus out after a single character.
-test('city search field keeps focus while typing (v3.4.0 regression)', async () => {
+test('city search field keeps focus while typing (v1.4.0 regression)', async () => {
   await page.goto(ORIGIN, { waitUntil: 'load' }); // NOT 'networkidle' — the app opens a long-lived SSE connection that never goes idle
   const input = page.locator('#fQ');
   await input.click();
@@ -60,9 +60,9 @@ test('city search field keeps focus while typing (v3.4.0 regression)', async () 
   await assert.equal(await input.inputValue(), 'תל אב');
 });
 
-// Regression: the 3.2.0 visibility-restore fix called renderSB() unconditionally on
+// Regression: the 1.2.0 visibility-restore fix called renderSB() unconditionally on
 // visibilitychange, snapping the view back to the Alerts tab from whatever tab the user was on.
-test('switching tabs then a visibilitychange stays on the same tab (v3.4.0 regression)', async () => {
+test('switching tabs then a visibilitychange stays on the same tab (v1.4.0 regression)', async () => {
   await page.goto(ORIGIN, { waitUntil: 'load' }); // NOT 'networkidle' — the app opens a long-lived SSE connection that never goes idle
   // currentTab is a script-scoped `let`, not a window property, so this checks rendered DOM state instead.
   await page.locator('.stab[onclick*="history"]').click();
@@ -75,7 +75,7 @@ test('switching tabs then a visibilitychange stays on the same tab (v3.4.0 regre
 
 // Regression: .mn-i lacked an explicit width, so on mobile it shrank to content size instead of
 // spanning the bottom nav bar, squeezing all 6 buttons into one corner.
-test('mobile bottom nav spans full width (v3.4.1 regression)', async () => {
+test('mobile bottom nav spans full width (v1.4.1 regression)', async () => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto(ORIGIN, { waitUntil: 'load' }); // NOT 'networkidle' — the app opens a long-lived SSE connection that never goes idle
   const widths = await page.evaluate(() => {
@@ -88,7 +88,7 @@ test('mobile bottom nav spans full width (v3.4.1 regression)', async () => {
 
 // Regression: shelter markers carried a permanent .ml text label that overlapped into an
 // illegible smear once real, densely-packed shelter data (Tel Aviv) replaced the sparse samples.
-test('shelter markers have no permanent text label (v3.4.1 regression)', async () => {
+test('shelter markers have no permanent text label (v1.4.1 regression)', async () => {
   await page.goto(ORIGIN, { waitUntil: 'load' }); // NOT 'networkidle' — the app opens a long-lived SSE connection that never goes idle
   await page.waitForFunction(() => typeof tglShl === 'function');
   await page.evaluate(() => tglShl());
@@ -99,7 +99,7 @@ test('shelter markers have no permanent text label (v3.4.1 regression)', async (
 
 // Regression: native <option> elements don't inherit a <select>'s custom colors, so dark-mode
 // dropdowns showed unreadable light-on-light (or dark-on-dark) text.
-test('select options have explicit dark-mode-safe colors (v3.4.1 regression)', async () => {
+test('select options have explicit dark-mode-safe colors (v1.4.1 regression)', async () => {
   await page.goto(ORIGIN, { waitUntil: 'load' }); // NOT 'networkidle' — the app opens a long-lived SSE connection that never goes idle
   const hasRule = await page.evaluate(() => {
     for (const sheet of document.styleSheets) {

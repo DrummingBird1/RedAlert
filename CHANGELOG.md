@@ -5,7 +5,7 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
-## [3.6.0]
+## [1.6.0]
 
 ### Fixed
 - **Critical: the History tab crashed for any user with real persisted history.**
@@ -55,7 +55,7 @@ All notable changes to this project are documented here. Format loosely follows
 - A per-version release banner generator (`scripts/release-banner.mjs`) — every future
   release gets a branded logo image alongside the app screenshot.
 
-## [3.5.0]
+## [1.5.0]
 
 ### Changed
 - **Replaced the single Patreon donation link with three donation options** — Ko-fi,
@@ -65,13 +65,13 @@ All notable changes to this project are documented here. Format loosely follows
 - README now includes a screenshot of the app; going forward, new GitHub releases include
   one too.
 
-## [3.4.1]
+## [1.4.1]
 
 ### Fixed
 - **Critical: shelter name labels smeared into an illegible mess when zooming.** Shelter
   markers had a permanent always-visible text label in addition to their click popup; that
   was tolerable with ~34 sparse illustrative points but with ~374 real, densely-packed Tel
-  Aviv shelters (added in 3.4.0) the labels overlapped into unreadable smears at most zoom
+  Aviv shelters (added in 1.4.0) the labels overlapped into unreadable smears at most zoom
   levels. Removed the permanent label — the name is still shown via the existing click popup.
 - **Mobile bottom nav: only the Alerts button showed a visible name.** `.mn-i` (the flex
   container holding all 6 nav buttons) had no explicit width; once `.mn` itself became a flex
@@ -85,9 +85,9 @@ All notable changes to this project are documented here. Format loosely follows
 ### Added
 - Autocomplete on the city search field via a shared `<datalist>`, so typing e.g. "תל"
   suggests "תל אביב" instead of relying purely on the substring filter or the separate
-  browse-dropdown added in 3.4.0.
+  browse-dropdown added in 1.4.0.
 
-## [3.4.0]
+## [1.4.0]
 
 ### Fixed
 - **City search input (`#fQ`/`#hQ`) kicked focus out of the field after one keystroke.**
@@ -98,7 +98,7 @@ All notable changes to this project are documented here. Format loosely follows
   (only shown on first paint) and guards against a slower request overwriting a newer one.
 - **Switching away to another browser tab and back reset the view to the Alerts tab**,
   discarding whatever tab (Stats/History/Updates/About) the user had actually been on.
-  Caused by the 3.2.0 visibility-restore fix calling `renderSB()` unconditionally; `updUI()`
+  Caused by the 1.2.0 visibility-restore fix calling `renderSB()` unconditionally; `updUI()`
   now goes through `refreshCurrentTab()`, which only repaints the tab that's actually active.
 - **Most tab and map-toolbar icons had no visible name on hover.** Only the Alerts tab had
   a text label; every other tab and every map-control button (home, locate, refresh, heatmap,
@@ -107,7 +107,7 @@ All notable changes to this project are documented here. Format loosely follows
   `aria-label`/`tabindex` on the previously-unlabeled, unfocusable tab elements.
 
 ### Added
-- **Satellite place-name labels.** Esri World Imagery (added in 3.3.0) has no text of its
+- **Satellite place-name labels.** Esri World Imagery (added in 1.3.0) has no text of its
   own; a free companion Esri overlay (place/road/border labels) can now be toggled on top of
   it via a new 🏷️ button that appears only while satellite mode is active.
 - **Real Tel Aviv-Yafo shelter data.** Re-investigated shelter-data availability: the
@@ -120,7 +120,7 @@ All notable changes to this project are documented here. Format loosely follows
 - A scrollable city picker (`<select>` listing every known city) next to the free-text
   search, for jumping the map straight to a city without typing.
 
-## [3.3.0]
+## [1.3.0]
 
 ### Added
 - **Rebranded to "Tzafir" (צפיר)** — the project's display name, PWA manifest,
@@ -159,7 +159,7 @@ All notable changes to this project are documented here. Format loosely follows
   cities meant only the final one was ever audible. It now collects every new
   city in a batch and speaks them together in a single utterance.
 
-## [3.2.0]
+## [1.2.0]
 
 ### Fixed
 - **Connection indicator blinked forever, even when stably connected.** The status
@@ -196,7 +196,7 @@ All notable changes to this project are documented here. Format loosely follows
   documented as such rather than implied to be authoritative. `SHELTERS_URL`
   remains the documented path for wiring up a real municipal shelter feed.
 
-## [3.1.0]
+## [1.1.0]
 
 ### Added
 - Fly.io deployment: `fly.toml` + `.github/workflows/deploy.yml` (auto-deploy on
@@ -241,7 +241,7 @@ All notable changes to this project are documented here. Format loosely follows
   if `ADMIN_PASS` is unset, a strong random password is generated at boot and
   printed once to the logs.
 
-## [3.0.0] — Initial release
+## [1.0.0] — Initial release
 
 - Node.js proxy server (zero core dependencies) + a monolithic HTML client
   displaying real-time Israeli Home Front Command (Pikud HaOref) alerts on a
@@ -251,12 +251,12 @@ All notable changes to this project are documented here. Format loosely follows
   (he/en/ar/ru), Docker + docker-compose, admin dashboard with Basic auth,
   health-check webhook, rate limiting, and file-based alert logging with rotation.
 
-[Unreleased]: https://github.com/DrummingBird1/RedAlert/compare/v3.6.0...HEAD
-[3.6.0]: https://github.com/DrummingBird1/RedAlert/compare/v3.5.0...v3.6.0
-[3.5.0]: https://github.com/DrummingBird1/RedAlert/compare/v3.4.1...v3.5.0
-[3.4.1]: https://github.com/DrummingBird1/RedAlert/compare/v3.4.0...v3.4.1
-[3.4.0]: https://github.com/DrummingBird1/RedAlert/compare/v3.3.0...v3.4.0
-[3.3.0]: https://github.com/DrummingBird1/RedAlert/compare/v3.2.0...v3.3.0
-[3.2.0]: https://github.com/DrummingBird1/RedAlert/compare/v3.1.0...v3.2.0
-[3.1.0]: https://github.com/DrummingBird1/RedAlert/compare/v3.0.0...v3.1.0
-[3.0.0]: https://github.com/DrummingBird1/RedAlert/releases/tag/v3.0.0
+[Unreleased]: https://github.com/DrummingBird1/RedAlert/compare/v1.6.0...HEAD
+[1.6.0]: https://github.com/DrummingBird1/RedAlert/compare/v1.5.0...v1.6.0
+[1.5.0]: https://github.com/DrummingBird1/RedAlert/compare/v1.4.1...v1.5.0
+[1.4.1]: https://github.com/DrummingBird1/RedAlert/compare/v1.4.0...v1.4.1
+[1.4.0]: https://github.com/DrummingBird1/RedAlert/compare/v1.3.0...v1.4.0
+[1.3.0]: https://github.com/DrummingBird1/RedAlert/compare/v1.2.0...v1.3.0
+[1.2.0]: https://github.com/DrummingBird1/RedAlert/compare/v1.1.0...v1.2.0
+[1.1.0]: https://github.com/DrummingBird1/RedAlert/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/DrummingBird1/RedAlert/releases/tag/v1.0.0

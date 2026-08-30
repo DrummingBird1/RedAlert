@@ -4,7 +4,7 @@
 
 ## מה הפרויקט
 
-**צפיר** (Tzafir; חבילת npm: `tzafir`, לשעבר `israel-alert-map`, v3.6.0) — שרת Node.js + קליינט HTML עצמאי שמציג בזמן אמת את אזעקות פיקוד העורף על מפת Leaflet. תלות בליבה: אפס (רק `node` ≥ 18). תלויות אופציונליות: `web-push`, `node-telegram-bot-api`. שם ה-repo ב-GitHub נשאר `RedAlert` במכוון (המיתוג שונה, ה-repo לא שונה).
+**צפיר** (Tzafir; חבילת npm: `tzafir`, לשעבר `israel-alert-map`, v1.6.0) — שרת Node.js + קליינט HTML עצמאי שמציג בזמן אמת את אזעקות פיקוד העורף על מפת Leaflet. תלות בליבה: אפס (רק `node` ≥ 18). תלויות אופציונליות: `web-push`, `node-telegram-bot-api`. שם ה-repo ב-GitHub נשאר `RedAlert` במכוון (המיתוג שונה, ה-repo לא שונה).
 
 מקור הנתונים: `https://www.oref.org.il/WarningMessages/alert/alerts.json` (polling כל 2 שניות). אין מפתחות, אין הרשמה.
 
@@ -130,7 +130,7 @@ npm run docker:run          # docker run -p 3000:3000 ...
 5. **endpoint חדש** — הוסף `if (p === '/api/...')` ב-`server.js` ל-pipeline הקיים בתוך `http.createServer`. תזכור `track(p, code)` ו-`gz(req, res, body, ct)`.
 6. **בדיקות** — הפונקציות הפניניות חיות ב-[lib.js](lib.js) (מקור-אמת יחיד). הקליינט עוטף בשמות קצרים, ו-`test.js` מייבא `require('./lib.js')`. **אם משנים לוגיקה פנינית — עורכים את `lib.js`, וזהו.** אין יותר שכפול ידני.
 7. **הוספת data סטטי** (עיר/שפה/סוג אזעקה) — עורכים את האובייקטים ב-[lib.js](lib.js) (`CITIES`/`LN`/`TM`/`RS`). הקליינט מושך אותם דרך `AlertLib`. עיר ללא קואורדינטה (לא נמצאה ב-`fuzzyMatch`) מסומנת `noLoc:true` — **לא מוצב מרקר במיקום אקראי** (היא מופיעה ברשימה עם תווית "מיקום לא ידוע" בלבד).
-8. **פרסום release** — עדכנו `package.json`/`APP_VERSION`/`CN` (server.js), הוסיפו סעיף ל-CHANGELOG.md + ל-`CHANGES` (index.html), והריצו את הטסטים. כל release חדש ב-GitHub כולל שתי תמונות בגוף ה-release notes: (א) `screenshot.jpg` (בשורש הריפו, מוצג גם ב-README) — עדכנו אותו כשה-UI משתנה משמעותית (דרך צילום מסך אמיתי של השרת המקומי במצב לוויין + `demo()` פעיל, לא mockup); (ב) `release-banners/vX.Y.Z.png` — לוגו ממותג עם מספר הגרסה, נוצר אוטומטית ע״י `node scripts/release-banner.mjs <version>` (headless Chrome, ללא תלות npm חדשה — דורש Chrome/Edge מותקן מקומית).
+8. **פרסום release** — עדכנו `package.json`/`APP_VERSION`/`CN` (server.js), הוסיפו סעיף ל-CHANGELOG.md + ל-`CHANGES` (index.html), והריצו את הטסטים. כל release חדש ב-GitHub כולל **רק** את `release-banners/vX.Y.Z.png` (לוגו ממותג עם מספר הגרסה, נוצר אוטומטית ע״י `node scripts/release-banner.mjs <version>` — headless Chrome, ללא תלות npm חדשה, דורש Chrome/Edge מותקן מקומית) בגוף ה-release notes. **אין** להוסיף את `screenshot.jpg` לגוף ה-release notes — המשתמש הסיר אותו במכוון מ-v1.5.0/v1.6.0 (הוא נשאר רק ב-README עצמו, ומתעדכן שם כשה-UI משתנה משמעותית). **⚠️ מספור גרסאות אחרי 2026-08-30**: המשתמש ביקש למספר-מחדש את כל ההיסטוריה (מה שהיה v3.0.0 עד v3.6.0 הפך ל-v1.0.0 עד v1.6.0 — major הורד מ-3 ל-1, minor/patch נשארו זהים). **הגרסה הבאה ממשיכה מ-v1.6.0** (למשל v1.6.1 לתיקון, v1.7.0 לפיצ'ר) — **לא** לקפוץ בחזרה ל-v3.x ו**לא** לקפוץ ל-v2.0.0.
 
 ## מוסכמות סגנון
 
@@ -185,7 +185,7 @@ npm run docker:run          # docker run -p 3000:3000 ...
 
 `test.js` מייבא את הפונקציות מ-[lib.js](lib.js) ישירות (`require('./lib.js')`) — אותו קובץ שהקליינט טוען. אין יותר שכפול: עריכה ב-`lib.js` משפיעה גם על הקליינט וגם על הטסטים. `shelterClass` ב-lib מחזיר `immediate/fast/medium/slow`; הקליינט ממפה ל-CSS suffix קצר (`imm/fast/med/slow`) דרך `SHC_MAP`. `formatShelter(s, labels)` מקבל את מחרוזות התרגום כפרמטר (הקליינט מעביר `t(...)`, הטסטים מעבירים עברית).
 
-**⚠️ למה `test-e2e.js` קיים בנוסף לשני האחרים**: `test.js`/`test-integration.js` בודקים לוגיקה טהורה ותשובות API — אף אחד מהם לא מריץ דפדפן אמיתי, ולכן אף אחד לא היה תופס את רוב באגי ה-UI שתוקנו בפועל בין 3.2.0 ל-3.4.1 (פוקוס שנעלם, טאב שמתאפס, רוחב CSS שקורס, תוויות שנמרחות, צבעי option לא קריאים) — כל אלה התגלו רק כי המשתמש בדק ידנית וצילם מסך. `test-e2e.js` סוגר את הפער: כל טסט שם משחזר תרחיש אמיתי שהיה שבור בעבר. **חובה** להוסיף טסט E2E חדש כשמתקנים כל באג UI עתידי מהסוג הזה — אחרת הוא יחזור בשקט בריפקטור הבא. `channel:'chrome'` מונע הורדת דפדפן bundled של Playwright (יש Chrome/Edge מותקן מקומית ממילא); ב-CI (`.github/workflows/test.yml`, job `e2e`) זה נשען על ה-Chrome המובנה של runner ה-ubuntu-latest.
+**⚠️ למה `test-e2e.js` קיים בנוסף לשני האחרים**: `test.js`/`test-integration.js` בודקים לוגיקה טהורה ותשובות API — אף אחד מהם לא מריץ דפדפן אמיתי, ולכן אף אחד לא היה תופס את רוב באגי ה-UI שתוקנו בפועל בין 1.2.0 ל-1.4.1 (פוקוס שנעלם, טאב שמתאפס, רוחב CSS שקורס, תוויות שנמרחות, צבעי option לא קריאים) — כל אלה התגלו רק כי המשתמש בדק ידנית וצילם מסך. `test-e2e.js` סוגר את הפער: כל טסט שם משחזר תרחיש אמיתי שהיה שבור בעבר. **חובה** להוסיף טסט E2E חדש כשמתקנים כל באג UI עתידי מהסוג הזה — אחרת הוא יחזור בשקט בריפקטור הבא. `channel:'chrome'` מונע הורדת דפדפן bundled של Playwright (יש Chrome/Edge מותקן מקומית ממילא); ב-CI (`.github/workflows/test.yml`, job `e2e`) זה נשען על ה-Chrome המובנה של runner ה-ubuntu-latest.
 
 ## API versioning
 
