@@ -113,3 +113,33 @@ test('select options have explicit dark-mode-safe colors (v3.4.1 regression)', a
   });
   assert.equal(hasRule, true, 'expected an explicit "select option { background; color }" rule');
 });
+
+// Regression: sDB() persists IndexedDB records with only `typeKey` (a string), never the full
+// `type` object (icon/css/color) that rItem() reads from — so any History tab visit with real
+// persisted history threw "Cannot read properties of undefined (reading 'icon')" and got stuck
+// on the loading skeleton forever. Unlike every other test here, this needs IndexedDB to actually
+// contain a record shaped exactly like sDB() writes it, so it's seeded directly before reload.
+test('history tab renders IndexedDB-sourced entries without a type object (long-standing bug)', async () => {
+  await page.goto(ORIGIN, { waitUntil: 'load' });
+  await page.evaluate(() => new Promise((resolve, reject) => {
+    const req = indexedDB.open('alertmap', 1);
+    req.onupgradeneeded = e => { const d = e.target.result; if (!d.objectStoreNames.contains('alerts')) d.createObjectStore('alerts', { keyPath: 'id' }).createIndex('timestamp', 'timestamp'); };
+    req.onsuccess = e => {
+      const db = e.target.result;
+      const tx = db.transaction('alerts', 'readwrite');
+      tx.objectStore('alerts').put({ id: 'e2e-seed-1', city: 'שדרות', region: 'עוטף עזה', typeKey: 'rockets', shelter: 15, timestamp: new Date().toISOString(), lat: 31.524, lng: 34.596 });
+      tx.oncomplete = () => { db.close(); resolve(); };
+      tx.onerror = () => reject(tx.error);
+    };
+    req.onerror = () => reject(req.error);
+  }));
+  await page.reload({ waitUntil: 'load' });
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await page.locator('.stab[onclick*="history"]').click();
+  await page.waitForSelector('#hQ', { timeout: 5000 });
+  await page.waitForTimeout(500);
+  assert.deepEqual(errors, [], `console errors rendering seeded history: ${errors.join(', ')}`);
+  const seededVisible = await page.locator('#sbC').evaluate(el => el.textContent.includes('שדרות'));
+  assert.equal(seededVisible, true, 'seeded history entry did not render');
+});

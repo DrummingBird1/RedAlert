@@ -117,6 +117,8 @@ html.high-contrast .sm .md{background:#3b82f6;border-color:#fff;border-radius:2p
 .tlw{height:80px;width:100%}.tlw canvas{width:100%;height:100%;display:block}
 .eb{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:0 10px 10px}
 .ebt{padding:6px;border-radius:5px;font-size:9px;font-weight:600;cursor:pointer;border:1px solid var(--brd);background:var(--bgc);color:var(--txt);display:flex;align-items:center;justify-content:center;gap:3px}
+.ebt:disabled{opacity:.4;cursor:not-allowed}
+.ebt.active{background:var(--red);border-color:var(--red);color:#fff}
 .ebt:hover{border-color:var(--blue);color:var(--blue)}
 .rs{padding:0 10px 10px}
 .rsi{display:flex;justify-content:space-between;padding:6px 9px;background:var(--bgc);border:1px solid var(--brd);border-radius:5px;margin-bottom:4px;font-size:10px}
@@ -537,7 +539,7 @@ function updStats(){const now=new Date(),ts=new Date(now.getFullYear(),now.getMo
 
 // Tabs — track currentTab so the 10s refresh interval doesn't clobber the user's chosen tab
 let currentTab='alerts';
-function swTab(tab,el){currentTab=tab;document.querySelectorAll('.stab').forEach(t=>t.classList.remove('active'));el.classList.add('active');if(tab==='alerts')renderSB();else if(tab==='stats')renderStatTab();else if(tab==='history')renderHistoryTab();else if(tab==='updates')renderUpdatesTab();else renderAboutTab();if(tab==='stats')schedTL()}
+function swTab(tab,el){if(tab!=='history')stopReplay();currentTab=tab;document.querySelectorAll('.stab').forEach(t=>t.classList.remove('active'));el.classList.add('active');if(tab==='alerts')renderSB();else if(tab==='stats')renderStatTab();else if(tab==='history')renderHistoryTab();else if(tab==='updates')renderUpdatesTab();else renderAboutTab();if(tab==='stats')schedTL()}
 function refreshCurrentTab(){if(currentTab==='alerts'){if(document.activeElement?.id==='fQ')return;renderSB()}else if(currentTab==='history'){if(document.activeElement?.id==='hQ')return;renderHistoryTab()}else if(currentTab==='stats'){/* stats tab repaints itself via schedTL */}}
 function renderStatTab(){if(!preloadDone&&hist.length===0){document.getElementById('sbC').innerHTML='<div class="sg"><div class="skel skel-card"></div><div class="skel skel-card"></div><div class="skel skel-card"></div><div class="skel skel-card"></div></div><div class="skel skel-tl"></div><div class="skel skel-tl"></div><div class="skel skel-row"></div><div class="skel skel-row"></div><div class="skel skel-row"></div>';return}const now=new Date(),ts=new Date(now.getFullYear(),now.getMonth(),now.getDate()),ha=new Date(now-36e5);const rk=hist.filter(a=>a.typeKey==='rockets'),uav=hist.filter(a=>a.typeKey==='uav'),lh=hist.filter(a=>a.timestamp>=ha);const regions={};hist.forEach(a=>{regions[a.region]=(regions[a.region]||0)+1});const anomalyHtml=anomalyBadge();document.getElementById('sbC').innerHTML=`${anomalyHtml}<div class="sg"><div class="sc2 r"><div class="v">${rk.length}</div><div class="l">${t('rockets')}</div></div><div class="sc2 o"><div class="v">${uav.length}</div><div class="l">${t('uav')}</div></div><div class="sc2 y"><div class="v">${Object.keys(regions).length}</div><div class="l">אזורים</div></div><div class="sc2 g"><div class="v">${lh.length}</div><div class="l">שעה</div></div></div><div class="tls"><div class="tlt"><span>📊 24h</span><span class="m" id="tlM">0</span></div><div class="tlw"><canvas id="tlC"></canvas></div></div><div class="tls"><div class="tlt"><span>📈 ${t('todayL')} / ${t('yesterdayL')}</span><span class="m" id="compM"></span></div><div class="tlw"><canvas id="compC"></canvas></div></div><div class="rs">${Object.entries(regions).sort((a,b)=>b[1]-a[1]).map(([r,c])=>`<div class="rsi"><span>${X(r)}</span><span class="rc">${c}</span></div>`).join('')}</div><div class="eb"><button class="ebt" onclick="expCSV()">📄 CSV</button><button class="ebt" onclick="expJSON()">📋 JSON</button><button class="ebt" onclick="expGeoJSON()">🌍 GeoJSON</button><button class="ebt" onclick="expKML()">🗺️ KML</button></div>${donateMini()}`;setTimeout(()=>{drawTL();drawComp()},50)}
 function donateCard(){if(!DONATE_LINKS.length)return'';const en=AlertLib.LN.en,bi=lang!=='en';return`<div class="dn"><div class="dn-t">💛 ${t('donate')}${bi?` · ${en.donate}`:''}</div><div class="dn-d">${t('donateD')}</div>${bi?`<div class="dn-d" style="margin-top:-3px">${en.donateD}</div>`:''}<div class="dn-row">${DONATE_LINKS.map(l=>`<a class="dn-b ${l.cls}" href="${X(l.url)}" target="_blank" rel="noopener">${l.i} ${X(l.n)}</a>`).join('')}</div></div>`}
@@ -549,6 +551,7 @@ function renderAboutTab(){document.getElementById('sbC').innerHTML=`<div class="
 // which only shows what's still in the capped in-memory `hist` array), with its own date range + search.
 let histRange='all',historySeq=0;
 async function renderHistoryTab(){
+  stopReplay(); // a filter/range change mid-replay would otherwise leave a stale interval flying to a list that's no longer shown
   const mySeq=++historySeq; // guards against a slower, superseded call overwriting a faster later one
   const el=document.getElementById('sbC');
   // Same focus/skeleton concern as renderSB(): only show the loading skeleton on the very
@@ -561,7 +564,9 @@ async function renderHistoryTab(){
   if(!prevQ)el.innerHTML='<div class="sg"><div class="skel skel-card"></div></div><div class="skel skel-row"></div><div class="skel skel-row"></div><div class="skel skel-row"></div>';
   const all=await gDB();
   if(mySeq!==historySeq)return;
-  all.forEach(a=>{if(!(a.timestamp instanceof Date))a.timestamp=new Date(a.timestamp)});
+  // IndexedDB records (sDB()) only persist typeKey, not the full type object (icon/css/color) —
+  // reconstruct it here, same fallback rItem()/addMrk() rely on elsewhere.
+  all.forEach(a=>{if(!(a.timestamp instanceof Date))a.timestamp=new Date(a.timestamp);if(!a.type)a.type=TM[a.typeKey]||TM.rockets});
   const now=Date.now();
   let list=all;
   if(histRange==='today'){const d=new Date();d.setHours(0,0,0,0);list=all.filter(a=>a.timestamp.getTime()>=d.getTime())}
@@ -572,17 +577,43 @@ async function renderHistoryTab(){
   if(q)list=list.filter(a=>a.city.toLowerCase().includes(q));
   list.sort((a,b)=>b.timestamp-a.timestamp);
   const shown=list.slice(0,200);
-  let h=`<div class="fbar"><div class="fr"><input class="fs" id="hQ" type="text" list="cityList" placeholder="${X(t('searchPlaceholder'))}" oninput="applyHF()" style="flex:1"></div><div class="fr"><select class="fs" id="hRange" onchange="applyHF()"><option value="all">${t('dateAll')}</option><option value="today">${t('dateToday')}</option><option value="yesterday">${t('dateYesterday')}</option><option value="week">${t('dateWeek')}</option><option value="month">${t('dateMonth')}</option></select></div></div>`;
+  const replayable=shown.filter(a=>!a.noLoc);
+  let h=`<div class="fbar"><div class="fr"><input class="fs" id="hQ" type="text" list="cityList" placeholder="${X(t('searchPlaceholder'))}" oninput="applyHF()" style="flex:1"></div><div class="fr"><select class="fs" id="hRange" onchange="applyHF()"><option value="all">${t('dateAll')}</option><option value="today">${t('dateToday')}</option><option value="yesterday">${t('dateYesterday')}</option><option value="week">${t('dateWeek')}</option><option value="month">${t('dateMonth')}</option></select><button class="ebt" id="replayB" onclick="toggleReplay()" ${replayable.length?'':'disabled'} aria-label="הפעל מחדש על המפה" title="הפעל מחדש על המפה">▶ הפעל</button></div></div>`;
   if(!shown.length)h+=`<div class="empty"><div class="icon">📭</div><h3>${t('noResults')}</h3></div>`;
   else{h+=`<div class="st">${t('history')} <span class="cb off">${list.length}</span></div><div class="hl2">${shown.map(a=>rItem(a,false)).join('')}</div>`;if(list.length>shown.length)h+=`<div style="text-align:center;font-size:9px;color:var(--txtm);padding:8px">${shown.length} / ${list.length}</div>`}
   h+=donateMini();
   el.innerHTML=h;
+  historyReplayList=replayable.slice().reverse(); // oldest first, for chronological playback
   const qEl=document.getElementById('hQ'),rEl=document.getElementById('hRange');
   if(qEl)qEl.value=flt.q;
   if(rEl)rEl.value=histRange;
   if(hadFocus&&qEl){qEl.focus();try{qEl.setSelectionRange(selStart,selEnd)}catch{}}
 }
 function applyHF(){flt.q=document.getElementById('hQ')?.value.trim()||'';histRange=document.getElementById('hRange')?.value||'all';renderHistoryTab()}
+
+// Timeline replay — flies through the currently-shown history list in chronological order,
+// one alert at a time, so a date range can be watched unfold on the map instead of just read as a list.
+let historyReplayList=[],replayTimer=null,replayIdx=0,replayPulse=null;
+function toggleReplay(){replayTimer?stopReplay():startReplay()}
+function startReplay(){
+  if(!historyReplayList.length)return;
+  replayIdx=0;
+  const btn=document.getElementById('replayB');if(btn){btn.textContent='⏹ עצור';btn.classList.add('active')}
+  replayTimer=setInterval(()=>{
+    if(replayIdx>=historyReplayList.length){stopReplay();return}
+    const a=historyReplayList[replayIdx];
+    map.flyTo([a.lat,a.lng],13,{duration:0.6});
+    if(replayPulse)try{map.removeLayer(replayPulse)}catch{}
+    replayPulse=L.circleMarker([a.lat,a.lng],{radius:22,color:'transparent',fillColor:'#ef4444',fillOpacity:.35,weight:0}).addTo(map);
+    toast(`▶ ${fTime(a.timestamp)} — ${a.city}`);
+    replayIdx++;
+  },1000);
+}
+function stopReplay(){
+  if(replayTimer){clearInterval(replayTimer);replayTimer=null}
+  if(replayPulse){try{map.removeLayer(replayPulse)}catch{}replayPulse=null}
+  const btn=document.getElementById('replayB');if(btn){btn.textContent='▶ הפעל';btn.classList.remove('active')}
+}
 
 // Updates tab — mirrors CHANGELOG.md's newest entries (update this array by hand on release,
 // same as the CHANGELOG.md file; kept short on purpose, full history lives in the repo).
@@ -610,7 +641,7 @@ function checkWhatsNew(){
 function closeUpdMod(){document.getElementById('updMod').classList.remove('open')}
 
 // Mobile
-function mobTab(tab,el){currentTab=tab;document.querySelectorAll('.mn-b').forEach(b=>b.classList.remove('active'));el.classList.add('active');const sh=document.getElementById('mSheet');const copy=()=>{sh.innerHTML=document.getElementById('sbC').innerHTML};let p=null;if(tab==='alerts')renderSB();else if(tab==='stats')renderStatTab();else if(tab==='history')p=renderHistoryTab();else if(tab==='updates')renderUpdatesTab();else renderAboutTab();if(p&&p.then)p.then(copy);else copy();sh.style.display='block';setTimeout(()=>sh.classList.add('open'),10);if(tab==='stats')setTimeout(()=>{drawTL();drawComp()},100)}
+function mobTab(tab,el){if(tab!=='history')stopReplay();currentTab=tab;document.querySelectorAll('.mn-b').forEach(b=>b.classList.remove('active'));el.classList.add('active');const sh=document.getElementById('mSheet');const copy=()=>{sh.innerHTML=document.getElementById('sbC').innerHTML};let p=null;if(tab==='alerts')renderSB();else if(tab==='stats')renderStatTab();else if(tab==='history')p=renderHistoryTab();else if(tab==='updates')renderUpdatesTab();else renderAboutTab();if(p&&p.then)p.then(copy);else copy();sh.style.display='block';setTimeout(()=>sh.classList.add('open'),10);if(tab==='stats')setTimeout(()=>{drawTL();drawComp()},100)}
 
 // Timeline
 function schedTL(){if(tlP)return;tlP=true;requestAnimationFrame(()=>{tlP=false;drawTL();drawComp()})}
