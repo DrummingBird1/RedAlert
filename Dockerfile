@@ -1,5 +1,5 @@
 FROM node:20-alpine
-LABEL org.opencontainers.image.title="Israel Alert Map"
+LABEL org.opencontainers.image.title="Tzafir"
 LABEL org.opencontainers.image.description="Real-time Pikud HaOref alert monitoring"
 LABEL org.opencontainers.image.source="https://github.com/DrummingBird1/RedAlert"
 LABEL org.opencontainers.image.licenses="MIT"
@@ -7,7 +7,8 @@ LABEL org.opencontainers.image.licenses="MIT"
 WORKDIR /app
 
 # Copy app sources (everything needed at runtime)
-COPY server.js index.html lib.js openapi.yaml package.json ./
+COPY server.js index.html lib.js package.json ./
+COPY docs/openapi.yaml ./docs/openapi.yaml
 
 # Pre-create runtime dirs (logs rotates here; VAPID keys + push-subs live in /app root)
 RUN mkdir -p /app/logs

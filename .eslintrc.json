@@ -54,7 +54,7 @@
   },
   "overrides": [
     {
-      "files": ["test.js", "test-integration.js"],
+      "files": ["test/unit.js", "test/integration.js"],
       "rules": {
         "no-unused-vars": "off"
       }

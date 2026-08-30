@@ -1,9 +1,9 @@
 # Contributing
 
-Thanks for considering a contribution to `israel-alert-map`. This is a small, volunteer,
-zero-core-dependency project — the goal is to keep it that way. Please read
-[SECURITY.md](SECURITY.md) first if you're reporting a vulnerability (privately, not
-as a public issue).
+Thanks for considering a contribution to `tzafir` (צפיר, formerly `israel-alert-map`).
+This is a small, volunteer, zero-core-dependency project — the goal is to keep it that
+way. Please read [SECURITY.md](SECURITY.md) first if you're reporting a vulnerability
+(privately, not as a public issue).
 
 ## Before you start
 
@@ -16,7 +16,7 @@ as a public issue).
 - **No client framework** — `index.html` is a deliberately monolithic HTML+CSS+JS file
   using plain DOM APIs. Please don't introduce React/Vue/build tooling.
 - For the full architecture picture (file layout, how SSE/Web Push/fallback work, style
-  conventions), read [CLAUDE.md](CLAUDE.md) — it's the same guide used to work on this
+  conventions), read [CLAUDE.md](../CLAUDE.md) — it's the same guide used to work on this
   codebase with AI coding assistants, and it's kept up to date with the actual code.
 
 ## Dev setup
@@ -37,14 +37,17 @@ ADMIN_PASS=devpass node server.js
 ## Running tests
 
 ```bash
-node test.js               # unit tests (node:test) — pure functions in lib.js
-node test-integration.js   # E2E — spins up a mock OREF server + the real server
-npm run test:all           # both, sequentially
+node test/unit.js          # unit tests (node:test) — pure functions in lib.js
+node test/integration.js   # API-level integration — spins up a mock OREF server + the real server
+node test/e2e.js           # real-browser E2E (Playwright) — needs Chrome/Edge installed locally
+npm run test:all           # all three, sequentially
 npm run lint                # ESLint (npm i -D eslint first — it's a devDependency)
 ```
 
-Both test files must pass before opening a PR. There's no build step and no
-typecheck — the project intentionally has no toolchain beyond Node itself.
+The unit and integration suites must pass before opening a PR (E2E needs a local Chrome/
+Edge install, so it's not always practical in every dev environment, but CI runs it).
+There's no build step and no typecheck — the project intentionally has no toolchain
+beyond Node itself.
 
 ## Code style
 
@@ -57,14 +60,14 @@ typecheck — the project intentionally has no toolchain beyond Node itself.
   **must** go through `escapeHtml()` (aliased as `X()` in the client) — see `lib.js`.
 - **Single source of truth**: static data (cities, i18n strings, alert types, shelter
   samples) and the small set of pure helper functions live in `lib.js` (UMD — used by
-  both the browser client and `test.js`). Don't duplicate them elsewhere.
+  both the browser client and `test/unit.js`). Don't duplicate them elsewhere.
 
 ## Submitting a change
 
 1. Fork the repo, create a branch off `main`.
 2. Make your change, keeping the scope focused — one logical change per PR is easier
    to review than a bundle of unrelated fixes.
-3. Run both test suites (see above) and add/update tests in `test.js` if you touched a
+3. Run the test suites (see above) and add/update tests in `test/unit.js` if you touched a
    pure function in `lib.js`.
 4. Update `CLAUDE.md` / `AGENTS.md` / `README.md` if your change affects documented
    behavior (env vars, endpoints, architecture notes) — stale docs are worse than no docs.

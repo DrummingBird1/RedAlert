@@ -128,7 +128,7 @@ async function pushAll(payload, cities) {
 function parseBody(req) { return new Promise((res, rej) => { const ch = []; let sz = 0; req.on('data', c => { sz += c.length; if (sz > 1e6) { req.destroy(); rej(new Error('Too large')); } ch.push(c); }); req.on('end', () => { try { res(JSON.parse(Buffer.concat(ch).toString())); } catch (e) { rej(e); } }); req.on('error', rej); }); }
 
 // ── Oref + Fallback ─────────────────────────────────────────
-// OREF_URL_OVERRIDE allows pointing at a mock server (used by test-integration.js)
+// OREF_URL_OVERRIDE allows pointing at a mock server (used by test/integration.js)
 const OREF_URL = process.env.OREF_URL_OVERRIDE || 'https://www.oref.org.il/WarningMessages/alert/alerts.json';
 const OREF_HIST = process.env.OREF_HIST_OVERRIDE || 'https://www.oref.org.il/WarningMessages/alert/History/AlertsHistory.json';
 // Accept either FALLBACK_ALERT_URLS (comma-separated chain) or legacy FALLBACK_ALERT_URL
@@ -309,7 +309,7 @@ function gz(req, res, data, ct, sc = 200) { const ae = req.headers['accept-encod
 let htmlCache = null, htmlMt = 0;
 function getHtml() { const p = path.join(__dirname, 'index.html'); try { const s = fs.statSync(p); if (!htmlCache || s.mtimeMs !== htmlMt) { htmlCache = fs.readFileSync(p, 'utf8'); htmlMt = s.mtimeMs; } return htmlCache; } catch { return null; } }
 
-// ── lib.js cache (shared data + pure functions; also required by test.js) ──
+// ── lib.js cache (shared data + pure functions; also required by test/unit.js) ──
 let libCache = null, libMt = 0;
 function getLib() { const p = path.join(__dirname, 'lib.js'); try { const s = fs.statSync(p); if (!libCache || s.mtimeMs !== libMt) { libCache = fs.readFileSync(p, 'utf8'); libMt = s.mtimeMs; } return libCache; } catch { return null; } }
 
@@ -524,7 +524,7 @@ const server = http.createServer(async (req, res) => {
   if (p === '/api/shelters/tel-aviv') { const s = await getTelAvivShelters(); track(p, 200); return gz(req, res, JSON.stringify(s || []), 'application/json; charset=utf-8'); }
   if (p === '/api/shelters/jerusalem') { const s = await getJerusalemShelters(); track(p, 200); return gz(req, res, JSON.stringify(s || []), 'application/json; charset=utf-8'); }
   if (p === '/api/shelters/haifa') { const s = await getHaifaShelters(); track(p, 200); return gz(req, res, JSON.stringify(s || []), 'application/json; charset=utf-8'); }
-  if (p === '/api/spec' || p === '/openapi.yaml') { try { const spec = fs.readFileSync(path.join(__dirname, 'openapi.yaml'), 'utf8'); track(p, 200); return gz(req, res, spec, 'application/yaml; charset=utf-8'); } catch { track(p, 404); res.writeHead(404); return res.end('{"error":"spec not found"}'); } }
+  if (p === '/api/spec' || p === '/openapi.yaml') { try { const spec = fs.readFileSync(path.join(__dirname, 'docs', 'openapi.yaml'), 'utf8'); track(p, 200); return gz(req, res, spec, 'application/yaml; charset=utf-8'); } catch { track(p, 404); res.writeHead(404); return res.end('{"error":"spec not found"}'); } }
   if (p === '/api/alerts') { const a = [...activeAlerts.values()]; track(p, 200); return gz(req, res, JSON.stringify({ alerts: a, count: a.length, ts: new Date().toISOString() }), 'application/json; charset=utf-8'); }
   if (p === '/api/history') { const lim = Math.min(Math.max(parseInt(url.searchParams.get('limit')) || 200, 1), 1000); const off = Math.max(parseInt(url.searchParams.get('offset')) || 0, 0); track(p, 200); return gz(req, res, JSON.stringify({ alerts: store.slice(off, off + lim), total: store.length, offset: off, limit: lim }), 'application/json; charset=utf-8'); }
   if (p === '/api/oref/live') { proxyOref('live', OREF_URL, 1000, req, res, p); return; }

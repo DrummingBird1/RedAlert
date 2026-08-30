@@ -10,7 +10,7 @@ on it as your sole source of alerts. Always follow official guidance.
 
 Only the latest release is supported. The project follows a rolling release on `main`;
 fixes land there first. (Versions before 1.0.0 were numbered 3.0.0–3.6.0; renumbered
-2026-08-30 — see [CHANGELOG.md](CHANGELOG.md).)
+2026-08-30 — see [CHANGELOG.md](../CHANGELOG.md).)
 
 ## Reporting a vulnerability
 

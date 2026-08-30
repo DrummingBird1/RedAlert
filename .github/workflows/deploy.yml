@@ -19,7 +19,7 @@ on:
       - 'CLAUDE.md'
       - '.github/dependabot.yml'
       - '.eslintrc.json'
-      - 'openapi.yaml'
+      - 'docs/openapi.yaml'
   workflow_dispatch:
 
 jobs:
@@ -35,7 +35,7 @@ jobs:
       - name: Run unit tests before deploy
         run: |
           node --check server.js
-          node test.js
+          node test/unit.js
 
       - name: Setup flyctl
         uses: superfly/flyctl-actions/setup-flyctl@master

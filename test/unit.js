@@ -1,17 +1,17 @@
 #!/usr/bin/env node
 // ============================================================
 //  Unit tests — pure functions from lib.js
-//  Run:  node --test test.js  |  node test.js  |  npm test
+//  Run:  node --test test/unit.js  |  node test/unit.js  |  npm test
 //
 //  These import the SAME lib.js the browser client loads, so there
 //  is no longer a duplicated copy to drift out of sync.
 //
-//  Server smoke + alert flow is covered by test-integration.js.
+//  Server smoke + alert flow is covered by test/integration.js.
 // ============================================================
 
 const { test, describe } = require('node:test');
 const assert = require('node:assert/strict');
-const lib = require('./lib.js');
+const lib = require('../lib.js');
 
 const { escapeHtml, formatShelter, shelterClass, distanceKm, isDND, normalizeCity, fuzzyMatch } = lib;
 

@@ -11,14 +11,14 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker)](Dockerfile)
 [![PWA](https://img.shields.io/badge/PWA-Installable-5A0FC8)]()
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](.github/CONTRIBUTING.md)
 [![Ko-fi](https://img.shields.io/badge/Ko--fi-Support-FF5E5B?logo=kofi&logoColor=white)](https://ko-fi.com/idanlights)
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy_Me_a_Coffee-Support-FFDD00?logo=buymeacoffee&logoColor=000)](https://buymeacoffee.com/MrIdan)
 [![Patreon](https://img.shields.io/badge/Patreon-Support-FF424D?logo=patreon&logoColor=white)](https://www.patreon.com/c/IdanLights)
 
 </div>
 
-<p align="center"><img src="screenshot.jpg" alt="מסך ראשי של צפיר — מפת אזעקות בזמן אמת" width="800"></p>
+<p align="center"><img src="docs/screenshot.jpg" alt="מסך ראשי של צפיר — מפת אזעקות בזמן אמת" width="800"></p>
 
 > ⚠️ **מערכת זו למטרות מידע בלבד ואינה מחליפה הנחיות פיקוד העורף.**
 
@@ -115,25 +115,30 @@ ADMIN_PASS=secret node server.js
 ## 📁 מבנה הפרויקט
 
 ```
-israel-alert-map/
-├── server.js           # שרת Node.js — proxy, SSE, API, PWA, admin, snapshot
-├── index.html          # קליינט — מפה, UI, כל הלוגיקה (טוען lib.js)
-├── lib.js              # מקור-אמת יחיד: data + פונקציות פניניות (UMD; קליינט + טסטים)
-├── package.json        # Metadata + npm scripts
-├── openapi.yaml        # OpenAPI 3.0.3 spec (מוגש ב-/api/spec)
-├── Dockerfile          # Docker image + healthcheck
-├── docker-compose.yml  # One-click deployment
-├── fly.toml            # Fly.io deployment config
-├── telegram-bot.js     # בוט טלגרם (עצמאי)
-├── test.js             # בדיקות יחידה (node:test) ל-lib.js
-├── test-integration.js # E2E: mock OREF → server → SSE
-├── .github/            # CI + deploy workflows, Dependabot, issue/PR templates
-├── CHANGELOG.md        # היסטוריית גרסאות
-├── CONTRIBUTING.md     # מדריך תרומה לפרויקט
-├── SECURITY.md         # נוהל דיווח פגיעויות
-├── README.md           # אתה פה
-├── LICENSE             # MIT
-└── .gitignore          # logs, secrets, snapshot, node_modules
+tzafir/
+├── server.js              # שרת Node.js — proxy, SSE, API, PWA, admin, snapshot
+├── index.html             # קליינט — מפה, UI, כל הלוגיקה (טוען lib.js)
+├── lib.js                 # מקור-אמת יחיד: data + פונקציות פניניות (UMD; קליינט + טסטים)
+├── package.json           # Metadata + npm scripts
+├── Dockerfile             # Docker image + healthcheck
+├── docker-compose.yml     # One-click deployment
+├── fly.toml               # Fly.io deployment config
+├── telegram-bot.js        # בוט טלגרם (עצמאי)
+├── test/
+│   ├── unit.js             # בדיקות יחידה (node:test) ל-lib.js
+│   ├── integration.js      # אינטגרציה ברמת API: mock OREF → server → SSE
+│   └── e2e.js               # E2E בדפדפן אמיתי (Playwright)
+├── scripts/
+│   └── release-banner.mjs  # מייצר את הבאנר הממותג לכל release
+├── docs/
+│   ├── openapi.yaml        # OpenAPI 3.0.3 spec (מוגש ב-/api/spec)
+│   └── screenshot.jpg      # תמונת ה-README
+├── release-banners/        # באנר ממותג לכל גרסה (vX.Y.Z.png)
+├── .github/                # CI + deploy workflows, CONTRIBUTING.md, SECURITY.md, Dependabot, issue/PR templates
+├── CHANGELOG.md            # היסטוריית גרסאות
+├── README.md               # אתה פה
+├── LICENSE                 # MIT
+└── .gitignore              # logs, secrets, snapshot, node_modules
 ```
 
 > 🗺️ **דיוק מיקום:** אזעקה לעיר שאינה במאגר הקואורדינטות (`lib.js` → `CITIES`) **לא מוצבת במיקום אקראי על המפה** — היא מופיעה ברשימה עם תווית "מיקום לא ידוע". זו אפליקציית בטיחות; מרקר במקום שגוי מטעה יותר ממרקר חסר.
@@ -395,16 +400,16 @@ TELEGRAM_TOKEN=123:ABC TELEGRAM_CHANNEL=@my_channel node telegram-bot.js
 ## 🧪 בדיקות + CI
 
 ```bash
-node test.js                # node:test runner — 90+ unit tests (incl. full i18n key-parity)
-node test-integration.js    # API-level integration: mock OREF → server → SSE (12 assertions)
-node test-e2e.js            # real-browser E2E via Playwright (needs Chrome/Edge installed locally)
+node test/unit.js           # node:test runner — 90+ unit tests (incl. full i18n key-parity)
+node test/integration.js    # API-level integration: mock OREF → server → SSE (12 assertions)
+node test/e2e.js            # real-browser E2E via Playwright (needs Chrome/Edge installed locally)
 npm run test:all            # כל השלושה
 npm run lint                # ESLint (אופציונלי, npm i -D eslint)
 ```
 
 CI ב-[.github/workflows/test.yml](.github/workflows/test.yml) — מריץ unit + integration על Node 18/20/22 (Ubuntu) + Node 20 (Windows + macOS), ועוד job נפרד ל-E2E על Chrome המובנה של ה-runner. Dependabot ב-[.github/dependabot.yml](.github/dependabot.yml) — שבועי ל-npm, חודשי ל-GitHub Actions ול-Docker.
 
-`test.js` משתמש ב-`node:test` המובנה (Node 18+) ובודק פונקציות פניניות (escapeHtml, formatShelter, shelterClass, distanceKm, isDND, fuzzyMatch, isRTL) וכן ששלל 14 השפות ב-`LN` חולקות בדיוק את אותו סט מפתחות. `test-integration.js` מקים שרת mock של OREF, מצביע אליו דרך `OREF_URL_OVERRIDE`, ובודק שאזעקה זורמת ל-`/api/alerts`, ל-SSE, ול-`/api/health` (12 assertions) — הכל ברמת API, בלי דפדפן. `test-e2e.js` מריץ Chrome אמיתי דרך Playwright (`channel:'chrome'`, לא מוריד דפדפן bundled) ובודק רגרסיות UI קונקרטיות מהיסטוריית הפרויקט (פוקוס בחיפוש, שימור טאב, רוחב ניווט מובייל, תוויות מקלטים, צבעי option).
+`test/unit.js` משתמש ב-`node:test` המובנה (Node 18+) ובודק פונקציות פניניות (escapeHtml, formatShelter, shelterClass, distanceKm, isDND, fuzzyMatch, isRTL) וכן ששלל 14 השפות ב-`LN` חולקות בדיוק את אותו סט מפתחות. `test/integration.js` מקים שרת mock של OREF, מצביע אליו דרך `OREF_URL_OVERRIDE`, ובודק שאזעקה זורמת ל-`/api/alerts`, ל-SSE, ול-`/api/health` (12 assertions) — הכל ברמת API, בלי דפדפן. `test/e2e.js` מריץ Chrome אמיתי דרך Playwright (`channel:'chrome'`, לא מוריד דפדפן bundled) ובודק רגרסיות UI קונקרטיות מהיסטוריית הפרויקט (פוקוס בחיפוש, שימור טאב, רוחב ניווט מובייל, תוויות מקלטים, צבעי option).
 
 קונפיג ESLint ב-[.eslintrc.json](.eslintrc.json) — מינימלי, מתמקד בחיפוש באגים אמיתיים (`no-unused-vars`, `no-undef`, `no-redeclare`, `eqeqeq`); לא אכפתי לסגנון בכוונה כי הקוד דחוס במכוון.
 
@@ -477,13 +482,13 @@ scrape_configs:
 
 ## 🔒 אבטחה
 
-ראו [SECURITY.md](SECURITY.md) — נוהל דיווח פגיעויות, checklist hardening לפריסה ציבורית, והחלטות עיצוב מכוונות (CORS פתוח, CSP עם `unsafe-inline`).
+ראו [SECURITY.md](.github/SECURITY.md) — נוהל דיווח פגיעויות, checklist hardening לפריסה ציבורית, והחלטות עיצוב מכוונות (CORS פתוח, CSP עם `unsafe-inline`).
 
 ---
 
 ## 🤝 תרומה לפרויקט
 
-PRs מתקבלים בברכה! ראו [CONTRIBUTING.md](CONTRIBUTING.md) — הגדרת סביבת פיתוח, הרצת בדיקות, מוסכמות סגנון, ותבניות ל-issues/PRs. היסטוריית שינויים ב-[CHANGELOG.md](CHANGELOG.md).
+PRs מתקבלים בברכה! ראו [CONTRIBUTING.md](.github/CONTRIBUTING.md) — הגדרת סביבת פיתוח, הרצת בדיקות, מוסכמות סגנון, ותבניות ל-issues/PRs. היסטוריית שינויים ב-[CHANGELOG.md](CHANGELOG.md).
 
 ---
 

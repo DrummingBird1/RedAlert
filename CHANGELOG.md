@@ -5,6 +5,17 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Changed
+- **Repo housekeeping — no runtime behavior change, so no version bump.** Moved
+  `CONTRIBUTING.md`/`SECURITY.md` into `.github/` (GitHub still recognizes them there),
+  `openapi.yaml`/`screenshot.jpg` into a new `docs/`, and `test.js`/`test-integration.js`/
+  `test-e2e.js` into a new `test/` (renamed to `unit.js`/`integration.js`/`e2e.js`). Root
+  went from 24 files to 17. Updated every reference across `package.json`, CI workflows,
+  the Dockerfile (was about to silently break the image build — `openapi.yaml` was no
+  longer at the path it `COPY`'d from), and all docs. `server.js`'s served routes
+  (`/openapi.yaml`, `/api/spec`, etc.) are unaffected — only internal file paths moved.
+- Set the GitHub repo's "About" description.
+
 ## [1.6.1]
 
 ### Fixed

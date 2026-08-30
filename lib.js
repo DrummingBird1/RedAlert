@@ -1,7 +1,7 @@
 // ============================================================
 //  lib.js — shared data + pure functions
 //  Single source of truth for both the browser client (index.html)
-//  and the Node test suite (test.js). UMD: works as <script src>
+//  and the Node test suite (test/unit.js). UMD: works as <script src>
 //  (exposes global `AlertLib`) and as require('./lib.js') in Node.
 //
 //  Loaded SYNCHRONOUSLY in index.html via a blocking <script> tag

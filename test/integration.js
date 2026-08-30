@@ -2,12 +2,14 @@
 // ============================================================
 //  Integration test — synthetic alert flow:
 //    mock OREF → alertmap server → /api/alerts + SSE
-//  Run: node test-integration.js
+//  Run: node test/integration.js
 //  No external deps. Spawns its own mock + server.
 // ============================================================
 
 const http = require('http');
+const path = require('path');
 const { spawn } = require('child_process');
+const ROOT = path.join(__dirname, '..');
 
 let passed = 0, failed = 0;
 const log = m => console.log(m);
@@ -54,7 +56,7 @@ mockOref.listen(MOCK_PORT, () => {
 
   // ── Step 2: Start alertmap server with override ────────────
   child = spawn('node', ['server.js'], {
-    cwd: __dirname,
+    cwd: ROOT,
     env: { ...process.env, PORT: String(ALERT_PORT), OREF_URL_OVERRIDE: orefUrl },
     stdio: 'ignore',
   });

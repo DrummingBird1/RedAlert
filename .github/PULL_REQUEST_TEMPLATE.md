@@ -8,8 +8,8 @@
 
 ## How was this tested?
 
-- [ ] `node test.js` passes (unit tests)
-- [ ] `node test-integration.js` passes (mock OREF → server → SSE)
+- [ ] `node test/unit.js` passes (unit tests)
+- [ ] `node test/integration.js` passes (mock OREF → server → SSE)
 - [ ] Manually tested in a browser (describe what you clicked/checked)
 - [ ] N/A — docs-only change
 

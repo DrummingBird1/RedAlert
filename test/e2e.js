@@ -10,21 +10,23 @@
 //  reintroduces one of these fails loudly instead of waiting for
 //  a user bug report.
 //
-//  Run: node test-e2e.js  |  npm run test:e2e
+//  Run: node test/e2e.js  |  npm run test:e2e
 //  Requires Chrome or Edge installed locally (dev-time only).
 // ============================================================
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const { spawn } = require('node:child_process');
+const path = require('node:path');
 const { chromium } = require('playwright');
 
+const ROOT = path.join(__dirname, '..');
 const PORT = 4800 + Math.floor(Math.random() * 200);
 const ORIGIN = `http://localhost:${PORT}`;
 let serverProc, browser, page;
 
 before(async () => {
   serverProc = spawn('node', ['server.js'], {
-    cwd: __dirname,
+    cwd: ROOT,
     env: { ...process.env, PORT: String(PORT) },
     stdio: 'ignore',
   });

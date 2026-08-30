@@ -5,11 +5,11 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node test.js",
-    "test:integration": "node test-integration.js",
-    "test:e2e": "node test-e2e.js",
-    "test:all": "node test.js && node test-integration.js && node test-e2e.js",
-    "lint": "eslint server.js test.js test-integration.js test-e2e.js telegram-bot.js",
+    "test": "node test/unit.js",
+    "test:integration": "node test/integration.js",
+    "test:e2e": "node test/e2e.js",
+    "test:all": "node test/unit.js && node test/integration.js && node test/e2e.js",
+    "lint": "eslint server.js test/unit.js test/integration.js test/e2e.js telegram-bot.js",
     "telegram": "node telegram-bot.js",
     "docker:build": "docker build -t alertmap .",
     "docker:run": "docker run -p 3000:3000 --name alertmap alertmap"
