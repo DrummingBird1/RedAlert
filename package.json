@@ -31,7 +31,7 @@
     "web-push": "^3.6.0"
   },
   "devDependencies": {
-    "eslint": "^9.0.0",
+    "eslint": "^10.9.1",
     "playwright": "^1.62.1"
   },
   "engines": {
