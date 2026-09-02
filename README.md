@@ -16,6 +16,8 @@
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy_Me_a_Coffee-Support-FFDD00?logo=buymeacoffee&logoColor=000)](https://buymeacoffee.com/MrIdan)
 [![Patreon](https://img.shields.io/badge/Patreon-Support-FF424D?logo=patreon&logoColor=white)](https://www.patreon.com/c/IdanLights)
 
+**🌐 [גרסה חיה — red-alert-ten.vercel.app](https://red-alert-ten.vercel.app)**
+
 </div>
 
 <p align="center"><img src="docs/screenshot.jpg" alt="מסך ראשי של צפיר — מפת אזעקות בזמן אמת" width="800"></p>
@@ -266,9 +268,17 @@ docker-compose logs -f
 
 ---
 
-## ☁️ פריסה ל-Fly.io (חינמי, אוטומטי מ-GitHub)
+## ☁️ פריסה
 
-הריפו כולל [fly.toml](fly.toml) ו-[.github/workflows/deploy.yml](.github/workflows/deploy.yml) — כל `git push` ל-`main` יפרוס אוטומטית.
+### Vercel (בשימוש בפועל — זו הגרסה החיה למעלה)
+
+הריפו מחובר ל-Vercel דרך אינטגרציית ה-GitHub שלה (Import Project ב-[vercel.com/new](https://vercel.com/new), zero-config — Vercel מזהה `"framework":"node"` אוטומטית, אין `vercel.json` בריפו). כל `git push` ל-`main` פורס ל-production; כל branch/PR מקבל preview deployment נפרד עם URL משלו. אין setup נוסף מעבר לחיבור הראשוני של הריפו לפרויקט ב-Vercel dashboard.
+
+**שים לב**: השרת בנוי כתהליך ארוך-חיים אחד (`http.createServer` + `setInterval` polling כל 2s + store בזיכרון + חיבורי SSE ארוכים ב-`/api/stream`) — לא ארכיטקטורת serverless קלאסית. זה עובד היום (נבדק ישירות — 0 שגיאות runtime, האתר עונה כמצופה), אבל אם ייתקלו בבעיות ייחודיות ל-serverless (state שמתאפס בין invocations, timeouts על SSE ארוך) — זו הסיבה.
+
+### Fly.io (מוכן אך לא מחובר כרגע)
+
+הריפו גם כולל [fly.toml](fly.toml) ו-[.github/workflows/deploy.yml](.github/workflows/deploy.yml) שמיועדים לפרוס אוטומטית ל-Fly.io בכל push ל-`main` — **אבל ה-workflow הזה כשל בכל ריצה עד כה** (`FLY_API_TOKEN` לא הוגדר מעולם כ-secret ב-GitHub, כך ש-`flyctl deploy` נכשל מיד עם "no access token available"). `https://red-alert.fly.dev` לא פנוי כרגע. ההוראות למטה עדיין תקפות אם תרצו להשלים את ה-setup בעצמכם (או כאלטרנטיבה/גיבוי ל-Vercel) — פשוט לא הושלמו.
 
 ### setup חד-פעמי (3 דקות)
 
@@ -298,7 +308,7 @@ flyctl tokens create deploy -x 99999h
 git push origin main
 ```
 
-ה-workflow ירוץ ב-Actions tab, יבנה Docker image מ-`Dockerfile`, ידחוף ל-Fly, ויאמת `/api/health`. URL: `https://red-alert.fly.dev`.
+אם כל 6 הצעדים הושלמו נכון, ה-workflow ירוץ ב-Actions tab, יבנה Docker image מ-`Dockerfile`, ידחוף ל-Fly, ויאמת `/api/health` — וה-URL (`https://red-alert-<app-name>.fly.dev`, לפי השם שנבחר בצעד 2) יעלה. בדקו ב-Actions tab שהריצה באמת ירוקה — secret חסר/שגוי נכשל בשקט מבחינת המשתמש (ה-push עצמו מצליח, רק ה-deploy נכשל).
 
 ### למה Fly ולא Render/Railway/Heroku?
 
