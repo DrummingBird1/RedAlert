@@ -16,6 +16,27 @@ All notable changes to this project are documented here. Format loosely follows
   (`/openapi.yaml`, `/api/spec`, etc.) are unaffected — only internal file paths moved.
 - Set the GitHub repo's "About" description.
 
+## [1.6.2]
+
+### Fixed
+- **The service worker's separate tile cache was never invalidated when v1.6.1 swapped the map
+  tile provider (CARTO → Esri).** That cache (`TILE`) is deliberately excluded from the SW
+  `activate` handler's cleanup, by design, so previously-viewed map areas keep working offline —
+  but that also meant it survives every `CN` (app cache) bump. Anyone who'd loaded the map while
+  it was showing CARTO's "API KEY REQUIRED" watermark kept serving those same cached watermarked
+  tiles indefinitely after the fix shipped, since their cache key (URL) never changed... except it
+  did, since the URLs moved from `cartocdn.com` to `arcgisonline.com` — the real risk was just an
+  ever-growing pile of dead, unreachable cache entries crowding the ~500-tile cap. Bumped `TILE` to
+  force a clean cache regardless.
+- Removed leftover `basemaps.cartocdn.com` entries from the CSP `img-src` allowlist and the service
+  worker's tile-cache hostname check — dead since v1.6.1, now that every basemap layer is Esri.
+- Added `maxNativeZoom:16` to the light/dark Canvas base+reference tile layers. Unlike
+  `World_Imagery`, their real tile coverage doesn't extend past zoom ~16 in most regions; without
+  the cap, Leaflet would request tiles beyond that depth, which Esri doesn't reliably serve
+  (comes back blank/incomplete rather than a clean 404). The cap makes Leaflet upscale the deepest
+  real tile instead once you zoom in further, which stays legible since these are label/line-art
+  tiles rather than photography.
+
 ## [1.6.1]
 
 ### Fixed

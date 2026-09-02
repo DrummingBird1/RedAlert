@@ -65,8 +65,10 @@ function secHeaders(res, html, allowFrame) {
   if (!allowFrame) res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   // CSP frame-ancestors *: required for /embed.js use cases; X-Frame-Options is the old-school equivalent
-  // img-src also allows Esri World Imagery (free, no API key) — the satellite basemap layer
-  if (html) res.setHeader('Content-Security-Policy', `default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://unpkg.com https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://*.basemaps.cartocdn.com https://server.arcgisonline.com; connect-src 'self'; frame-ancestors ${allowFrame ? '*' : "'self'"}`);
+  // img-src allows server.arcgisonline.com — Esri's free, no-API-key tile services back every basemap
+  // layer (light/dark Canvas base+reference, World Imagery satellite, boundary labels). CARTO's
+  // basemaps.cartocdn.com was dropped in v1.6.1 (started requiring a paid API key); removed here too.
+  if (html) res.setHeader('Content-Security-Policy', `default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://unpkg.com https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com; connect-src 'self'; frame-ancestors ${allowFrame ? '*' : "'self'"}`);
 }
 
 // ── Metrics ──────────────────────────────────────────────────
@@ -315,10 +317,15 @@ function getLib() { const p = path.join(__dirname, 'lib.js'); try { const s = fs
 
 // ── PWA ─────────────────────────────────────────────────────
 const MANIFEST = JSON.stringify({ name: 'צפיר', short_name: 'צפיר', description: 'ניטור התרעות פיקוד העורף בזמן אמת', start_url: '/', display: 'standalone', background_color: '#0a0e17', theme_color: '#ef4444', orientation: 'any', lang: 'he', dir: 'rtl', icons: [{ src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' }] }, null, 2);
-// NOTE: bump CN whenever the client (index.html) or SW logic changes, otherwise users keep cached version
+// NOTE: bump CN whenever the client (index.html) or SW logic changes, otherwise users keep cached version.
+// TILE is a *separate* cache the 'activate' handler deliberately never clears (so previously-viewed
+// map areas keep working offline) — bump TILE too whenever the tile provider/URLs change, otherwise
+// stale/bad cached tile images linger forever. v1.6.1 swapped CARTO for Esri but missed this: TILE
+// was left at v1, so anyone who'd visited before that fix kept their watermarked CARTO tiles cached
+// indefinitely. Bumping it now actually clears them.
 const SW = `
-const CN='red-alert-v16';
-const TILE='red-alert-tiles-v1';
+const CN='red-alert-v17';
+const TILE='red-alert-tiles-v2';
 const AS=['/','/index.html','/lib.js','/manifest.json','/icon.svg'];
 const CDN=['https://unpkg.com/leaflet@1.9.4/dist/leaflet.css','https://unpkg.com/leaflet@1.9.4/dist/leaflet.js','https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css','https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css','https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js'];
 self.addEventListener('install',e=>{e.waitUntil((async()=>{const c=await caches.open(CN);await Promise.allSettled(AS.map(u=>c.add(u)));Promise.allSettled(CDN.map(u=>c.add(new Request(u,{mode:'no-cors'}))))})());self.skipWaiting()});
@@ -326,8 +333,8 @@ self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.
 self.addEventListener('fetch',e=>{
   const u=new URL(e.request.url);
   if(e.request.method!=='GET'||u.pathname.startsWith('/api/'))return;
-  // Map basemap tiles (incl. satellite) → cache-first so previously-viewed areas work offline (capped ~500 tiles)
-  if(u.hostname.endsWith('basemaps.cartocdn.com')||u.hostname==='server.arcgisonline.com'){
+  // Map basemap tiles (light/dark base+reference/satellite/labels, all Esri) → cache-first so previously-viewed areas work offline (capped ~500 tiles)
+  if(u.hostname==='server.arcgisonline.com'){
     e.respondWith((async()=>{
       const c=await caches.open(TILE);
       const hit=await c.match(e.request);
