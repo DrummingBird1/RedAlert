@@ -4,7 +4,7 @@
 
 ## מה הפרויקט
 
-**צפיר** (Tzafir; חבילת npm: `tzafir`, לשעבר `israel-alert-map`, v1.6.1) — שרת Node.js + קליינט HTML עצמאי שמציג בזמן אמת את אזעקות פיקוד העורף על מפת Leaflet. תלות בליבה: אפס (רק `node` ≥ 18). תלויות אופציונליות: `web-push`, `node-telegram-bot-api`. שם ה-repo ב-GitHub נשאר `RedAlert` במכוון (המיתוג שונה, ה-repo לא שונה).
+**צפיר** (Tzafir; חבילת npm: `tzafir`, לשעבר `israel-alert-map`, v1.6.1) — שרת Node.js + קליינט HTML עצמאי שמציג בזמן אמת את אזעקות פיקוד העורף על מפת Leaflet. תלות בליבה: אפס (רק `node` ≥ 18). תלות אופציונלית יחידה: `web-push` (ל-server.js). `telegram-bot.js` ללא תלויות בכלל — קורא ל-Telegram Bot API דרך `https` גולמי. שם ה-repo ב-GitHub נשאר `RedAlert` במכוון (המיתוג שונה, ה-repo לא שונה).
 
 מקור הנתונים: `https://www.oref.org.il/WarningMessages/alert/alerts.json` (polling כל 2 שניות). אין מפתחות, אין הרשמה.
 
@@ -38,7 +38,7 @@ flowchart LR
 | [test/unit.js](test/unit.js) | בדיקות יחידה ל-`lib.js` דרך `node:test`. ללא תלויות. |
 | [test/integration.js](test/integration.js) | בדיקת אינטגרציה ברמת ה-API — מקים mock OREF + spawned server, מאמת אזעקה זורמת ל-`/api/alerts` + SSE + `/api/health`. ללא דפדפן. |
 | [test/e2e.js](test/e2e.js) | E2E בדפדפן אמיתי (Playwright, `channel:'chrome'` — משתמש ב-Chrome המותקן מקומית, בלי הורדת דפדפן bundled). מריץ spawned server + בודק רגרסיות UI אמיתיות שנתפסו בעבר (פוקוס בחיפוש, שימור טאב, רוחב ניווט מובייל, תוויות מקלטים, צבעי option במצב כהה, תוויות טאב חסרות, קריסת טאב היסטוריה) — כל טסט מקושר לבאג ספציפי מה-CHANGELOG. `playwright` הוא `devDependency` בלבד. |
-| [telegram-bot.js](telegram-bot.js) | בוט עצמאי — polling ל-`/api/alerts` ושליחה לערוץ טלגרם. |
+| [telegram-bot.js](telegram-bot.js) | בוט עצמאי — polling ל-`/api/alerts` ושליחה לערוץ טלגרם. **ללא תלויות** — `sendMessage` ל-Telegram Bot API דרך `https` גולמי (אותו סגנון כמו `sendDiscord()` ב-server.js), לא `node-telegram-bot-api`. |
 | [Dockerfile](Dockerfile) + [docker-compose.yml](docker-compose.yml) | בנייה ל-`node:20-alpine` עם healthcheck. |
 | [package.json](package.json) | scripts בלבד; ללא `dependencies` רגילים, רק `optionalDependencies`. |
 
@@ -58,7 +58,7 @@ node test/unit.js           # 90+ בדיקות (כולל smoke test לשרת)
 node test/integration.js    # אינטגרציה ברמת API — mock OREF → server → SSE
 node test/e2e.js            # E2E בדפדפן אמיתי — דורש Chrome/Edge מקומי + playwright (devDependency)
 node telegram-bot.js        # בוט טלגרם (דורש משתני סביבה)
-npm install                 # התקנת web-push + telegram-bot-api (אופציונלי)
+npm install                 # התקנת web-push (אופציונלי; telegram-bot.js ללא תלויות)
 docker-compose up -d        # פריסה ב-Docker
 
 npm start                   # = node server.js
@@ -217,3 +217,7 @@ npm run docker:run          # docker run -p 3000:3000 ...
 - **CORS פתוח (`*`)** — מכוון; ה-API נועד לצריכה ציבורית.
 - **CSP מתיר `unsafe-inline`** — מכוון; הקליינט הוא HTML+JS מונוליטי.
 - **המערכת אינה חליפה להנחיות פיקוד העורף**. הדגש את זה בכל UI חדש.
+
+## Dependabot / תלויות פגיעות — היסטוריה
+
+ב-2026-08-29 GitHub דיווח 8 alerts (1 critical, 2 high, 5 moderate) בפעם הראשונה ש-`pnpm-lock.yaml` הוכנס ל-git (זה first-visibility — Dependabot סורק רק lockfile שכבר ב-repo, לא regression חדש). נבדק ישירות מול `gh api repos/.../dependabot/alerts`: **7 מתוך 8** (`request`, `form-data` פעמיים כולל ה-critical, `qs` פעמיים, `uuid`, `tough-cookie`) חזרו לאותה שרשרת אחת — הלקוח הישן `request`/`@cypress/request` שנמשך טרנזיטיבית ע״י `node-telegram-bot-api@0.66.0` (שהיה `optionalDependency`). השימוש היחיד בספרייה הזו בקוד היה `new TelegramBot(token,{polling:false})` + `bot.sendMessage(...)` — קריאת API בודדת. **תוקן**: `telegram-bot.js` נכתב מחדש לקרוא ל-`api.telegram.org` ישירות דרך `https` גולמי (אותו סגנון כמו `sendDiscord()`), ו-`node-telegram-bot-api` הוסר לגמרי מ-`package.json` — מסיר את כל השרשרת, בלי `npm install` בכלל. **1 מתוך 8** (`js-yaml`, high, DoS ב-`!!omap`) מגיע מ-`eslint@9.39.5`→`@eslint/eslintrc`, `devDependency` בלבד שרץ רק לוקאלית/ב-CI. הפרויקט לא מפרסר YAML לא-מהימן באף מקום (openapi.yaml הוא סטטי ומוגש כמו שהוא, לא עובר `js-yaml`). **התקבל כסיכון, לא תוקן** — הסרתו דורשת מעבר `.eslintrc.json`→flat config (`eslint.config.js`) והעלאת `engines.node` ל-`^20.19||^22.13||>=24` (הפרויקט מצהיר `>=18`), לא פרופורציונלי לאזהרת lint-only שאינה ניתנת לניצול. פירוט מלא ב-[.github/SECURITY.md](.github/SECURITY.md#dependabot-alerts).

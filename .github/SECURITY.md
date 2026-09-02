@@ -59,6 +59,35 @@ These are deliberate and **should not be reported** as bugs:
   so the worst case is old genuine error reports getting rotated out faster under abuse, not
   unbounded disk growth.
 
+## Dependabot alerts
+
+GitHub reported 8 alerts (1 critical, 2 high, 5 moderate) the first time
+`pnpm-lock.yaml` was committed — Dependabot can only scan a lockfile once it's
+tracked in git, so this was a first-visibility event, not a new regression.
+
+- **7 of 8 (`request`, `form-data` ×2 including the critical one, `qs` ×2,
+  `uuid`, `tough-cookie`)** all traced to the same chain: the deprecated
+  `request`/`@cypress/request` HTTP client pulled in transitively by
+  `node-telegram-bot-api@0.66.0` (an `optionalDependency`, used only by the
+  standalone `telegram-bot.js`). That library's only actual use in this repo
+  was `new TelegramBot(token, {polling:false})` + `bot.sendMessage(...)` — a
+  single Telegram Bot API call. **Fixed**: `telegram-bot.js` was rewritten to
+  POST to `api.telegram.org` directly via `https` (same pattern as
+  `sendDiscord()` in `server.js`), and `node-telegram-bot-api` was dropped
+  from `package.json` entirely. This removes the whole vulnerable chain and
+  needs no `npm install` step anymore.
+- **1 of 8 (`js-yaml`, high, quadratic-CPU DoS in `!!omap` parsing)** comes
+  from `eslint@9.39.5` → `@eslint/eslintrc` (a `devDependency`, only runs
+  locally/in CI, never in the deployed server). The project never parses
+  untrusted YAML anywhere in `server.js`/`index.html`/`lib.js` — the only YAML
+  file is the static, developer-authored `openapi.yaml`, which is served as-is
+  and never fed through `js-yaml`. **Accepted, not fixed**: eslint only drops
+  this dependency in its v10 line, which requires migrating `.eslintrc.json`
+  to flat config (`eslint.config.js`) and raising the supported Node version
+  to `^20.19 || ^22.13 || >=24` (the project currently declares
+  `engines.node: >=18`) — out of proportion to a lint-only, non-exploitable
+  advisory. Revisit if/when the project bumps its minimum Node version.
+
 ## Data & privacy
 
 - The server stores only alert data (city, type, timestamp) — **no user accounts, no PII**.
