@@ -60,11 +60,13 @@ jobs:
   lint:
     name: ESLint
     runs-on: ubuntu-latest
-    continue-on-error: true  # optional dependency; don't block merges
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - run: npm install --no-save eslint@9
-      - run: npx eslint server.js test/unit.js test/integration.js test/e2e.js telegram-bot.js
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec eslint server.js test/unit.js test/integration.js test/e2e.js telegram-bot.js

@@ -412,7 +412,7 @@ CI ב-[.github/workflows/test.yml](.github/workflows/test.yml) — מריץ unit
 
 `test/unit.js` משתמש ב-`node:test` המובנה (Node 18+) ובודק פונקציות פניניות (escapeHtml, formatShelter, shelterClass, distanceKm, isDND, fuzzyMatch, isRTL) וכן ששלל 14 השפות ב-`LN` חולקות בדיוק את אותו סט מפתחות. `test/integration.js` מקים שרת mock של OREF, מצביע אליו דרך `OREF_URL_OVERRIDE`, ובודק שאזעקה זורמת ל-`/api/alerts`, ל-SSE, ול-`/api/health` (12 assertions) — הכל ברמת API, בלי דפדפן. `test/e2e.js` מריץ Chrome אמיתי דרך Playwright (`channel:'chrome'`, לא מוריד דפדפן bundled) ובודק רגרסיות UI קונקרטיות מהיסטוריית הפרויקט (פוקוס בחיפוש, שימור טאב, רוחב ניווט מובייל, תוויות מקלטים, צבעי option).
 
-קונפיג ESLint ב-[.eslintrc.json](.eslintrc.json) — מינימלי, מתמקד בחיפוש באגים אמיתיים (`no-unused-vars`, `no-undef`, `no-redeclare`, `eqeqeq`); לא אכפתי לסגנון בכוונה כי הקוד דחוס במכוון.
+קונפיג ESLint ב-[eslint.config.js](eslint.config.js) (flat config) — מינימלי, מתמקד בחיפוש באגים אמיתיים (`no-unused-vars`, `no-undef`, `no-redeclare`, `eqeqeq`); לא אכפתי לסגנון בכוונה כי הקוד דחוס במכוון.
 
 ---
 
