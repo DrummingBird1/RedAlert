@@ -284,7 +284,7 @@ let clientErrSent=0;
 function reportClientError(message,stack){if(clientErrSent>=5)return;clientErrSent++;try{fetch(`${API}/api/client-error`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:String(message||'').slice(0,500),stack:String(stack||'').slice(0,2000),url:location.href})}).catch(()=>{})}catch{}}
 window.addEventListener('error',e=>reportClientError(e.message,e.error?.stack));
 window.addEventListener('unhandledrejection',e=>reportClientError('unhandledrejection: '+String(e.reason?.message||e.reason),e.reason?.stack));
-const APP_VERSION='1.6.1'; // bump alongside package.json; drives the "what's new" popup in checkWhatsNew()
+const APP_VERSION='1.6.2'; // bump alongside package.json; drives the "what's new" popup in checkWhatsNew()
 // Donation links — rendered as a row of buttons everywhere the donate card/mini appears. Empty array hides them.
 const DONATE_LINKS=[
   {n:'Ko-fi',i:'☕',url:'https://ko-fi.com/idanlights',cls:'kofi'},
@@ -387,13 +387,17 @@ let satOn=JSON.parse(localStorage.getItem('alertmap-sat')||'false');
 let satLabelsOn=JSON.parse(localStorage.getItem('alertmap-sat-labels')||'true');
 let tileLabels=null,basemapRef=null;
 function curTileUrl(){return satOn?SAT_URL:(theme==='light'?LIGHT_BASE_URL:DARK_BASE_URL)}
+// maxNativeZoom caps the Canvas base+reference layers' actual tile requests at their real coverage
+// depth (~16 in most regions, unlike World_Imagery) — beyond that Leaflet upscales the last tile
+// instead of requesting nonexistent/blank ones.
+function tileOpts(){return satOn?{maxZoom:19,attribution:'Esri'}:{maxZoom:19,maxNativeZoom:16,attribution:'Esri'}}
 // Adds/removes the labels overlay + shows/hides its toggle button, matching current satOn/satLabelsOn.
 function syncSatLabels(){const btn=document.getElementById('satLblB');if(btn)btn.style.display=satOn?'':'none';if(!map)return;if(satOn&&satLabelsOn){if(!tileLabels){tileLabels=L.tileLayer(SAT_LABELS_URL,{maxZoom:19,pane:'labelsPane'})}if(!map.hasLayer(tileLabels))tileLabels.addTo(map)}else if(tileLabels&&map.hasLayer(tileLabels)){map.removeLayer(tileLabels)}}
 function tglSatLabels(){satLabelsOn=!satLabelsOn;localStorage.setItem('alertmap-sat-labels',JSON.stringify(satLabelsOn));document.getElementById('satLblB')?.classList.toggle('active',satLabelsOn);syncSatLabels()}
 // Light/dark basemap's place-name/road/border overlay — always on (not user-toggleable, unlike the
 // optional satellite labels) since it replaces what used to be baked directly into the CartoDB tiles.
-function syncBasemapRef(){if(!map)return;if(basemapRef){map.removeLayer(basemapRef);basemapRef=null}if(!satOn)basemapRef=L.tileLayer(theme==='light'?LIGHT_REF_URL:DARK_REF_URL,{maxZoom:19,pane:'labelsPane'}).addTo(map)}
-function tglSat(){satOn=!satOn;localStorage.setItem('alertmap-sat',JSON.stringify(satOn));document.getElementById('satB')?.classList.toggle('active',satOn);if(!map||!tileL)return;map.removeLayer(tileL);tileL=L.tileLayer(curTileUrl(),{maxZoom:19,attribution:'Esri'}).addTo(map);syncSatLabels();syncBasemapRef()}
+function syncBasemapRef(){if(!map)return;if(basemapRef){map.removeLayer(basemapRef);basemapRef=null}if(!satOn)basemapRef=L.tileLayer(theme==='light'?LIGHT_REF_URL:DARK_REF_URL,{maxZoom:19,maxNativeZoom:16,pane:'labelsPane'}).addTo(map)}
+function tglSat(){satOn=!satOn;localStorage.setItem('alertmap-sat',JSON.stringify(satOn));document.getElementById('satB')?.classList.toggle('active',satOn);if(!map||!tileL)return;map.removeLayer(tileL);tileL=L.tileLayer(curTileUrl(),tileOpts()).addTo(map);syncSatLabels();syncBasemapRef()}
 let flt={r:'',t:'',time:'all',q:''},lastFly=0,actx=null,lastS=0,uiP=false,tlP=false;
 let uLoc=null,uMark=null,favs=JSON.parse(localStorage.getItem('alertmap-favs')||'[]');
 let dndOn=JSON.parse(localStorage.getItem('alertmap-dnd')||'false');
@@ -421,11 +425,11 @@ try{const s=parseInt(localStorage.getItem('alertmap-snooze')||'0');if(s>Date.now
 let theme=URL_PARAMS.get('theme')||localStorage.getItem('alertmap-theme');
 if(theme!=='light'&&theme!=='dark')theme=null;
 if(!theme){const mq=window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches;const h=new Date().getHours();theme=(mq||(h>=21||h<6))?'dark':'light'}
-function applyTh(th){theme=th;document.documentElement.classList.toggle('light',th==='light');document.getElementById('themeB').textContent=th==='light'?'☀️':'🌙';localStorage.setItem('alertmap-theme',th);if(tileL&&map&&!satOn){map.removeLayer(tileL);tileL=L.tileLayer(curTileUrl(),{maxZoom:19,attribution:'Esri'}).addTo(map);syncBasemapRef()}schedTL();syncURL()}
+function applyTh(th){theme=th;document.documentElement.classList.toggle('light',th==='light');document.getElementById('themeB').textContent=th==='light'?'☀️':'🌙';localStorage.setItem('alertmap-theme',th);if(tileL&&map&&!satOn){map.removeLayer(tileL);tileL=L.tileLayer(curTileUrl(),tileOpts()).addTo(map);syncBasemapRef()}schedTL();syncURL()}
 function tglTheme(){const next=theme==='dark'?'light':'dark';if(document.startViewTransition){document.startViewTransition(()=>applyTh(next))}else{applyTh(next)}}
 function tglHC(){hcOn=!hcOn;localStorage.setItem('alertmap-hc',JSON.stringify(hcOn));document.documentElement.classList.toggle('high-contrast',hcOn);document.getElementById('hcT').checked=hcOn}
 
-function initMap(){map=L.map('map',{center:[31.5,34.8],zoom:8,zoomControl:false,attributionControl:false});map.createPane('labelsPane');const lp=map.getPane('labelsPane');lp.style.zIndex=450;lp.style.pointerEvents='none';tileL=L.tileLayer(curTileUrl(),{maxZoom:19,attribution:'Esri'}).addTo(map);syncBasemapRef();if(satOn){document.getElementById('satB')?.classList.add('active');document.getElementById('satLblB')?.classList.toggle('active',satLabelsOn);syncSatLabels()}L.control.zoom({position:'bottomleft'}).addTo(map);clsG=L.markerClusterGroup({chunkedLoading:true,maxClusterRadius:50,disableClusteringAtZoom:12});if(clsOn)map.addLayer(clsG);updCls()}
+function initMap(){map=L.map('map',{center:[31.5,34.8],zoom:8,zoomControl:false,attributionControl:false});map.createPane('labelsPane');const lp=map.getPane('labelsPane');lp.style.zIndex=450;lp.style.pointerEvents='none';tileL=L.tileLayer(curTileUrl(),tileOpts()).addTo(map);syncBasemapRef();if(satOn){document.getElementById('satB')?.classList.add('active');document.getElementById('satLblB')?.classList.toggle('active',satLabelsOn);syncSatLabels()}L.control.zoom({position:'bottomleft'}).addTo(map);clsG=L.markerClusterGroup({chunkedLoading:true,maxClusterRadius:50,disableClusteringAtZoom:12});if(clsOn)map.addLayer(clsG);updCls()}
 function tglCls(){clsOn=!clsOn;localStorage.setItem('alertmap-cls',JSON.stringify(clsOn));updCls();if(!clsG)return;if(clsOn){map.addLayer(clsG);mrk.forEach((m,id)=>{if(!act.has(id)){if(map.hasLayer(m))map.removeLayer(m);clsG.addLayer(m)}})}else{clsG.eachLayer(l=>map.addLayer(l));clsG.clearLayers();map.removeLayer(clsG)}}
 function updCls(){document.getElementById('clsB').classList.toggle('active',clsOn)}
 
@@ -632,6 +636,7 @@ function stopReplay(){
 // Updates tab — mirrors CHANGELOG.md's newest entries (update this array by hand on release,
 // same as the CHANGELOG.md file; kept short on purpose, full history lives in the repo).
 const CHANGES=[
+  {v:'1.6.2',d:'2026-09-02',items:['🐛 תוקן: v1.6.1 החליף את ספק אריחי המפה (CARTO ← Esri) אבל לא ניקה את מטמון האריחים הנפרד ב-Service Worker — מבקרים שראו את ה-watermark "API KEY REQUIRED" לפני התיקון המשיכו לקבל אותם אריחים ישנים מהמטמון גם אחריו. גם נוקה קוד מת (allowlist ישן ל-CARTO ב-CSP/SW) ונוסף גבול זום לשכבות ה-Canvas כדי שזום עמוק מאוד לא יבקש אריחים לא-קיימים']},
   {v:'1.6.1',d:'2026-08-30',items:['🐛 קריטי: המפה הרגילה (לא-לוויין) הראתה "API KEY REQUIRED" על כל אריח — הספק הקודם (CartoDB) התחיל לדרוש מפתח API; הוחלף בשכבת Esri חינמית וללא מפתח (בהיר וכהה)','🐛 תוקן: רק לטאב "אזעקות" הייתה תווית טקסט גלויה — שאר 4 הטאבים היו אייקון בלבד; עכשיו לכולם יש תווית גלויה ומתורגמת מתחת לאייקון','🖼️ תוקן: הבאנרים הממותגים של v1.5.0/v1.6.0 עדיין הציגו את מספרי הגרסה הישנים (v3.5.0/v3.6.0) בתמונה עצמה']},
   {v:'1.6.0',d:'2026-08-30',items:['🐛 קריטי: תוקן קריסה ארוכת-טווח בטאב היסטוריה — רשומות מ-IndexedDB חסרו שדה שהתצוגה דרשה, והטאב נתקע על טעינה לכל משתמש עם היסטוריה אמיתית שמורה','🗺️ מקלטים אמיתיים נוספו לירושלים ולחיפה (בנוסף לתל אביב), עם קישורי ניווט Waze/Google Maps מכל מקלט על המפה','▶ Replay בטאב היסטוריה — צפייה כרונולוגית באזעקות ישירות על המפה','🔐 2FA אופציונלי לאדמין (קוד TOTP) + יומן ביקורת התחברויות','🌍 ייצוא GeoJSON/KML להיסטוריה, פאג\'ינציה אמיתית ל-API, מדיניות שמירת היסטוריה ניתנת להגדרה','🌐 זיהוי שפה אוטומטי מהדפדפן בביקור ראשון (במקום נפילה ישירה לעברית)','🔴 באדג׳ מספר אזעקות פעילות על אייקון האפליקציה, הודעת התקנה ל-iPhone/iPad','🧪 בדיקות E2E בדפדפן אמיתי (Playwright) בנוסף ליחידה ואינטגרציה','📉 דיווח שגיאות קליינט לשרת, ותרשים ארכיטקטורה חדש ב-README']},
   {v:'1.5.0',d:'2026-08-29',items:['💛 3 אפשרויות תרומה במקום אחת: Ko-fi, Buy Me a Coffee ו-Patreon (חשבון חדש) — מוצגות כשורת כפתורים בכל מקום שהיה כפתור תרומה יחיד','🖼️ צילום מסך של האפליקציה נוסף ל-README ולכל release חדש ב-GitHub']},
