@@ -383,7 +383,7 @@ function adminPage() { return `<!DOCTYPE html><html><head><meta charset="UTF-8">
 // Optional TOTP 2FA (RFC 6238) — active only if ADMIN_TOTP_SECRET is set, so existing deployments
 // see no behavior change. When enabled, the Basic Auth password becomes ADMIN_PASS + the current
 // 6-digit code (e.g. "hunter2483726"), compatible with any standard authenticator app.
-function base32Decode(str) { const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'; let bits = '', bytes = []; for (const c of String(str).replace(/=+$/, '').toUpperCase()) { const val = alphabet.indexOf(c); if (val === -1) continue; bits += val.toString(2).padStart(5, '0'); } for (let i = 0; i + 8 <= bits.length; i += 8) bytes.push(parseInt(bits.slice(i, i + 8), 2)); return Buffer.from(bytes); }
+function base32Decode(str) { const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'; let bits = ''; const bytes = []; for (const c of String(str).replace(/=+$/, '').toUpperCase()) { const val = alphabet.indexOf(c); if (val === -1) continue; bits += val.toString(2).padStart(5, '0'); } for (let i = 0; i + 8 <= bits.length; i += 8) bytes.push(parseInt(bits.slice(i, i + 8), 2)); return Buffer.from(bytes); }
 function totpAt(secretB32, timeStep) { const key = base32Decode(secretB32); const buf = Buffer.alloc(8); buf.writeBigUInt64BE(BigInt(timeStep)); const hmac = crypto.createHmac('sha1', key).update(buf).digest(); const offset = hmac[hmac.length - 1] & 0xf; const code = ((hmac[offset] & 0x7f) << 24 | (hmac[offset + 1] & 0xff) << 16 | (hmac[offset + 2] & 0xff) << 8 | (hmac[offset + 3] & 0xff)) % 1000000; return String(code).padStart(6, '0'); }
 function verifyTOTP(secretB32, token) { if (!/^\d{6}$/.test(token || '')) return false; const step = Math.floor(Date.now() / 30000); for (const drift of [-1, 0, 1]) if (safeEqual(totpAt(secretB32, step + drift), token)) return true; return false; }
 // Plain === short-circuits on the first mismatched byte, which in principle leaks a timing
@@ -539,7 +539,7 @@ const server = http.createServer(async (req, res) => {
   if (p === '/api/stream') {
     res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive', 'X-Accel-Buffering': 'no' });
     const a = [...activeAlerts.values()]; res.write(`data: ${JSON.stringify({ type: 'init', alerts: a })}\n\n`);
-    let ls = JSON.stringify(a.map(a => a.id)); const cl = { res, ls }; sseClients.add(cl); track(p, 200);
+    const ls = JSON.stringify(a.map(a => a.id)); const cl = { res, ls }; sseClients.add(cl); track(p, 200);
     const iv = setInterval(() => { try { const c = [...activeAlerts.values()]; const ids = JSON.stringify(c.map(a => a.id)); if (ids !== cl.ls) { res.write(`data: ${JSON.stringify({ type: 'update', alerts: c })}\n\n`); cl.ls = ids; } else res.write(`: hb\n\n`); } catch { clearInterval(iv); sseClients.delete(cl); } }, 2000);
     req.on('close', () => { clearInterval(iv); sseClients.delete(cl); }); return;
   }
