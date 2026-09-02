@@ -30,7 +30,7 @@ jobs:
       group: deploy-${{ github.ref }}
       cancel-in-progress: false   # don't cancel in-flight deploys
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Run unit tests before deploy
         run: |
