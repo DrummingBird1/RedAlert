@@ -46,7 +46,7 @@ docker-compose up -d
 ### עם תוספות אופציונליות
 
 ```bash
-npm install                    # web-push + telegram bot
+npm install                    # web-push (Telegram bot אין לו תלויות — ראו למטה)
 ADMIN_PASS=secret node server.js
 ```
 
@@ -391,9 +391,10 @@ cloudflared tunnel --url http://localhost:3000
 ## 🤖 Telegram Bot
 
 ```bash
-npm install node-telegram-bot-api
 TELEGRAM_TOKEN=123:ABC TELEGRAM_CHANNEL=@my_channel node telegram-bot.js
 ```
+
+ללא תלויות — קריאה ל-Telegram Bot API (`sendMessage`) דרך `https` גולמי, אין יותר `npm install`.
 
 ---
 

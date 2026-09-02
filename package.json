@@ -27,7 +27,6 @@
   "author": "",
   "license": "MIT",
   "optionalDependencies": {
-    "node-telegram-bot-api": "^0.66.0",
     "web-push": "^3.6.0"
   },
   "devDependencies": {

@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 // ============================================================
 //  Telegram Bot — מעביר אזעקות לערוץ טלגרם
-//  התקנה: npm install node-telegram-bot-api
 //  הפעלה: TELEGRAM_TOKEN=xxx TELEGRAM_CHANNEL=@mychannel node telegram-bot.js
+//  ללא תלויות: קריאה ל-Telegram Bot API (sendMessage) דרך https גולמי,
+//  באותו סגנון כמו sendDiscord() ב-server.js — לא צריך npm install.
 // ============================================================
 
 const TOKEN = process.env.TELEGRAM_TOKEN;
@@ -16,17 +17,30 @@ if (!TOKEN || !CHANNEL) {
   process.exit(1);
 }
 
-let TelegramBot;
-try {
-  TelegramBot = require('node-telegram-bot-api');
-} catch {
-  console.error('❌ חסר: npm install node-telegram-bot-api');
-  process.exit(1);
-}
-
-const bot = new TelegramBot(TOKEN, { polling: false });
+const https = require('https');
 const http = API_URL.startsWith('https') ? require('https') : require('http');
 const knownIds = new Set();
+
+// ── שליחה ל-Telegram Bot API (sendMessage) — POST https גולמי, בלי ספריית לקוח ──
+function sendTelegramMessage(text) {
+  return new Promise((resolve, reject) => {
+    const payload = JSON.stringify({ chat_id: CHANNEL, text, parse_mode: 'HTML', disable_web_page_preview: true });
+    const req = https.request(`https://api.telegram.org/bot${TOKEN}/sendMessage`, { method: 'POST', timeout: 10000, headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) } }, res => {
+      const chunks = [];
+      res.on('data', c => chunks.push(c));
+      res.on('end', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) return resolve();
+        let msg = `HTTP ${res.statusCode}`;
+        try { const j = JSON.parse(Buffer.concat(chunks).toString()); if (j.description) msg = j.description; } catch {}
+        reject(new Error(msg));
+      });
+    });
+    req.on('error', reject);
+    req.on('timeout', () => req.destroy(new Error('timeout')));
+    req.write(payload);
+    req.end();
+  });
+}
 
 function fetchAlerts() {
   return new Promise((resolve, reject) => {
@@ -84,10 +98,7 @@ async function poll() {
           `🔗 <a href="${API_URL}">מפת אזעקות</a>`;
 
         try {
-          await bot.sendMessage(CHANNEL, message, {
-            parse_mode: 'HTML',
-            disable_web_page_preview: true,
-          });
+          await sendTelegramMessage(message);
           console.log(`📨 ${cities.length} אזעקות נשלחו לטלגרם: ${cityList}`);
         } catch (e) {
           console.error('❌ שגיאת טלגרם:', e.message);
