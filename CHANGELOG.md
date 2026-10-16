@@ -5,6 +5,16 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+## [1.6.4]
+
+### Fixed
+- **v1.6.3's "feed is down" detection did not work on the live Vercel deployment.** It decided from the failure
+  COUNT alone ("still starting" until 3 consecutive failures). Vercel freezes timers between requests, so the poll
+  loop barely runs there: at 100s of uptime `/api/health` still said `status: "ok"`, `upstream_ok: true` with
+  `last_poll_ago: null` — caught by checking the live site right after releasing 1.6.3. A feed that has never
+  answered is now also "down" once 30s of wall-clock have passed since boot. The decision moved into
+  `AlertLib.upstreamOk()` (pure, injected times) and is unit-tested, including the frozen-timer case.
+
 ## [1.6.3]
 
 ### Fixed

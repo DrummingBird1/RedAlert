@@ -144,7 +144,7 @@ paths:
                 required: [status, uptime_seconds, memory_mb, sse_clients, alerts_stored]
                 properties:
                   status: { type: string, enum: [ok, degraded], example: ok, description: "'degraded' when the server cannot reach its alert feed (see upstream_ok)" }
-                  upstream_ok: { type: boolean, description: 'false when the OREF feed has never answered (3 consecutive failures) or has been silent for more than 30s. The HTTP status is still 200.' }
+                  upstream_ok: { type: boolean, description: 'false when the OREF feed has been silent for more than 30s, or has never answered within 30s of boot or after 3 consecutive failures. The HTTP status is still 200.' }
                   uptime_seconds: { type: integer }
                   memory_mb: { type: integer }
                   sse_clients: { type: integer }

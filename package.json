@@ -1,6 +1,6 @@
 {
   "name": "tzafir",
-  "version": "1.6.3",
+  "version": "1.6.4",
   "description": "צפיר (Tzafir) — Real-time alert monitoring based on IDF Home Front Command (Pikud HaOref). Formerly israel-alert-map.",
   "main": "server.js",
   "scripts": {

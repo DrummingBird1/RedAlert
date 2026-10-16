@@ -162,3 +162,22 @@ describe('telegram-bot', () => {
     assert.equal(bot.errMsg(null), 'null');
   });
 });
+
+// Regression (v1.6.4): v1.6.3 decided "feed down" from the failure COUNT alone. The live Vercel deploy freezes timers between
+// requests, so the poll loop barely runs: after 100s of uptime it still had last_poll_ago:null but fewer than 3 recorded
+// failures, and /api/health kept answering status "ok". The wall-clock grace since boot is what catches that case.
+describe('upstreamOk', () => {
+  const T = 1_000_000;
+  const ok = over => lib.upstreamOk({ now: T, lastPoll: 0, start: T - 5000, fails: 0, ...over });
+  test('answered recently -> ok', () => assert.equal(ok({ lastPoll: T - 2000 }), true));
+  test('answered, then silent for more than 30s -> not ok', () => assert.equal(ok({ lastPoll: T - 31000 }), false));
+  test('exactly 30s of silence is still ok (boundary)', () => assert.equal(ok({ lastPoll: T - 30000 }), true));
+  test('never answered, just booted -> ok ("still starting")', () => assert.equal(ok({}), true));
+  test('never answered, 2 failures -> still starting', () => assert.equal(ok({ fails: 2 }), true));
+  test('never answered, 3 consecutive failures -> not ok', () => assert.equal(ok({ fails: 3 }), false));
+  test('REGRESSION: never answered, 0 failures, but >30s since boot (timers frozen, e.g. Vercel) -> not ok', () => {
+    assert.equal(ok({ start: T - 100000, fails: 0 }), false);
+    assert.equal(ok({ start: T - 100000, fails: 1 }), false);
+  });
+  test('a recent success overrides how old the process is', () => assert.equal(ok({ start: T - 1e9, lastPoll: T - 1000 }), true));
+});

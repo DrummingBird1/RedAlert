@@ -88,6 +88,17 @@
   }
 
   // Right-to-left language codes (subset of LN's 14 keys). Hebrew + Arabic are RTL; the rest are LTR.
+  // Is the alert feed (OREF, or its fallback) actually flowing? Pure, with injected times, so it is testable without waiting.
+  //  - answered before:  ok while the last success is recent (staleMs)
+  //  - never answered:   "still starting" only until maxFails consecutive failures OR graceMs of wall-clock since boot.
+  // The wall-clock grace is what catches a host that freezes timers between requests (the live Vercel deploy): its poll loop
+  // barely runs, so the failure COUNT never reaches maxFails even after minutes of uptime — the v1.6.3 count-only rule
+  // reported "ok" there with last_poll_ago:null at uptime 100s.
+  function upstreamOk({ now, lastPoll, start, fails }, staleMs = 30000, graceMs = 30000, maxFails = 3) {
+    if (lastPoll) return now - lastPoll <= staleMs;
+    return fails < maxFails && now - start <= graceMs;
+  }
+
   // Maps a browser language list (navigator.languages) to a supported UI language, or null.
   // Splits on the first separator instead of slice(0,2): "fil-PH" used to become "fi" (Finnish) and match nothing.
   // Aliases: browsers report Filipino as "fil" (we key it "tl"); legacy Java/Android Hebrew is "iw".
@@ -125,6 +136,6 @@
 
   return {
     CITIES, TM, RS, SHELTERS_DEFAULT, LN, LANG_META, TTS_LOCALE, RTL_LANGS,
-    escapeHtml, formatShelter, shelterClass, distanceKm, isDND, normalizeCity, fuzzyMatch, isRTL, detectLang, LANG_ALIASES,
+    escapeHtml, formatShelter, shelterClass, distanceKm, isDND, normalizeCity, fuzzyMatch, isRTL, detectLang, LANG_ALIASES, upstreamOk,
   };
 }));
