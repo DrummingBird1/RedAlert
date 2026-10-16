@@ -5,8 +5,53 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+## [1.6.3]
+
+### Fixed
+- **A server that can't reach OREF reported "all clear" forever.** OREF (Akamai) answers
+  "Access Denied" to non-Israeli datacenter IPs; the live Vercel deployment (Frankfurt/Washington)
+  therefore never fetched a single alert, yet `/api/health` hard-coded `status: "ok"` and the page
+  showed "מחובר" + "הכל שקט" — a silent failure in an alerting app. `/api/health` now returns
+  `status: "degraded"` + `upstream_ok: false` (still HTTP 200, so Docker/Fly healthchecks keep working)
+  when the feed has never answered (3 consecutive failures) or has been silent >30s, and the client
+  shows a persistent warning bar plus a "no connection to the source" empty state instead of the
+  green check. Translated into all 14 languages. Hosting it on a non-Israeli IP still can't receive
+  alerts — that needs an Israeli IP or `FALLBACK_ALERT_URL`; this release only makes the failure visible.
+- **Alerts-tab search didn't filter while typing** — only seconds after leaving the field. The v1.4.0
+  focus fix made `refreshCurrentTab()` skip re-rendering while `#fQ` has focus, which also swallowed the
+  user's own keystrokes. A user-driven filter change now re-renders (focus and caret are restored);
+  only background refreshes are skipped.
+- **A typed space vanished in both search boxes** ("תל " → "תל" → "תלאב"): the re-render restored the
+  input from the `.trim()`med `flt.q`. Multi-word cities ("תל אביב", "באר שבע") could not be searched in the
+  History tab at all. Restores from the raw text now.
+- **The History tab could paint itself under another tab.** With a large IndexedDB, switching tabs while
+  `gDB()` was still pending let the late render overwrite the new tab's content.
+- **Filipino users got Hebrew instead of Tagalog.** `detectBrowserLang()` used `slice(0,2)`, so Chrome's
+  "fil-PH" became "fi" (Finnish) and matched nothing. Moved to `AlertLib.detectLang()` in `lib.js`: splits on
+  `-`/`_`, aliases `fil→tl` and the legacy `iw→he`.
+- **Telegram bot**: city names are HTML-escaped (one name containing `<` or `&` made Telegram reject the
+  whole message with HTTP 400); an alert is marked "sent" only after a successful send (up to 3 attempts,
+  then given up) instead of being lost on the first transient failure; the "polling error" log is no longer
+  blank when the API is down (Node 20+ reports a refused `localhost` connection as an empty-message
+  `AggregateError`). The module is now `require()`-safe, so its helpers are unit-tested.
+- Leftover branding: startup banner ("Alert Map v3"), embed iframe title, OpenAPI title, fly.toml comment,
+  fallback User-Agent.
+
 ### Changed
-- **Repo housekeeping — no runtime behavior change, so no version bump.** Moved
+- **Tests no longer write mock alerts into your real data.** New `DATA_DIR` env var (default: the repo dir,
+  i.e. no change for normal use) controls where `logs/`, `.store-snapshot.json`, `.vapid-keys.json` and
+  `.push-subs.json` live. `test/integration.js` and `test/e2e.js` point it at a temp dir. Previously every
+  test run seeded the developer's real `.store-snapshot.json` with 44 fake שדרות/אשקלון rocket alerts that the
+  next `node server.js` loaded as history.
+- New `RATE_LIMIT_PER_MIN` env var (default `120`, unchanged). `test/e2e.js` sets it high: one browser = one IP,
+  and a full run of page loads exceeded 120/min, so the main document itself started returning 429 and failed
+  tests at random.
+- `test/e2e.js` now polls a deterministic **mock OREF** instead of the real one (offline-safe; on CI the real
+  OREF is geo-blocked, which would trip the new warning bar). Four new regression tests, each verified to fail
+  against the old code; the v1.4.0 "keeps focus" test now also asserts the typed text (it passed while the
+  list never filtered because nothing re-rendered). `test/integration.js` gained a dead-feed → degraded
+  scenario and an `upstream_ok` assertion. `test/unit.js`: 91 → 106 tests.
+- **Repo housekeeping — no runtime behavior change.** Moved
   `CONTRIBUTING.md`/`SECURITY.md` into `.github/` (GitHub still recognizes them there),
   `openapi.yaml`/`screenshot.jpg` into a new `docs/`, and `test.js`/`test-integration.js`/
   `test-e2e.js` into a new `test/` (renamed to `unit.js`/`integration.js`/`e2e.js`). Root

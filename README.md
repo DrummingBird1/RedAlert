@@ -18,6 +18,8 @@
 
 **🌐 [גרסה חיה — red-alert-ten.vercel.app](https://red-alert-ten.vercel.app)**
 
+> ⚠️ **האתר הזה אינו מקבל אזעקות אמיתיות.** פיקוד העורף חוסם בקשות מחוץ לישראל, ו-Vercel פועל מחו"ל — מאז v1.6.3 הוא מציג באנר אזהרה "אין חיבור למקור הנתונים" במקום "הכל שקט". להתראות אמיתיות הריצו את השרת מכתובת IP ישראלית (ראו [פריסה](#vercel-בשימוש-בפועל--זו-הגרסה-החיה-למעלה-ללא-אזעקות-אמיתיות)).
+
 </div>
 
 <p align="center"><img src="docs/screenshot.jpg" alt="מסך ראשי של צפיר — מפת אזעקות בזמן אמת" width="800"></p>
@@ -214,6 +216,8 @@ flowchart LR
 | `DISCORD_WEBHOOK_URL` | (ריק) | Webhook של ערוץ Discord (Channel Settings → Integrations → Webhooks בדיסקורד) — שולח embed על כל batch אזעקות אמיתי חדש |
 | `OREF_URL_OVERRIDE` | (ריק) | החלף את URL של פיקוד העורף (לטסטים בלבד) |
 | `OREF_HIST_OVERRIDE` | (ריק) | החלף את URL של ההיסטוריה (לטסטים בלבד) |
+| `DATA_DIR` | תיקיית הריפו | היכן נכתבים קבצי ה-runtime (`logs/`, `.store-snapshot.json`, `.vapid-keys.json`, `.push-subs.json`). הטסטים מצביעים עליו לתיקייה זמנית כדי לא לכתוב אזעקות מדומות להיסטוריה שלכם |
+| `RATE_LIMIT_PER_MIN` | `120` | מגבלת בקשות לדקה לכל IP (override קיים לטסטי E2E בלבד) |
 | `SHELTERS_URL` | (ריק) | URL חיצוני ל-JSON של מקלטים אמיתיים (למשל מ-API של הרשות המקומית שלך). הקליינט מאחה אם זמין; אחרת fallback ל-~34 דוגמאות illustrative |
 | `TELEGRAM_TOKEN` | (ריק) | Bot token לטלגרם |
 | `TELEGRAM_CHANNEL` | (ריק) | Channel ID לטלגרם |
@@ -270,11 +274,13 @@ docker-compose logs -f
 
 ## ☁️ פריסה
 
-### Vercel (בשימוש בפועל — זו הגרסה החיה למעלה)
+### Vercel (בשימוש בפועל — זו הגרסה החיה למעלה, **ללא אזעקות אמיתיות**)
 
 הריפו מחובר ל-Vercel דרך אינטגרציית ה-GitHub שלה (Import Project ב-[vercel.com/new](https://vercel.com/new), zero-config — Vercel מזהה `"framework":"node"` אוטומטית, אין `vercel.json` בריפו). כל `git push` ל-`main` פורס ל-production; כל branch/PR מקבל preview deployment נפרד עם URL משלו. אין setup נוסף מעבר לחיבור הראשוני של הריפו לפרויקט ב-Vercel dashboard.
 
-**שים לב**: השרת בנוי כתהליך ארוך-חיים אחד (`http.createServer` + `setInterval` polling כל 2s + store בזיכרון + חיבורי SSE ארוכים ב-`/api/stream`) — לא ארכיטקטורת serverless קלאסית. זה עובד היום (נבדק ישירות — 0 שגיאות runtime, האתר עונה כמצופה), אבל אם ייתקלו בבעיות ייחודיות ל-serverless (state שמתאפס בין invocations, timeouts על SSE ארוך) — זו הסיבה.
+**⚠️ מגבלה ידועה (אומתה ב-2026-10-16)**: פיקוד העורף (Akamai) מחזיר "Access Denied" לבקשות ממרכזי נתונים מחוץ לישראל, ו-Vercel פועל מפרנקפורט/וושינגטון — השרת שם **אף פעם לא הצליח למשוך אזעקה אחת** (`last_poll_ago: null` ב-`/api/health`). עד v1.6.2 זה היה שקט לגמרי: `/api/health` החזיר `ok` והאפליקציה הציגה "מחובר" + "הכל שקט". מ-v1.6.3 `/api/health` מחזיר `status: "degraded"` + `upstream_ok: false` והלקוח מציג באנר אזהרה. כדי לקבל אזעקות אמיתיות צריך להריץ את השרת מכתובת IP ישראלית (מחשב בית, VPS ישראלי) ו/או להגדיר `FALLBACK_ALERT_URL`.
+
+**שים לב**: השרת בנוי כתהליך ארוך-חיים אחד (`http.createServer` + `setInterval` polling כל 2s + store בזיכרון + חיבורי SSE ארוכים ב-`/api/stream`) — לא ארכיטקטורת serverless קלאסית. הוא אכן רץ כתהליך יציב ב-Vercel (ה-`uptime` עולה), אבל אם ייתקלו בבעיות ייחודיות ל-serverless (state שמתאפס בין invocations, timeouts על SSE ארוך) — זו הסיבה.
 
 ### Fly.io (מוכן אך לא מחובר כרגע)
 
@@ -411,11 +417,11 @@ TELEGRAM_TOKEN=123:ABC TELEGRAM_CHANNEL=@my_channel node telegram-bot.js
 ## 🧪 בדיקות + CI
 
 ```bash
-node test/unit.js           # node:test runner — 90+ unit tests (incl. full i18n key-parity)
-node test/integration.js    # API-level integration: mock OREF → server → SSE (12 assertions)
+node test/unit.js           # node:test runner — 100+ unit tests (incl. full i18n key-parity)
+node test/integration.js    # API-level integration: mock OREF → server → SSE (16 assertions, incl. dead feed → degraded)
 node test/e2e.js            # real-browser E2E via Playwright (needs Chrome/Edge installed locally)
 npm run test:all            # כל השלושה
-npm run lint                # ESLint (אופציונלי, npm i -D eslint)
+npm run lint                # ESLint (flat config, devDependency)
 ```
 
 CI ב-[.github/workflows/test.yml](.github/workflows/test.yml) — מריץ unit + integration על Node 18/20/22 (Ubuntu) + Node 20 (Windows + macOS), ועוד job נפרד ל-E2E על Chrome המובנה של ה-runner. Dependabot ב-[.github/dependabot.yml](.github/dependabot.yml) — שבועי ל-npm, חודשי ל-GitHub Actions ול-Docker.

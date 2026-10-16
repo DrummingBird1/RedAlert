@@ -119,3 +119,46 @@ describe('fuzzyMatch', () => {
   test('no match returns null', () => assert.equal(fuzzyMatch('לא קיימת', mockCities), null));
   test('resolves against real CITIES', () => assert.equal(fuzzyMatch('שדרות', lib.CITIES), 'שדרות'));
 });
+
+// Regression (v1.6.3): detectBrowserLang() used nl.slice(0,2), so Chrome's Filipino locale "fil-PH" became "fi"
+// (Finnish) -> no match -> Hebrew, for the very community the Tagalog translation was added for.
+describe('detectLang', () => {
+  test('Filipino "fil-PH" maps to Tagalog "tl" (was sliced to "fi")', () => assert.equal(lib.detectLang(['fil-PH']), 'tl'));
+  test('plain "fil" and "tl_PH" (underscore form) both map to "tl"', () => { assert.equal(lib.detectLang(['fil']), 'tl'); assert.equal(lib.detectLang(['tl_PH']), 'tl'); });
+  test('legacy Hebrew code "iw" maps to "he"', () => assert.equal(lib.detectLang(['iw-IL']), 'he'));
+  test('regional/script subtags collapse to the primary language', () => { assert.equal(lib.detectLang(['fr-CA']), 'fr'); assert.equal(lib.detectLang(['zh-Hans-CN']), 'zh'); });
+  test('skips unsupported languages and takes the next supported one', () => assert.equal(lib.detectLang(['pt-BR', 'es']), 'es'));
+  test('case-insensitive', () => assert.equal(lib.detectLang(['FIL']), 'tl'));
+  test('nothing supported / empty / missing -> null', () => { assert.equal(lib.detectLang(['xx-YY']), null); assert.equal(lib.detectLang([]), null); assert.equal(lib.detectLang(undefined), null); assert.equal(lib.detectLang(['']), null); });
+  test('every alias target is a real language', () => { for (const to of Object.values(lib.LANG_ALIASES)) assert.ok(lib.LN[to], `alias points at unknown language ${to}`); });
+});
+
+// Every language must carry the "feed is down" warning (the key-parity test above only proves the SAME keys exist
+// everywhere; this proves the new safety string really got translated rather than left as the Hebrew original).
+describe('upstreamDown warning', () => {
+  test('present in all languages and non-trivial', () => { for (const l of Object.keys(lib.LN)) assert.ok(typeof lib.LN[l].upstreamDown === 'string' && lib.LN[l].upstreamDown.length > 30, `${l}.upstreamDown`); });
+  test('non-Hebrew languages do not contain Hebrew letters', () => { for (const l of Object.keys(lib.LN)) if (l !== 'he') assert.ok(!/[\u0590-\u05FF]/.test(lib.LN[l].upstreamDown), `${l}.upstreamDown still has Hebrew`); });
+});
+
+// telegram-bot.js is require()-safe (no side effects at import), so its pure helpers are testable.
+describe('telegram-bot', () => {
+  const bot = require('../telegram-bot.js');
+  test('escapeHtml neutralises tags, ampersands and quotes', () => assert.equal(bot.escapeHtml('a<b>&"c'), 'a&lt;b&gt;&amp;&quot;c'));
+  test('a hostile city name cannot inject markup into the HTML-mode message', () => {
+    const msg = bot.buildMessage('rockets', ['שדרות', 'כפר <b>&amp;'], 'http://x');
+    assert.ok(msg.includes('כפר &lt;b&gt;&amp;amp;'), msg);
+    assert.ok(!msg.includes('<b>&amp;'), 'raw hostile markup leaked into the message');
+  });
+  test('message keeps its own intentional <b> and <a> markup', () => {
+    const msg = bot.buildMessage('uav', ['חיפה'], 'https://example.com/?a=1&b="2"');
+    assert.ok(msg.includes('<b>צבע אדום — חדירת כלי טיס עוין</b>'));
+    assert.ok(msg.includes('<a href="https://example.com/?a=1&amp;b=&quot;2&quot;">'), 'href must be attribute-escaped');
+  });
+  test('unknown type falls back to a generic emoji and its escaped raw name', () => assert.ok(bot.buildMessage('<x>', ['a'], 'http://x').startsWith('🚨 <b>צבע אדום — &lt;x&gt;</b>')));
+  test('errMsg never returns blank, incl. the empty-message AggregateError Node gives for a refused localhost', () => {
+    assert.equal(bot.errMsg(new Error('boom')), 'boom');
+    const agg = Object.assign(new AggregateError([Object.assign(new Error(''), { code: 'ECONNREFUSED' })], ''), { code: 'ECONNREFUSED' });
+    assert.equal(bot.errMsg(agg), 'ECONNREFUSED');
+    assert.equal(bot.errMsg(null), 'null');
+  });
+});

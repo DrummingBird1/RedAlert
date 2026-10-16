@@ -1,4 +1,4 @@
-# fly.toml — Fly.io configuration for Israel Alert Map
+# fly.toml — Fly.io configuration for Tzafir
 #
 # Initial setup (run once, locally):
 #   curl -L https://fly.io/install.sh | sh         # install flyctl

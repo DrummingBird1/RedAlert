@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: Israel Alert Map API
+  title: Tzafir API
   description: |
     Real-time Israeli Home Front Command (Pikud HaOref) alert monitoring.
     Open public proxy + SSE stream, no authentication required for read endpoints.
@@ -143,7 +143,8 @@ paths:
                 type: object
                 required: [status, uptime_seconds, memory_mb, sse_clients, alerts_stored]
                 properties:
-                  status: { type: string, example: ok }
+                  status: { type: string, enum: [ok, degraded], example: ok, description: "'degraded' when the server cannot reach its alert feed (see upstream_ok)" }
+                  upstream_ok: { type: boolean, description: 'false when the OREF feed has never answered (3 consecutive failures) or has been silent for more than 30s. The HTTP status is still 200.' }
                   uptime_seconds: { type: integer }
                   memory_mb: { type: integer }
                   sse_clients: { type: integer }

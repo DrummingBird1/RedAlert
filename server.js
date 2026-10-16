@@ -12,7 +12,11 @@ const zlib = require('zlib');
 const crypto = require('crypto');
 
 const PORT = process.env.PORT || 3000;
-const LOG_DIR = path.join(__dirname, 'logs');
+// Runtime files (logs/, store snapshot, VAPID keys, push subs) live under DATA_DIR. Defaults to the repo dir (unchanged
+// behavior); tests point it at a temp dir so they never write mock alerts into the developer's real history/logs.
+const DATA_DIR = process.env.DATA_DIR || __dirname;
+const APP_V = (() => { try { return require('./package.json').version; } catch { return ''; } })();
+const LOG_DIR = path.join(DATA_DIR, 'logs');
 const LOG_FILE = path.join(LOG_DIR, 'alerts.log');
 const SERVER_START = Date.now();
 const ADMIN_USER = process.env.ADMIN_USER || 'admin';
@@ -56,7 +60,8 @@ const adminAuditLog = { write(line) { try { if (adminAuditStream) adminAuditStre
 
 // ── Rate limiting ────────────────────────────────────────────
 const rateMap = new Map();
-function rateOK(ip) { const now = Date.now(); let e = rateMap.get(ip); if (!e || now - e.t > 60000) { e = { t: now, c: 0 }; rateMap.set(ip, e); } return ++e.c <= 120; }
+const RATE_MAX = parseInt(process.env.RATE_LIMIT_PER_MIN, 10) || 120; // per IP per minute; the env override exists for test/e2e.js — one browser = one IP, and a full suite of page loads exceeds 120/min (the main document itself got a 429)
+function rateOK(ip) { const now = Date.now(); let e = rateMap.get(ip); if (!e || now - e.t > 60000) { e = { t: now, c: 0 }; rateMap.set(ip, e); } return ++e.c <= RATE_MAX; }
 setInterval(() => { const c = Date.now() - 60000; rateMap.forEach((v, k) => { if (v.t < c) rateMap.delete(k); }); }, 300000);
 
 // ── Security headers ─────────────────────────────────────────
@@ -83,7 +88,7 @@ function track(r, c) {
 }
 
 // ── VAPID keys (only generated if web-push is available) ─────
-const VAPID_F = path.join(__dirname, '.vapid-keys.json');
+const VAPID_F = path.join(DATA_DIR, '.vapid-keys.json');
 let vapidKeys = null;
 function loadVapid() { try { if (fs.existsSync(VAPID_F)) return JSON.parse(fs.readFileSync(VAPID_F, 'utf8')); } catch {} const ec = crypto.createECDH('prime256v1'); ec.generateKeys(); const k = { publicKey: ec.getPublicKey('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''), privateKey: ec.getPrivateKey('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '') }; try { fs.writeFileSync(VAPID_F, JSON.stringify(k, null, 2)); } catch {} return k; }
 if (webpush) {
@@ -92,7 +97,7 @@ if (webpush) {
 }
 
 // ── Push subscriptions (Map for O(1) dedupe) ─────────────────
-const SUBS_F = path.join(__dirname, '.push-subs.json');
+const SUBS_F = path.join(DATA_DIR, '.push-subs.json');
 const pushSubs = new Map(); // endpoint -> { sub, favs:[] }
 function loadSubs() { try { if (fs.existsSync(SUBS_F)) { const arr = JSON.parse(fs.readFileSync(SUBS_F, 'utf8')); arr.forEach(e => { if (e?.sub?.endpoint) pushSubs.set(e.sub.endpoint, { sub: e.sub, favs: Array.isArray(e.favs) ? e.favs : [], dnd: !!e.dnd }); else if (e?.endpoint) pushSubs.set(e.endpoint, { sub: e, favs: [], dnd: false }); }); } } catch {} }
 // Debounced async save to avoid blocking event loop and to coalesce rapid subscribe/unsubscribe bursts
@@ -149,7 +154,7 @@ let orefFormatMisses = 0, formatAlerted = false; // detect OREF JSON shape chang
 // ── Store snapshot (survive process restart) ─────────────────
 // Persists alert history to disk so a Fly VM restart / redeploy doesn't lose it.
 // Active alerts are NOT restored as active (they're ephemeral, 90s, and re-arrive from OREF).
-const SNAP_F = path.join(__dirname, '.store-snapshot.json');
+const SNAP_F = path.join(DATA_DIR, '.store-snapshot.json');
 const SNAP_MAX = 2000; // cap persisted entries to keep the file small
 let snapTimer = null;
 function loadSnapshot() {
@@ -201,7 +206,7 @@ async function pollAlerts() {
     const useFallback = useFB && FB_URLS.length > 0;
     const targetUrl = useFallback ? FB_URLS[fbIdx % FB_URLS.length] : OREF_URL;
     // Send OREF-specific headers only to OREF; use minimal generic headers for fallback URLs
-    const headers = useFallback ? { 'Accept': 'application/json', 'User-Agent': 'alertmap/3.0' } : OREF_H;
+    const headers = useFallback ? { 'Accept': 'application/json', 'User-Agent': `tzafir/${APP_V}` } : OREF_H;
     const { status, body } = await fetchUrl(targetUrl, headers);
     if (status !== 200) { orefFail(); return; }
     const markHealthy = () => { lastPoll = Date.now(); orefFails = 0; nextPollDelay = POLL_BASE_MS; if (useFB) { useFB = false; console.log('✅ OREF back'); } };
@@ -243,6 +248,11 @@ function orefFail() {
   // Exponential backoff: double the delay on each failure (capped)
   if (orefFails >= 3) nextPollDelay = Math.min(nextPollDelay * 2, POLL_MAX_MS);
 }
+// Is the data feed (OREF, or the fallback) actually flowing? A feed that never answered counts as "still starting"
+// until 3 consecutive failures; one that answered before goes stale after 30s of silence (same threshold as checkHealth()).
+// Exposed on /api/health so a host that CAN'T reach OREF (it geo-blocks non-Israeli datacenter IPs — e.g. Vercel) shows up
+// as degraded instead of reporting "ok" while silently never delivering a single alert.
+function upstreamOk() { return lastPoll ? (Date.now() - lastPoll) <= 30000 : orefFails < 3; }
 function schedulePoll() { pollTimer = setTimeout(async () => { await pollAlerts(); schedulePoll(); }, nextPollDelay); }
 setInterval(() => { if (!useFB) return; fetchUrl(OREF_URL).then(({ status }) => { if (status === 200) { useFB = false; orefFails = 0; fbIdx = 0; nextPollDelay = POLL_BASE_MS; } }).catch(() => {}); }, 60000);
 
@@ -324,7 +334,7 @@ const MANIFEST = JSON.stringify({ name: 'צפיר', short_name: 'צפיר', desc
 // was left at v1, so anyone who'd visited before that fix kept their watermarked CARTO tiles cached
 // indefinitely. Bumping it now actually clears them.
 const SW = `
-const CN='red-alert-v17';
+const CN='red-alert-v18';
 const TILE='red-alert-tiles-v2';
 const AS=['/','/index.html','/lib.js','/manifest.json','/icon.svg'];
 const CDN=['https://unpkg.com/leaflet@1.9.4/dist/leaflet.css','https://unpkg.com/leaflet@1.9.4/dist/leaflet.js','https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css','https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css','https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js'];
@@ -376,7 +386,7 @@ function prometheusMetrics() {
 
 // ── Embed widget loader (served at /embed.js) ────────────────
 // External sites embed an iframe of the alertmap by including <script src=".../embed.js" data-city="...">
-const EMBED_JS = `(function(){var s=document.currentScript;if(!s)return;var d=s.dataset||{};var o;try{o=new URL(s.src).origin}catch(e){return}var p=new URLSearchParams({embed:'1'});if(d.lang)p.set('lang',d.lang);if(d.theme)p.set('theme',d.theme);if(d.city)p.set('city',d.city);var i=document.createElement('iframe');i.src=o+'/?'+p.toString();i.style.width=d.width||'400px';i.style.height=d.height||'320px';i.style.border='0';i.style.borderRadius='8px';i.setAttribute('loading','lazy');i.setAttribute('title','Israel Alert Map');i.setAttribute('allow','notifications;geolocation');s.parentNode.insertBefore(i,s.nextSibling)})();`;
+const EMBED_JS = `(function(){var s=document.currentScript;if(!s)return;var d=s.dataset||{};var o;try{o=new URL(s.src).origin}catch(e){return}var p=new URLSearchParams({embed:'1'});if(d.lang)p.set('lang',d.lang);if(d.theme)p.set('theme',d.theme);if(d.city)p.set('city',d.city);var i=document.createElement('iframe');i.src=o+'/?'+p.toString();i.style.width=d.width||'400px';i.style.height=d.height||'320px';i.style.border='0';i.style.borderRadius='8px';i.setAttribute('loading','lazy');i.setAttribute('title','Tzafir — real-time alerts');i.setAttribute('allow','notifications;geolocation');s.parentNode.insertBefore(i,s.nextSibling)})();`;
 
 // ── Admin ───────────────────────────────────────────────────
 function adminPage() { return `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Admin</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:system-ui;background:#0a0e17;color:#f1f5f9;padding:20px}h1{font-size:20px;margin-bottom:14px}.g{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:16px}.c{background:#1a2236;border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:12px;text-align:center}.c .v{font-size:24px;font-weight:800;margin-bottom:2px}.c .l{font-size:10px;color:#94a3b8}.c.r .v{color:#ef4444}.c.g2 .v{color:#22c55e}.c.b .v{color:#3b82f6}.c.o .v{color:#f97316}.c.y .v{color:#eab308}.c.p .v{color:#a855f7}table{width:100%;border-collapse:collapse;background:#1a2236;border-radius:6px;overflow:hidden;font-size:11px;margin-bottom:12px}th,td{padding:6px 10px;text-align:right;border-bottom:1px solid rgba(255,255,255,.05)}th{background:rgba(0,0,0,.3);color:#94a3b8}</style></head><body><h1>🛡️ Admin</h1><div class="g" id="cards"></div><table id="rt"><thead><tr><th>Route</th><th>#</th></tr></thead><tbody></tbody></table><script>async function L(){try{const r=await fetch('/api/admin/metrics');const d=await r.json();document.getElementById('cards').innerHTML=[{v:d.up,l:'Uptime',c:'g2'},{v:d.mem+'MB',l:'Memory',c:'b'},{v:d.sse,l:'SSE',c:'p'},{v:d.stored,l:'Alerts',c:'r'},{v:d.reqs,l:'Requests',c:'o'},{v:d.polls,l:'Polls',c:'b'},{v:d.errs,l:'Errors',c:'y'},{v:d.subs,l:'Push',c:'g2'},{v:d.fb?'YES':'NO',l:'Fallback',c:d.fb?'y':'g2'},{v:d.lat+'ms',l:'Latency',c:'b'},{v:d.wp?'✅':'❌',l:'web-push',c:d.wp?'g2':'r'},{v:d.hw?'✅':'❌',l:'Health WH',c:d.hw?'g2':'r'}].map(c=>'<div class="c '+c.c+'"><div class="v">'+c.v+'</div><div class="l">'+c.l+'</div></div>').join('');document.querySelector('#rt tbody').innerHTML=Object.entries(d.routes||{}).sort((a,b)=>b[1]-a[1]).map(([r,c])=>'<tr><td>'+r+'</td><td>'+c+'</td></tr>').join('')}catch{}}L();setInterval(L,5000)</script></body></html>`; }
@@ -526,7 +536,7 @@ const server = http.createServer(async (req, res) => {
   if (p === '/api/push/unsubscribe' && req.method === 'POST') { try { const b = await parseBody(req); const endpoint = b.endpoint || b.subscription?.endpoint; if (endpoint) pushSubs.delete(endpoint); saveSubs(); track(p, 200); res.writeHead(200); return res.end('{"ok":true}'); } catch { track(p, 400); res.writeHead(400); return res.end('{"error":"bad"}'); } }
   if (p === '/api/client-error' && req.method === 'POST') { try { const b = await parseBody(req); const entry = { t: new Date().toISOString(), message: String(b.message || '').slice(0, 500), stack: String(b.stack || '').slice(0, 2000), url: String(b.url || '').slice(0, 300), ua: String(req.headers['user-agent'] || '').slice(0, 300) }; if (clientErrStream) clientErrStream.write(JSON.stringify(entry) + '\n'); rotateClientErrLog(); track(p, 204); res.writeHead(204); return res.end(); } catch { track(p, 400); res.writeHead(400); return res.end(); } }
 
-  if (p === '/api/health') { const mem = process.memoryUsage(); track(p, 200); return gz(req, res, JSON.stringify({ status: 'ok', uptime_seconds: Math.floor((Date.now() - SERVER_START) / 1000), memory_mb: Math.round(mem.rss / 1024 / 1024), sse_clients: sseClients.size, alerts_stored: store.length, fallback: useFB, web_push: !!webpush, push_subs: pushSubs.size, last_poll_ago: lastPoll ? Math.floor((Date.now() - lastPoll) / 1000) : null, health_webhook: !!HEALTH_WEBHOOK }), 'application/json; charset=utf-8'); }
+  if (p === '/api/health') { const mem = process.memoryUsage(); const upOk = upstreamOk(); track(p, 200); return gz(req, res, JSON.stringify({ status: upOk ? 'ok' : 'degraded', upstream_ok: upOk, uptime_seconds: Math.floor((Date.now() - SERVER_START) / 1000), memory_mb: Math.round(mem.rss / 1024 / 1024), sse_clients: sseClients.size, alerts_stored: store.length, fallback: useFB, web_push: !!webpush, push_subs: pushSubs.size, last_poll_ago: lastPoll ? Math.floor((Date.now() - lastPoll) / 1000) : null, health_webhook: !!HEALTH_WEBHOOK }), 'application/json; charset=utf-8'); }
   if (p === '/api/config') { track(p, 200); return gz(req, res, JSON.stringify({ shelters_url: SHELTERS_URL || null, web_push: !!webpush }), 'application/json; charset=utf-8'); }
   if (p === '/api/shelters/tel-aviv') { const s = await getTelAvivShelters(); track(p, 200); return gz(req, res, JSON.stringify(s || []), 'application/json; charset=utf-8'); }
   if (p === '/api/shelters/jerusalem') { const s = await getJerusalemShelters(); track(p, 200); return gz(req, res, JSON.stringify(s || []), 'application/json; charset=utf-8'); }
@@ -552,7 +562,7 @@ const server = http.createServer(async (req, res) => {
 server.on('error', err => { if (err.code === 'EADDRINUSE') { console.error(`❌ Port ${PORT} in use — set PORT env to a free port`); process.exit(1); } });
 server.listen(PORT, () => {
   console.log(`\n╔═══════════════════════════════════════════════╗`);
-  console.log(`║  🚨 Alert Map v3 — http://localhost:${PORT}         ║`);
+  console.log(`║  🚨 Tzafir v${APP_V} — http://localhost:${PORT}        ║`);
   console.log(`║  🛡️  /admin user: ${ADMIN_USER}                         ║`);
   console.log(`║  📡 web-push: ${webpush ? '✅' : '❌ npm i web-push'}                   ║`);
   console.log(`║  🔄 Fallback: ${FB_URL ? '✅' : '❌ set FALLBACK_ALERT_URL'}          ║`);

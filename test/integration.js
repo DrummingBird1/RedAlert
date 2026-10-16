@@ -7,9 +7,15 @@
 // ============================================================
 
 const http = require('http');
+const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const { spawn } = require('child_process');
 const ROOT = path.join(__dirname, '..');
+// Spawned servers write logs/, the store snapshot and VAPID keys. Point them at throwaway temp dirs (DATA_DIR) —
+// otherwise every run seeds the developer's REAL .store-snapshot.json / logs with these mock שדרות/אשקלון alerts.
+const TMP_DIRS = [];
+const mkTmp = () => { const d = fs.mkdtempSync(path.join(os.tmpdir(), 'tzafir-int-')); TMP_DIRS.push(d); return d; };
 
 let passed = 0, failed = 0;
 const log = m => console.log(m);
@@ -36,16 +42,19 @@ const mockOref = http.createServer((req, res) => {
   }));
 });
 
-let child = null;
+let child = null, child2 = null;
 function cleanup(code) {
   try { if (child) child.kill(); } catch {}
+  try { if (child2) child2.kill(); } catch {}
   try { mockOref.close(); } catch {}
   log('\n═══════════════════════════════════');
   log(`  ✅ Passed: ${passed}`);
   log(`  ❌ Failed: ${failed}`);
   log(`  📊 Total:  ${passed + failed}`);
   log('═══════════════════════════════════\n');
-  process.exit(code != null ? code : (failed > 0 ? 1 : 0));
+  const exitCode = code != null ? code : (failed > 0 ? 1 : 0);
+  // Give the killed servers a moment to release their log files (Windows keeps them locked) before removing the temp dirs.
+  setTimeout(() => { for (const d of TMP_DIRS) { try { fs.rmSync(d, { recursive: true, force: true }); } catch {} } process.exit(exitCode); }, 500);
 }
 
 process.on('uncaughtException', e => { console.error('💥', e.message); cleanup(2); });
@@ -57,7 +66,7 @@ mockOref.listen(MOCK_PORT, () => {
   // ── Step 2: Start alertmap server with override ────────────
   child = spawn('node', ['server.js'], {
     cwd: ROOT,
-    env: { ...process.env, PORT: String(ALERT_PORT), OREF_URL_OVERRIDE: orefUrl },
+    env: { ...process.env, PORT: String(ALERT_PORT), OREF_URL_OVERRIDE: orefUrl, DATA_DIR: mkTmp() },
     stdio: 'ignore',
   });
   child.on('error', e => { console.error('  ❌ spawn:', e.message); cleanup(2); });
@@ -94,6 +103,8 @@ function runChecks() {
 
 function runSSECheck() {
   // ── Step 4: SSE — connect and expect 'init' frame with alerts ──
+  // Cleared once init arrives — it used to fire unconditionally 3s later and was only harmless because cleanup() had already exited.
+  const sseTimer = setTimeout(() => { failed++; console.error('  ❌ SSE: timeout waiting for init'); cleanup(); }, 3000);
   const sseReq = http.get(`${ORIGIN}/api/stream`, sseRes => {
     let buf = '';
     let initSeen = false;
@@ -105,6 +116,7 @@ function runSSECheck() {
           const evt = JSON.parse(m[1]);
           if (evt.type === 'init') {
             initSeen = true;
+            clearTimeout(sseTimer);
             assert(Array.isArray(evt.alerts), 'SSE init: alerts is array');
             assert(evt.alerts.some(a => a.city === 'שדרות'), 'SSE init: includes שדרות');
             sseReq.destroy();
@@ -115,7 +127,6 @@ function runSSECheck() {
     });
   });
   sseReq.on('error', e => { console.error(`  ❌ SSE: ${e.message}`); failed++; cleanup(); });
-  setTimeout(() => { if (failed === 0) { failed++; console.error('  ❌ SSE: timeout waiting for init'); cleanup(); } }, 3000);
 }
 
 function runHealthCheck() {
@@ -127,13 +138,48 @@ function runHealthCheck() {
       try {
         const h = JSON.parse(data);
         assert(h.status === 'ok', '/api/health: status=ok');
+        assert(h.upstream_ok === true, '/api/health: upstream_ok=true while the feed answers');
         assert(h.alerts_stored >= 2, `/api/health: alerts_stored>=2 (got ${h.alerts_stored})`);
         assert(h.last_poll_ago != null, '/api/health: last_poll_ago is set');
         assert(h.last_poll_ago < 10, `/api/health: poll is recent (${h.last_poll_ago}s ago)`);
       } catch (e) {
         console.error(`  ❌ /api/health parse: ${e.message}`); failed++;
+        return cleanup();
       }
-      cleanup();
+      runDegradedCheck();
     });
   }).on('error', e => { console.error(`  ❌ /api/health fetch: ${e.message}`); failed++; cleanup(); });
+}
+
+// ── Step 6: a feed that never answers must surface as degraded ─────────────────────────────
+// Regression (v1.6.3): the live Vercel deploy can't reach OREF (Akamai geo-block). /api/health used to hard-code
+// status:'ok', so the app showed "connected / all clear" forever without ever delivering a single alert.
+function runDegradedCheck() {
+  const DEAD_PORT = MOCK_PORT + 200; // nothing listens here -> every poll fails with ECONNREFUSED
+  const DEAD_ORIGIN = `http://localhost:${ALERT_PORT + 1}`;
+  child2 = spawn('node', ['server.js'], {
+    cwd: ROOT,
+    env: { ...process.env, PORT: String(ALERT_PORT + 1), OREF_URL_OVERRIDE: `http://localhost:${DEAD_PORT}/`, DATA_DIR: mkTmp() },
+    stdio: 'ignore',
+  });
+  child2.on('error', e => { console.error('  ❌ spawn (dead-feed server):', e.message); failed++; cleanup(); });
+  const started = Date.now();
+  const tick = () => {
+    http.get(`${DEAD_ORIGIN}/api/health`, res => {
+      let data = '';
+      res.on('data', c => data += c);
+      res.on('end', () => {
+        let h = null; try { h = JSON.parse(data); } catch {}
+        if (h && h.status === 'degraded') {
+          assert(res.statusCode === 200, 'dead feed: /api/health still answers HTTP 200 (Docker/Fly healthchecks keep working)');
+          assert(h.upstream_ok === false, 'dead feed: upstream_ok=false');
+          assert(h.last_poll_ago === null, 'dead feed: last_poll_ago=null (never had a successful poll)');
+          return cleanup();
+        }
+        if (Date.now() - started > 25000) { assert(false, `dead feed: status never became degraded (last: ${data.slice(0, 120)})`); return cleanup(); }
+        setTimeout(tick, 1000);
+      });
+    }).on('error', () => { if (Date.now() - started > 25000) { assert(false, 'dead feed: server never came up'); return cleanup(); } setTimeout(tick, 500); });
+  };
+  setTimeout(tick, 1500);
 }

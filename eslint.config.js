@@ -63,11 +63,12 @@ module.exports = [
     },
   },
   {
-    // page.evaluate(() => tglShl()) מריץ בקונטקסט הדפדפן — tglShl מוגדר ב-index.html, לא בקובץ הזה
+    // page.evaluate(() => tglShl()) מריץ בקונטקסט הדפדפן — tglShl/checkUpstream מוגדרים ב-index.html, לא בקובץ הזה
     files: ['test/e2e.js'],
     languageOptions: {
       globals: {
         tglShl: 'readonly',
+        checkUpstream: 'readonly',
       },
     },
   },

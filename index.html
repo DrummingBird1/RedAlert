@@ -54,6 +54,9 @@ html.high-contrast .sm .md{background:#3b82f6;border-color:#fff;border-radius:2p
 /* Offline bar */
 .offline{display:none;position:fixed;top:54px;left:0;right:320px;z-index:250;background:rgba(234,179,8,.9);color:#000;text-align:center;padding:5px;font-size:11px;font-weight:600}
 .offline.active{display:block}
+/* Server reachable but its own feed from OREF is dead/blocked (GET /api/health -> upstream_ok:false). z-index below .banner/.defense so a live alert always wins. */
+.upstream{display:none;position:fixed;top:54px;left:0;right:320px;z-index:140;background:rgba(234,179,8,.96);color:#000;text-align:center;padding:6px 12px;font-size:12px;font-weight:700;line-height:1.4}
+.upstream.active{display:block}
 /* Banner */
 .banner{display:none;position:fixed;top:54px;left:0;right:320px;z-index:200;background:linear-gradient(135deg,rgba(220,38,38,.92),rgba(185,28,28,.92));color:#fff;text-align:center;padding:6px 14px;font-weight:700;font-size:12px;animation:bf 1s infinite;max-height:38px;overflow:hidden}
 .banner.active{display:flex;align-items:center;justify-content:center;gap:6px}
@@ -235,11 +238,11 @@ html.light .skel{background:linear-gradient(90deg,rgba(0,0,0,.04) 25%,rgba(0,0,0
 .ptr-ind.spin{animation:ptrspin .6s linear infinite}
 @keyframes ptrspin{to{transform:translateX(-50%) translateY(10px) rotate(360deg)}}
 
-@media(max-width:768px){.sb{display:none}#map,.overlay,.banner,.defense,.offline{right:0}#map{bottom:50px}.mn{display:flex}.hdr{padding:0 8px}.cnt{display:none!important}.ci{right:6px;bottom:66px}.mc{bottom:66px;left:8px}.tb{bottom:62px}.ios-install{bottom:62px}}
+@media(max-width:768px){.sb{display:none}#map,.overlay,.banner,.defense,.offline,.upstream{right:0}#map{bottom:50px}.mn{display:flex}.hdr{padding:0 8px}.cnt{display:none!important}.ci{right:6px;bottom:66px}.mc{bottom:66px;left:8px}.tb{bottom:62px}.ios-install{bottom:62px}}
 /* Embed mode — minimal chrome for iframe embedding */
 html.embed .hdr,html.embed .sb,html.embed .mn,html.embed .mc,html.embed .ci{display:none!important}
-html.embed #map,html.embed .banner,html.embed .defense,html.embed .offline,html.embed .overlay{top:0!important;right:0!important;bottom:0!important;left:0!important}
-html.embed .banner,html.embed .defense,html.embed .offline{bottom:auto!important}
+html.embed #map,html.embed .banner,html.embed .defense,html.embed .offline,html.embed .upstream,html.embed .overlay{top:0!important;right:0!important;bottom:0!important;left:0!important}
+html.embed .banner,html.embed .defense,html.embed .offline,html.embed .upstream{bottom:auto!important}
 html.embed .banner{top:0!important}
 html.embed .defense.below-banner{top:38px!important}
 </style>
@@ -262,6 +265,7 @@ html.embed .defense.below-banner{top:38px!important}
 <div class="banner" id="banner" role="alert" aria-live="assertive"><span>⚠️</span><span id="banTxt">צבע אדום</span><span>⚠️</span></div>
 <div class="defense" id="defP" role="alert"><span aria-hidden="true">🛡️</span><div class="defense-t"><strong>היכנס למרחב מוגן עכשיו!</strong><small>ממ״ד, מקלט, או חדר מדרגות פנימי</small></div><button class="safe-btn" onclick="shareSafe()" aria-label="שלח הודעה שאני בסדר">✓ אני בסדר</button><div class="defense-cd" id="defCd" aria-hidden="true"></div></div>
 <div class="offline" id="offBar">📵 אין חיבור — נתונים מהמטמון</div>
+<div class="upstream" id="upBar" role="alert" data-i18n="upstreamDown">⚠️ אין חיבור למקור הנתונים של פיקוד העורף — ייתכן שאזעקות לא יוצגו. פעלו לפי האפליקציה הרשמית של פיקוד העורף.</div>
 <div class="overlay" id="overlay"></div>
 <div id="map"></div>
 <div class="sb"><div class="stabs" role="tablist"><div class="stab active" role="tab" tabindex="0" onclick="swTab('alerts',this)" aria-label="אזעקות" title="אזעקות"><span class="si">🔔</span><span data-i18n="alerts">אזעקות</span></div><div class="stab" role="tab" tabindex="0" onclick="swTab('stats',this)" aria-label="סטטיסטיקה" title="סטטיסטיקה"><span class="si">📊</span><span data-i18n="stats">סטטיסטיקה</span></div><div class="stab" role="tab" tabindex="0" onclick="swTab('history',this)" aria-label="היסטוריה" title="היסטוריה"><span class="si">📜</span><span data-i18n="history">היסטוריה</span></div><div class="stab" role="tab" tabindex="0" onclick="swTab('updates',this)" aria-label="עדכונים" title="עדכונים"><span class="si">🆕</span><span data-i18n="updates">עדכונים</span></div><div class="stab" role="tab" tabindex="0" onclick="swTab('about',this)" aria-label="אודות" title="אודות"><span class="si">ℹ️</span><span data-i18n="about">אודות</span></div></div><div class="sc" id="sbC"></div></div>
@@ -284,7 +288,7 @@ let clientErrSent=0;
 function reportClientError(message,stack){if(clientErrSent>=5)return;clientErrSent++;try{fetch(`${API}/api/client-error`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:String(message||'').slice(0,500),stack:String(stack||'').slice(0,2000),url:location.href})}).catch(()=>{})}catch{}}
 window.addEventListener('error',e=>reportClientError(e.message,e.error?.stack));
 window.addEventListener('unhandledrejection',e=>reportClientError('unhandledrejection: '+String(e.reason?.message||e.reason),e.reason?.stack));
-const APP_VERSION='1.6.2'; // bump alongside package.json; drives the "what's new" popup in checkWhatsNew()
+const APP_VERSION='1.6.3'; // bump alongside package.json; drives the "what's new" popup in checkWhatsNew()
 // Donation links — rendered as a row of buttons everywhere the donate card/mini appears. Empty array hides them.
 const DONATE_LINKS=[
   {n:'Ko-fi',i:'☕',url:'https://ko-fi.com/idanlights',cls:'kofi'},
@@ -306,7 +310,7 @@ async function shareLink(){const u=location.href;try{if(navigator.share){await n
 function t(k){return(LN[lang]&&LN[lang][k])||LN.he[k]||k}
 function setLang(l){lang=l;localStorage.setItem('alertmap-lang',l);document.documentElement.lang=l;document.documentElement.dir=AlertLib.isRTL(l)?'rtl':'ltr';document.querySelectorAll('[data-i18n]').forEach(e=>{const v=t(e.dataset.i18n);if(v)e.textContent=v});document.getElementById('langS').value=l;schedUI();syncURL()}
 // First-ever visit (no ?lang= and no saved preference): guess from the browser's language list.
-function detectBrowserLang(){for(const nl of (navigator.languages||[navigator.language||''])){const code=nl.slice(0,2).toLowerCase();if(AlertLib.LN[code])return code}return null}
+function detectBrowserLang(){return AlertLib.detectLang(navigator.languages||[navigator.language||''])}
 function initLangSelect(){document.getElementById('langS').innerHTML=Object.entries(AlertLib.LANG_META).map(([code,m])=>`<option value="${code}">${m.f} ${X(m.n)}</option>`).join('')}
 function updClock(){const el=document.getElementById('clk');if(el)el.textContent=new Date().toLocaleTimeString('en-GB',{hour12:false})}
 // iOS/iPadOS Safari never fires beforeinstallprompt, so it's the one platform with zero
@@ -467,7 +471,7 @@ window.addEventListener('offline',()=>{document.getElementById('offBar').classLi
 window.addEventListener('online',()=>{document.getElementById('offBar').classList.remove('active');connectSSE()});
 
 // SSE
-function connectSSE(){if(reconTO){clearTimeout(reconTO);reconTO=null}if(es){es.onopen=es.onmessage=es.onerror=null;es.close();es=null}sseOK=false;setSt('connecting','מתחבר...');const ci=document.getElementById('cInfo');ci.className='ci dc';ci.textContent='⏳';try{es=new EventSource(`${API}/api/stream`)}catch{schedR();return}es.onopen=()=>{sseOK=true;ci.className='ci ok';ci.textContent='🟢 SSE';setSt('live','מחובר')};es.onmessage=e=>{try{const d=JSON.parse(e.data);if(d.type==='init'||d.type==='update')procSA(d.alerts||[])}catch{}};es.onerror=()=>{sseOK=false;ci.className='ci dc';ci.textContent='🟡';setSt('disconnected','מנותק');if(es){es.onopen=es.onmessage=es.onerror=null;es.close();es=null}schedR()}}
+function connectSSE(){if(reconTO){clearTimeout(reconTO);reconTO=null}if(es){es.onopen=es.onmessage=es.onerror=null;es.close();es=null}sseOK=false;setSt('connecting','מתחבר...');const ci=document.getElementById('cInfo');ci.className='ci dc';ci.textContent='⏳';try{es=new EventSource(`${API}/api/stream`)}catch{schedR();return}es.onopen=()=>{sseOK=true;ci.className='ci ok';ci.textContent='🟢 SSE';setSt('live','מחובר');checkUpstream()};es.onmessage=e=>{try{const d=JSON.parse(e.data);if(d.type==='init'||d.type==='update')procSA(d.alerts||[])}catch{}};es.onerror=()=>{sseOK=false;ci.className='ci dc';ci.textContent='🟡';setSt('disconnected','מנותק');if(es){es.onopen=es.onmessage=es.onerror=null;es.close();es=null}schedR()}}
 function schedR(){if(reconTO)return;reconTO=setTimeout(()=>{reconTO=null;connectSSE()},3000)}
 function startPoll(){setInterval(async()=>{if(sseOK)return;try{const r=await fetch(`${API}/api/alerts`);const d=await r.json();procSA(d.alerts||[])}catch{}},5000)}
 
@@ -533,7 +537,11 @@ function fSh(s){return AlertLib.formatShelter(s,{imm:t('imm'),sec:t('sec'),min:t
 // Map lib's canonical bucket to the client's CSS-class suffix (thresholds stay single-sourced in lib)
 const SHC_MAP={immediate:'imm',fast:'fast',medium:'med',slow:'slow'};
 function shC(s){return SHC_MAP[AlertLib.shelterClass(s)]}
-function applyF(){flt.r=document.getElementById('fR')?.value||'';flt.t=document.getElementById('fT')?.value||'';flt.time=document.getElementById('fTime')?.value||'all';flt.q=document.getElementById('fQ')?.value.trim()||'';schedUI()}
+// userFilt: a USER-driven filter change (typing in #fQ, changing a select) must re-render the list even while #fQ has focus —
+// renderSB() restores focus/caret itself. refreshCurrentTab() only skips *background* refreshes (SSE ticks) during typing;
+// before this flag that skip also swallowed the user's own keystrokes, so search-as-you-type never filtered until blur.
+let userFilt=false,upDown=false; // upDown: see checkUpstream() — declared here, before renderSB() reads it, to stay clear of the TDZ
+function applyF(){flt.r=document.getElementById('fR')?.value||'';flt.t=document.getElementById('fT')?.value||'';flt.time=document.getElementById('fTime')?.value||'all';flt.q=document.getElementById('fQ')?.value.trim()||'';userFilt=true;schedUI()}
 function clearF(){const a=document.getElementById('fR'),b=document.getElementById('fT'),c=document.getElementById('fTime'),d=document.getElementById('fQ');if(a)a.value='';if(b)b.value='';if(c)c.value='all';if(d)d.value='';applyF()}
 function filterH2(list){const now=Date.now();let cut=0;if(flt.time==='hour')cut=now-36e5;else if(flt.time==='day')cut=now-864e5;else if(flt.time==='week')cut=now-6048e5;const q=flt.q?flt.q.toLowerCase():'';return list.filter(a=>{if(flt.r&&a.region!==flt.r)return false;if(flt.t&&a.typeKey!==flt.t)return false;if(cut&&a.timestamp.getTime()<cut)return false;if(q&&!a.city.toLowerCase().includes(q))return false;return true})}
 
@@ -544,10 +552,13 @@ function renderSB(){const el=document.getElementById('sbC');const all=filterH2(h
 // mid-typing, capture focus + cursor position here and restore them after, or every
 // keystroke would kick focus out of the field (the input node is destroyed and recreated).
 const prevQ=document.getElementById('fQ');const hadFocus=!!prevQ&&document.activeElement===prevQ;const selStart=hadFocus?prevQ.selectionStart:null,selEnd=hadFocus?prevQ.selectionEnd:null;
+// Raw text too: flt.q is .trim()med, so restoring the input from it eats the space the user just typed ("תל " -> "תל" -> "תלאב"),
+// which made every multi-word city ("תל אביב", "באר שבע") impossible to type once the list started re-rendering mid-typing.
+const prevVal=hadFocus?prevQ.value:null;
 let h=`<div class="fbar"><div class="fr"><input class="fs" id="fQ" type="text" list="cityList" placeholder="${X(t('searchPlaceholder'))}" oninput="applyF()" style="flex:1"></div><div class="fr"><select class="fs" id="citySel" onchange="jumpToCity(this.value)" style="flex:1"><option value="">🗺️ קפוץ ליישוב...</option>${citySelOptions()}</select></div><div class="fr"><select class="fs" id="fR" onchange="applyF()"><option value="">כל האזורים</option><option value="צפון">צפון</option><option value="חיפה">חיפה</option><option value="שרון">שרון</option><option value="מרכז">מרכז</option><option value="ירושלים">ירושלים</option><option value="שפלה">שפלה</option><option value="דרום">דרום</option><option value="עוטף עזה">עוטף עזה</option><option value="ערבה">ערבה</option><option value="יו״ש">יו״ש</option></select><select class="fs" id="fT" onchange="applyF()"><option value="">הכל</option><option value="rockets">רקטות</option><option value="uav">כטב״מ</option></select></div><div class="fr"><select class="fs" id="fTime" onchange="applyF()"><option value="all">הכל</option><option value="hour">שעה</option><option value="day">יום</option><option value="week">שבוע</option></select><button class="fc" onclick="clearF()">נקה</button></div></div>`;
-if(!all.length){h+=`<div class="empty"><div class="icon">✅</div><h3>${t(hist.length?'noResults':'allClear')}</h3><p>${t('noAlerts')}</p></div>`}else{if(ac.length)h+=`<div class="st">${t('active')} <span class="cb">${ac.length}</span></div><div class="al">${ac.slice(0,20).map(a=>rItem(a,true)).join('')}</div>`;if(hi.length)h+=`<div class="st">${t('history')} <span class="cb off">${hi.length}</span></div><div class="hl2">${hi.slice(0,30).map(a=>rItem(a,false)).join('')}</div>`}
+if(!all.length){h+=upDown&&!hist.length?`<div class="empty"><div class="icon">⚠️</div><h3>${X(t('upstreamDown'))}</h3></div>`:`<div class="empty"><div class="icon">✅</div><h3>${t(hist.length?'noResults':'allClear')}</h3><p>${t('noAlerts')}</p></div>`}else{if(ac.length)h+=`<div class="st">${t('active')} <span class="cb">${ac.length}</span></div><div class="al">${ac.slice(0,20).map(a=>rItem(a,true)).join('')}</div>`;if(hi.length)h+=`<div class="st">${t('history')} <span class="cb off">${hi.length}</span></div><div class="hl2">${hi.slice(0,30).map(a=>rItem(a,false)).join('')}</div>`}
 h+=donateMini();
-el.innerHTML=h;const a=document.getElementById('fR'),b=document.getElementById('fT'),c=document.getElementById('fTime'),d=document.getElementById('fQ');if(a)a.value=flt.r;if(b)b.value=flt.t;if(c)c.value=flt.time;if(d)d.value=flt.q;
+el.innerHTML=h;const a=document.getElementById('fR'),b=document.getElementById('fT'),c=document.getElementById('fTime'),d=document.getElementById('fQ');if(a)a.value=flt.r;if(b)b.value=flt.t;if(c)c.value=flt.time;if(d)d.value=hadFocus?prevVal:flt.q;
 if(hadFocus&&d){d.focus();try{d.setSelectionRange(selStart,selEnd)}catch{}}}
 function rItem(a,isAct){const sc=X(a.city),sl=shC(a.shelter),sf=fSh(a.shelter),isFav=favs.includes(a.city);let dH='';if(uLoc&&!a.noLoc)dH=`<span class="di">📍 ${distK(uLoc.lat,uLoc.lng,a.lat,a.lng).toFixed(1)} ${t('km')}</span>`;if(a.noLoc)dH+=`<span class="di nl">📍 ${t('unknownLoc')}</span>`;let cdH='';if(isAct&&a.detectedAt){const rem=a.shelter-Math.floor((Date.now()-a.detectedAt)/1000);cdH=`<span class="cd cdt ${rem<=0?'done':''}" data-det="${a.detectedAt}" data-sh="${a.shelter}">${rem>0?`⏳ ${t('remaining')} ${rem}${t('sec')}`:`✓ ${t('passed')}`}</span>`}const click=a.noLoc?'':`onclick="map.flyTo([${a.lat},${a.lng}],12)"`;
 return`<div class="ai ${isAct?'act':''} ${a.noLoc?'noloc':''}" ${click}><div class="ai-h"><div class="ai-c"><button class="fs2 ${isFav?'on':''}" onclick="event.stopPropagation();tglFav('${X(a.city)}')">${isFav?'⭐':'☆'}</button>${a.type.icon} ${sc}</div><div class="ai-t">${fTime(a.timestamp)}</div></div><div class="ai-tp"><span class="td ${a.type.css}"></span>${t(a.typeKey)}${isAct?`<span style="color:var(--red);margin-right:auto">● ${t('active')}</span>`:''}</div><div class="ai-m"><span class="sh ${sl}">⏱️ ${sf}</span>${cdH}${dH}</div></div>`}
@@ -558,7 +569,7 @@ function updStats(){const now=new Date(),ts=new Date(now.getFullYear(),now.getMo
 // Tabs — track currentTab so the 10s refresh interval doesn't clobber the user's chosen tab
 let currentTab='alerts';
 function swTab(tab,el){if(tab!=='history')stopReplay();currentTab=tab;document.querySelectorAll('.stab').forEach(t=>t.classList.remove('active'));el.classList.add('active');if(tab==='alerts')renderSB();else if(tab==='stats')renderStatTab();else if(tab==='history')renderHistoryTab();else if(tab==='updates')renderUpdatesTab();else renderAboutTab();if(tab==='stats')schedTL()}
-function refreshCurrentTab(){if(currentTab==='alerts'){if(document.activeElement?.id==='fQ')return;renderSB()}else if(currentTab==='history'){if(document.activeElement?.id==='hQ')return;renderHistoryTab()}else if(currentTab==='stats'){/* stats tab repaints itself via schedTL */}}
+function refreshCurrentTab(){if(currentTab==='alerts'){if(document.activeElement?.id==='fQ'&&!userFilt)return;userFilt=false;renderSB()}else if(currentTab==='history'){if(document.activeElement?.id==='hQ')return;renderHistoryTab()}else if(currentTab==='stats'){/* stats tab repaints itself via schedTL */}}
 function renderStatTab(){if(!preloadDone&&hist.length===0){document.getElementById('sbC').innerHTML='<div class="sg"><div class="skel skel-card"></div><div class="skel skel-card"></div><div class="skel skel-card"></div><div class="skel skel-card"></div></div><div class="skel skel-tl"></div><div class="skel skel-tl"></div><div class="skel skel-row"></div><div class="skel skel-row"></div><div class="skel skel-row"></div>';return}const now=new Date(),ts=new Date(now.getFullYear(),now.getMonth(),now.getDate()),ha=new Date(now-36e5);const rk=hist.filter(a=>a.typeKey==='rockets'),uav=hist.filter(a=>a.typeKey==='uav'),lh=hist.filter(a=>a.timestamp>=ha);const regions={};hist.forEach(a=>{regions[a.region]=(regions[a.region]||0)+1});const anomalyHtml=anomalyBadge();document.getElementById('sbC').innerHTML=`${anomalyHtml}<div class="sg"><div class="sc2 r"><div class="v">${rk.length}</div><div class="l">${t('rockets')}</div></div><div class="sc2 o"><div class="v">${uav.length}</div><div class="l">${t('uav')}</div></div><div class="sc2 y"><div class="v">${Object.keys(regions).length}</div><div class="l">אזורים</div></div><div class="sc2 g"><div class="v">${lh.length}</div><div class="l">שעה</div></div></div><div class="tls"><div class="tlt"><span>📊 24h</span><span class="m" id="tlM">0</span></div><div class="tlw"><canvas id="tlC"></canvas></div></div><div class="tls"><div class="tlt"><span>📈 ${t('todayL')} / ${t('yesterdayL')}</span><span class="m" id="compM"></span></div><div class="tlw"><canvas id="compC"></canvas></div></div><div class="rs">${Object.entries(regions).sort((a,b)=>b[1]-a[1]).map(([r,c])=>`<div class="rsi"><span>${X(r)}</span><span class="rc">${c}</span></div>`).join('')}</div><div class="eb"><button class="ebt" onclick="expCSV()">📄 CSV</button><button class="ebt" onclick="expJSON()">📋 JSON</button><button class="ebt" onclick="expGeoJSON()">🌍 GeoJSON</button><button class="ebt" onclick="expKML()">🗺️ KML</button></div>${donateMini()}`;setTimeout(()=>{drawTL();drawComp()},50)}
 function donateCard(){if(!DONATE_LINKS.length)return'';const en=AlertLib.LN.en,bi=lang!=='en';return`<div class="dn"><div class="dn-t">💛 ${t('donate')}${bi?` · ${en.donate}`:''}</div><div class="dn-d">${t('donateD')}</div>${bi?`<div class="dn-d" style="margin-top:-3px">${en.donateD}</div>`:''}<div class="dn-row">${DONATE_LINKS.map(l=>`<a class="dn-b ${l.cls}" href="${X(l.url)}" target="_blank" rel="noopener">${l.i} ${X(l.n)}</a>`).join('')}</div></div>`}
 // Compact variant shown in tabs other than About (which keeps the full donateCard)
@@ -581,7 +592,7 @@ async function renderHistoryTab(){
   const selStart=hadFocus?prevQ.selectionStart:null,selEnd=hadFocus?prevQ.selectionEnd:null;
   if(!prevQ)el.innerHTML='<div class="sg"><div class="skel skel-card"></div></div><div class="skel skel-row"></div><div class="skel skel-row"></div><div class="skel skel-row"></div>';
   const all=await gDB();
-  if(mySeq!==historySeq)return;
+  if(mySeq!==historySeq||currentTab!=='history')return; // also bail if the user switched tabs while gDB() was pending — a late render would paint the history list under the new tab
   // IndexedDB records (sDB()) only persist typeKey, not the full type object (icon/css/color) —
   // reconstruct it here, same fallback rItem()/addMrk() rely on elsewhere.
   all.forEach(a=>{if(!(a.timestamp instanceof Date))a.timestamp=new Date(a.timestamp);if(!a.type)a.type=TM[a.typeKey]||TM.rockets});
@@ -600,10 +611,11 @@ async function renderHistoryTab(){
   if(!shown.length)h+=`<div class="empty"><div class="icon">📭</div><h3>${t('noResults')}</h3></div>`;
   else{h+=`<div class="st">${t('history')} <span class="cb off">${list.length}</span></div><div class="hl2">${shown.map(a=>rItem(a,false)).join('')}</div>`;if(list.length>shown.length)h+=`<div style="text-align:center;font-size:9px;color:var(--txtm);padding:8px">${shown.length} / ${list.length}</div>`}
   h+=donateMini();
+  const rawQ=hadFocus?document.getElementById('hQ')?.value:undefined; // raw text — flt.q is trimmed, and restoring it would eat a just-typed space (same bug as #fQ)
   el.innerHTML=h;
   historyReplayList=replayable.slice().reverse(); // oldest first, for chronological playback
   const qEl=document.getElementById('hQ'),rEl=document.getElementById('hRange');
-  if(qEl)qEl.value=flt.q;
+  if(qEl)qEl.value=rawQ!==undefined?rawQ:flt.q;
   if(rEl)rEl.value=histRange;
   if(hadFocus&&qEl){qEl.focus();try{qEl.setSelectionRange(selStart,selEnd)}catch{}}
 }
@@ -636,6 +648,7 @@ function stopReplay(){
 // Updates tab — mirrors CHANGELOG.md's newest entries (update this array by hand on release,
 // same as the CHANGELOG.md file; kept short on purpose, full history lives in the repo).
 const CHANGES=[
+  {v:'1.6.3',d:'2026-10-16',items:['🐛 קריטי: כשהשרת לא הצליח להגיע למקור הנתונים של פיקוד העורף (למשל באתר ה-Vercel — פיקוד העורף חוסם כתובות IP מחוץ לישראל), המסך המשיך להציג "מחובר" ו"הכל שקט". עכשיו מוצג באנר אזהרה ברור, ו-/api/health מדווח degraded עם upstream_ok:false','🐛 תוקן: חיפוש עיר בטאב האזעקות לא סינן את הרשימה תוך כדי הקלדה — רק אחרי יציאה מהשדה','🐛 תוקן: מעבר מהיר מטאב ההיסטוריה לטאב אחר (בעיקר עם היסטוריה גדולה) הציג את רשימת ההיסטוריה תחת הטאב השני','🐛 תוקן: זיהוי שפת הדפדפן לא זיהה פיליפינית (fil), ולכן משתמשים קיבלו עברית במקום טאגלוג; נוספה גם תמיכה בקוד הישן iw לעברית','🤖 בוט טלגרם: escape ל-HTML בשמות ערים (עיר עם התו < או & הייתה מכשילה את כל ההודעה), ניסיון חוזר כשהשליחה נכשלת, והודעות שגיאה קריאות','🧪 הטסטים כבר לא כותבים אזעקות מדומות להיסטוריה ולוגים האמיתיים שלך (משתנה הסביבה DATA_DIR)']},
   {v:'1.6.2',d:'2026-09-02',items:['🐛 תוקן: v1.6.1 החליף את ספק אריחי המפה (CARTO ← Esri) אבל לא ניקה את מטמון האריחים הנפרד ב-Service Worker — מבקרים שראו את ה-watermark "API KEY REQUIRED" לפני התיקון המשיכו לקבל אותם אריחים ישנים מהמטמון גם אחריו. גם נוקה קוד מת (allowlist ישן ל-CARTO ב-CSP/SW) ונוסף גבול זום לשכבות ה-Canvas כדי שזום עמוק מאוד לא יבקש אריחים לא-קיימים']},
   {v:'1.6.1',d:'2026-08-30',items:['🐛 קריטי: המפה הרגילה (לא-לוויין) הראתה "API KEY REQUIRED" על כל אריח — הספק הקודם (CartoDB) התחיל לדרוש מפתח API; הוחלף בשכבת Esri חינמית וללא מפתח (בהיר וכהה)','🐛 תוקן: רק לטאב "אזעקות" הייתה תווית טקסט גלויה — שאר 4 הטאבים היו אייקון בלבד; עכשיו לכולם יש תווית גלויה ומתורגמת מתחת לאייקון','🖼️ תוקן: הבאנרים הממותגים של v1.5.0/v1.6.0 עדיין הציגו את מספרי הגרסה הישנים (v3.5.0/v3.6.0) בתמונה עצמה']},
   {v:'1.6.0',d:'2026-08-30',items:['🐛 קריטי: תוקן קריסה ארוכת-טווח בטאב היסטוריה — רשומות מ-IndexedDB חסרו שדה שהתצוגה דרשה, והטאב נתקע על טעינה לכל משתמש עם היסטוריה אמיתית שמורה','🗺️ מקלטים אמיתיים נוספו לירושלים ולחיפה (בנוסף לתל אביב), עם קישורי ניווט Waze/Google Maps מכל מקלט על המפה','▶ Replay בטאב היסטוריה — צפייה כרונולוגית באזעקות ישירות על המפה','🔐 2FA אופציונלי לאדמין (קוד TOTP) + יומן ביקורת התחברויות','🌍 ייצוא GeoJSON/KML להיסטוריה, פאג\'ינציה אמיתית ל-API, מדיניות שמירת היסטוריה ניתנת להגדרה','🌐 זיהוי שפה אוטומטי מהדפדפן בביקור ראשון (במקום נפילה ישירה לעברית)','🔴 באדג׳ מספר אזעקות פעילות על אייקון האפליקציה, הודעת התקנה ל-iPhone/iPad','🧪 בדיקות E2E בדפדפן אמיתי (Playwright) בנוסף ליחידה ואינטגרציה','📉 דיווח שגיאות קליינט לשרת, ותרשים ארכיטקטורה חדש ב-README']},
@@ -688,6 +701,11 @@ function showPN(a){if(!pushOn||Notification.permission!=='granted')return;if(doc
 
 // Sound
 function setSt(s,txt){document.getElementById('sBadge').className=`badge ${s}`;document.getElementById('sText').textContent=txt}
+// Upstream health. "מחובר" only means THIS server is reachable over SSE — the server's own feed from OREF can be dead or blocked
+// (OREF geo-blocks non-Israeli datacenter IPs, e.g. Vercel) while the page happily shows "all clear". /api/health reports it as
+// upstream_ok:false; show a persistent warning instead of a false calm. A failed fetch (server unreachable) leaves the state alone:
+// the connection badge already covers that case.
+async function checkUpstream(){try{const r=await fetch(`${API}/api/health`,{cache:'no-store'});if(!r.ok)return;const h=await r.json();const was=upDown;upDown=h.upstream_ok===false;document.getElementById('upBar').classList.toggle('active',upDown);if(was!==upDown)schedUI()}catch{}}
 function getAC(){if(!actx||actx.state==='closed')try{actx=new(window.AudioContext||window.webkitAudioContext)()}catch{return null};if(actx.state==='suspended')actx.resume().catch(()=>{});return actx}
 // Per-type sound + vibration profiles. Rockets = highest urgency; UAV slightly lower; quake/tsunami distinctive
 const ALERT_PROFILES={
@@ -765,7 +783,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   // Refresh snooze status display every minute so the countdown stays accurate
   setInterval(updSnoozeUI,60000);
   if(localStorage.getItem('alertmap-push')==='on'&&'Notification' in window&&Notification.permission==='granted'){pushOn=true;setTimeout(()=>wpSub(),1500)}
-  updPush();connectSSE();startPoll();regSW();
+  updPush();connectSSE();startPoll();regSW();checkUpstream();setInterval(checkUpstream,30000);
   preloadHistory();
   loadExternalShelters();
   initPTR();
