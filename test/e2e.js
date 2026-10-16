@@ -49,7 +49,9 @@ before(async () => {
     try { await fetch(`${ORIGIN}/api/health`); break; } catch { await new Promise(r => setTimeout(r, 250)); }
   }
   browser = await chromium.launch({ channel: 'chrome', headless: true });
-  page = await browser.newPage();
+  // Pin the browser language: since v1.6.0 the app picks its UI language from navigator.languages, so an en-US CI runner
+  // and a Hebrew developer machine would otherwise see different text (the v1.6.3 banner assertion failed on CI only).
+  page = await browser.newPage({ locale: 'he-IL' });
 });
 
 after(async () => {
@@ -236,7 +238,11 @@ test('shows a warning banner when the server says its OREF feed is down (v1.6.3 
     await page.goto(ORIGIN, { waitUntil: 'load' });
     await page.waitForSelector('#upBar.active', { timeout: 5000 });
     assert.equal(await page.locator('#upBar').isVisible(), true, 'banner is in the DOM but not visible');
-    assert.ok((await page.locator('#upBar').textContent()).includes('פיקוד העורף'), 'banner has no explanatory text');
+    // Compare against the translation for whatever language is active (not a hard-coded Hebrew substring), so the
+    // assertion holds on any machine locale.
+    const shown = await page.evaluate(() => ({ text: document.getElementById('upBar').textContent, expected: AlertLib.LN[document.documentElement.lang].upstreamDown }));
+    assert.equal(shown.text, shown.expected, 'banner text is not the translated upstreamDown string');
+    assert.ok(shown.text.length > 30, 'banner has no explanatory text');
     up = true; // feed recovers
     await page.evaluate(() => checkUpstream());
     // waitForFunction, not waitForSelector: the default 'visible' state never matches a display:none element.

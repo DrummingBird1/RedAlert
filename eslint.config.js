@@ -69,6 +69,7 @@ module.exports = [
       globals: {
         tglShl: 'readonly',
         checkUpstream: 'readonly',
+        AlertLib: 'readonly',
       },
     },
   },
