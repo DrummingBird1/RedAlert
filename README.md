@@ -137,9 +137,13 @@ tzafir/
 │   └── smoke.mjs           # בדיקת smoke לאתר פרוס (חובה לפני תיוג release)
 ├── docs/
 │   ├── openapi.yaml        # OpenAPI 3.0.3 spec (מוגש ב-/api/spec)
+│   ├── HANDOFF.md          # מצב נוכחי + משימות פתוחות (לסוכני קוד: Claude/Codex/Grok)
+│   ├── ARCHITECTURE.md     # עומק טכני (נטען לפי צורך)
 │   └── screenshot.jpg      # תמונת ה-README
 ├── release-banners/        # באנר ממותג לכל גרסה (vX.Y.Z.png)
 ├── .github/                # CI + deploy workflows, CONTRIBUTING.md, SECURITY.md, Dependabot, issue/PR templates
+├── AGENTS.md               # הוראות עבודה לסוכני קוד (Codex/Grok/Cursor/...) — מקור האמת
+├── CLAUDE.md               # הפניה ל-AGENTS.md (Claude Code)
 ├── CHANGELOG.md            # היסטוריית גרסאות
 ├── README.md               # אתה פה
 ├── LICENSE                 # MIT

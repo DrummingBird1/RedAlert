@@ -5,6 +5,9 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Changed
+- **Agent docs restructured for multi-agent use (Claude Code / Codex / Grok) and for token cost** — no runtime change, no version bump. xAI's Grok Build reads both `AGENTS.md` and `CLAUDE.md` from the repo root, and they were identical 41KB copies (~82KB loaded per session). `AGENTS.md` is now the single source of truth (~22KB: iron rules, critical constraints, commands, release flow, cheap-code-reading tips), `CLAUDE.md` is a 192-byte pointer (`@AGENTS.md`), the long technical reference moved to `docs/ARCHITECTURE.md` (read on demand), and `docs/HANDOFF.md` holds current state, open tasks (NAS hosting, i18n completion, ...) and user preferences. All original content preserved (checked line by line).
+
 ## [1.6.5]
 
 ### Fixed
