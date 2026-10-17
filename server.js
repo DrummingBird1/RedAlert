@@ -16,7 +16,12 @@ const PORT = process.env.PORT || 3000;
 // behavior); tests point it at a temp dir so they never write mock alerts into the developer's real history/logs.
 const DATA_DIR = process.env.DATA_DIR || __dirname;
 const APP_V = (() => { try { return require('./package.json').version; } catch { return ''; } })();
-const AlertLib = require('./lib.js'); // same file the browser loads; here only for the pure upstreamOk() decision
+// lib.js is the file the browser loads; the server uses it only for the pure upstreamOk() decision. It is read from DISK and
+// evaluated — NOT require()d. Reason (v1.6.4 regression): on Vercel a require('./lib.js') makes the bundler treat lib.js as a
+// bundled module instead of a deployed asset, so the existing GET /lib.js route (which reads the same file from disk) started
+// returning 404 — and since the client loads lib.js synchronously first, the whole app died: no map, nothing. Reading it the same
+// way /lib.js is served means: if /lib.js works, this works. Null if unreadable; upstreamOk() then degrades conservatively.
+const AlertLib = (() => { try { const m = { exports: {} }; new Function('module', 'exports', fs.readFileSync(path.join(__dirname, 'lib.js'), 'utf8'))(m, m.exports); return m.exports; } catch { return null; } })();
 const LOG_DIR = path.join(DATA_DIR, 'logs');
 const LOG_FILE = path.join(LOG_DIR, 'alerts.log');
 const SERVER_START = Date.now();
@@ -252,7 +257,7 @@ function orefFail() {
 // Is the data feed (OREF, or the fallback) actually flowing? Exposed on /api/health so a host that CAN'T reach OREF (it
 // geo-blocks non-Israeli datacenter IPs — e.g. Vercel) shows up as degraded instead of reporting "ok" while silently never
 // delivering a single alert. The decision itself lives in lib.js (pure, unit-tested with injected times): see AlertLib.upstreamOk.
-function upstreamOk() { return AlertLib.upstreamOk({ now: Date.now(), lastPoll, start: SERVER_START, fails: orefFails }); }
+function upstreamOk() { return AlertLib ? AlertLib.upstreamOk({ now: Date.now(), lastPoll, start: SERVER_START, fails: orefFails }) : (lastPoll > 0 && Date.now() - lastPoll <= 30000); }
 function schedulePoll() { pollTimer = setTimeout(async () => { await pollAlerts(); schedulePoll(); }, nextPollDelay); }
 setInterval(() => { if (!useFB) return; fetchUrl(OREF_URL).then(({ status }) => { if (status === 200) { useFB = false; orefFails = 0; fbIdx = 0; nextPollDelay = POLL_BASE_MS; } }).catch(() => {}); }, 60000);
 

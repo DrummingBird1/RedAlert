@@ -120,13 +120,46 @@ function runSSECheck() {
             assert(Array.isArray(evt.alerts), 'SSE init: alerts is array');
             assert(evt.alerts.some(a => a.city === 'שדרות'), 'SSE init: includes שדרות');
             sseReq.destroy();
-            runHealthCheck();
+            runLibCheck();
           }
         } catch {}
       }
     });
   });
   sseReq.on('error', e => { console.error(`  ❌ SSE: ${e.message}`); failed++; cleanup(); });
+}
+
+// ── Step 4b: /lib.js must be served AND usable — the client loads it synchronously before its own script, so if it 404s the
+// whole app is dead (no map, nothing). v1.6.4 shipped exactly that on Vercel; no test looked at /lib.js until now.
+function runLibCheck() {
+  http.get(`${ORIGIN}/lib.js`, res => {
+    let data = '';
+    res.on('data', c => data += c);
+    res.on('end', () => {
+      try {
+        assert(res.statusCode === 200, `/lib.js: HTTP 200 (got ${res.statusCode})`);
+        assert(/javascript/.test(res.headers['content-type'] || ''), `/lib.js: javascript content-type (${res.headers['content-type']})`);
+        const m = { exports: {} };
+        new Function('module', 'exports', data)(m, m.exports); // evaluate the served bytes exactly as a script would
+        assert(Object.keys(m.exports.LN || {}).length >= 14, '/lib.js: evaluates to an AlertLib with 14+ languages');
+        assert(typeof m.exports.upstreamOk === 'function', '/lib.js: exposes upstreamOk()');
+      } catch (e) {
+        console.error(`  ❌ /lib.js: ${e.message}`); failed++;
+      }
+      runSmokeCheck();
+    });
+  }).on('error', e => { console.error(`  ❌ /lib.js fetch: ${e.message}`); failed++; cleanup(); });
+}
+
+// ── Step 4c: scripts/smoke.mjs (the post-deploy check) must itself pass against a healthy local server ──
+function runSmokeCheck() {
+  const p = spawn('node', ['scripts/smoke.mjs', ORIGIN], { cwd: ROOT, stdio: 'pipe' });
+  let out = ''; p.stdout.on('data', c => out += c); p.stderr.on('data', c => out += c);
+  p.on('close', code => {
+    assert(code === 0, `scripts/smoke.mjs passes against a healthy server (exit ${code})`);
+    if (code !== 0) console.error(out.split('\n').filter(l => /❌/.test(l)).join('\n'));
+    runHealthCheck();
+  });
 }
 
 function runHealthCheck() {

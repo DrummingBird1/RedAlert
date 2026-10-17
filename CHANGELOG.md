@@ -5,6 +5,24 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+## [1.6.5]
+
+### Fixed
+- **v1.6.4 broke the live Vercel site completely — no map, no UI.** `GET /lib.js` returned 404 there. The client
+  loads `lib.js` synchronously before its own script, so without it `AlertLib` is undefined and the app dies on its
+  first line. Cause: v1.6.4 added `require('./lib.js')` to `server.js`; on Vercel that makes the bundler treat
+  `lib.js` as a bundled module instead of a deployed asset, so the existing `/lib.js` route (which reads the same
+  file from disk) no longer found it. `server.js` now reads `lib.js` from disk and evaluates it — the same read
+  `/lib.js` is served with, so if the route works this works. All suites were green for v1.6.4; none looked at
+  `/lib.js`, and the deployed site was only checked via `/api/health`.
+
+### Added
+- `scripts/smoke.mjs <url>` — post-deploy check of what a browser needs from a DEPLOYED origin (page, version, `lib.js`
+  that actually *evaluates* to a usable `AlertLib`, `sw.js`, manifest, config, spec, health). Run against the live
+  site it fails on the v1.6.4 breakage. Now a required step before tagging a release (CLAUDE.md).
+- Integration test: `/lib.js` is served 200 as JavaScript and evaluates to an `AlertLib` with 14+ languages; the
+  smoke script is run against the test server and must pass (16 → 21 assertions).
+
 ## [1.6.4]
 
 ### Fixed

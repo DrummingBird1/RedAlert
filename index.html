@@ -288,7 +288,7 @@ let clientErrSent=0;
 function reportClientError(message,stack){if(clientErrSent>=5)return;clientErrSent++;try{fetch(`${API}/api/client-error`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:String(message||'').slice(0,500),stack:String(stack||'').slice(0,2000),url:location.href})}).catch(()=>{})}catch{}}
 window.addEventListener('error',e=>reportClientError(e.message,e.error?.stack));
 window.addEventListener('unhandledrejection',e=>reportClientError('unhandledrejection: '+String(e.reason?.message||e.reason),e.reason?.stack));
-const APP_VERSION='1.6.4'; // bump alongside package.json; drives the "what's new" popup in checkWhatsNew()
+const APP_VERSION='1.6.5'; // bump alongside package.json; drives the "what's new" popup in checkWhatsNew()
 // Donation links — rendered as a row of buttons everywhere the donate card/mini appears. Empty array hides them.
 const DONATE_LINKS=[
   {n:'Ko-fi',i:'☕',url:'https://ko-fi.com/idanlights',cls:'kofi'},
@@ -648,6 +648,7 @@ function stopReplay(){
 // Updates tab — mirrors CHANGELOG.md's newest entries (update this array by hand on release,
 // same as the CHANGELOG.md file; kept short on purpose, full history lives in the repo).
 const CHANGES=[
+  {v:'1.6.5',d:'2026-10-17',items:['🐛 קריטי: גרסה 1.6.4 שברה את האתר ב-Vercel לגמרי — אין מפה ואין ממשק. הקובץ lib.js (שהאפליקציה טוענת לפני הכול) הוחזר שם כ-404, כי השרת התחיל לטעון אותו עם require() ו-Vercel מפסיקה לפרוס אותו כקובץ. עכשיו השרת קורא אותו מהדיסק, בדיוק כמו שהוא מגיש אותו','🧪 נוסף סקריפט smoke שבודק אתר פרוס (scripts/smoke.mjs), וטסט אינטגרציה ש-lib.js מוגש ועובד — עד היום אף בדיקה לא הסתכלה על הקובץ הזה']},
   {v:'1.6.4',d:'2026-10-16',items:['🐛 קריטי: התיקון של v1.6.3 לא עבד באתר החי ב-Vercel — השרת שם עדיין דיווח "תקין" (upstream_ok:true) למרות שמעולם לא קיבל אזעקה. Vercel מקפיא את הטיימרים בין בקשות, אז לולאת הסקירה כמעט לא רצה וספירת הכשלונות לא הגיעה לסף. עכשיו גם 30 שניות מההפעלה בלי סקירה מוצלחת אחת נחשבות "לא תקין" — והבאנר מופיע']},
   {v:'1.6.3',d:'2026-10-16',items:['🐛 קריטי: כשהשרת לא הצליח להגיע למקור הנתונים של פיקוד העורף (למשל באתר ה-Vercel — פיקוד העורף חוסם כתובות IP מחוץ לישראל), המסך המשיך להציג "מחובר" ו"הכל שקט". עכשיו מוצג באנר אזהרה ברור, ו-/api/health מדווח degraded עם upstream_ok:false','🐛 תוקן: חיפוש עיר בטאב האזעקות לא סינן את הרשימה תוך כדי הקלדה — רק אחרי יציאה מהשדה','🐛 תוקן: מעבר מהיר מטאב ההיסטוריה לטאב אחר (בעיקר עם היסטוריה גדולה) הציג את רשימת ההיסטוריה תחת הטאב השני','🐛 תוקן: זיהוי שפת הדפדפן לא זיהה פיליפינית (fil), ולכן משתמשים קיבלו עברית במקום טאגלוג; נוספה גם תמיכה בקוד הישן iw לעברית','🤖 בוט טלגרם: escape ל-HTML בשמות ערים (עיר עם התו < או & הייתה מכשילה את כל ההודעה), ניסיון חוזר כשהשליחה נכשלת, והודעות שגיאה קריאות','🧪 הטסטים כבר לא כותבים אזעקות מדומות להיסטוריה ולוגים האמיתיים שלך (משתנה הסביבה DATA_DIR)']},
   {v:'1.6.2',d:'2026-09-02',items:['🐛 תוקן: v1.6.1 החליף את ספק אריחי המפה (CARTO ← Esri) אבל לא ניקה את מטמון האריחים הנפרד ב-Service Worker — מבקרים שראו את ה-watermark "API KEY REQUIRED" לפני התיקון המשיכו לקבל אותם אריחים ישנים מהמטמון גם אחריו. גם נוקה קוד מת (allowlist ישן ל-CARTO ב-CSP/SW) ונוסף גבול זום לשכבות ה-Canvas כדי שזום עמוק מאוד לא יבקש אריחים לא-קיימים']},

@@ -133,7 +133,8 @@ tzafir/
 │   ├── integration.js      # אינטגרציה ברמת API: mock OREF → server → SSE
 │   └── e2e.js               # E2E בדפדפן אמיתי (Playwright)
 ├── scripts/
-│   └── release-banner.mjs  # מייצר את הבאנר הממותג לכל release
+│   ├── release-banner.mjs  # מייצר את הבאנר הממותג לכל release
+│   └── smoke.mjs           # בדיקת smoke לאתר פרוס (חובה לפני תיוג release)
 ├── docs/
 │   ├── openapi.yaml        # OpenAPI 3.0.3 spec (מוגש ב-/api/spec)
 │   └── screenshot.jpg      # תמונת ה-README
