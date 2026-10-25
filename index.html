@@ -263,7 +263,7 @@ html.embed .defense.below-banner{top:38px!important}
   </div>
 </div>
 <div class="banner" id="banner" role="alert" aria-live="assertive"><span>⚠️</span><span id="banTxt">צבע אדום</span><span>⚠️</span></div>
-<div class="defense" id="defP" role="alert"><span aria-hidden="true">🛡️</span><div class="defense-t"><strong>היכנס למרחב מוגן עכשיו!</strong><small>ממ״ד, מקלט, או חדר מדרגות פנימי</small></div><button class="safe-btn" onclick="shareSafe()" aria-label="שלח הודעה שאני בסדר">✓ אני בסדר</button><div class="defense-cd" id="defCd" aria-hidden="true"></div></div>
+<div class="defense" id="defP" role="alert"><span aria-hidden="true">🛡️</span><div class="defense-t"><strong data-i18n="goShelter">היכנס למרחב מוגן עכשיו!</strong><small data-i18n="shelterWhere">ממ״ד, מקלט, או חדר מדרגות פנימי</small></div><button class="safe-btn" onclick="shareSafe()" aria-label="שלח הודעה שאני בסדר" data-i18n-aria="imSafeAria" data-i18n="imSafe">✓ אני בסדר</button><div class="defense-cd" id="defCd" aria-hidden="true"></div></div>
 <div class="offline" id="offBar">📵 אין חיבור — נתונים מהמטמון</div>
 <div class="upstream" id="upBar" role="alert" data-i18n="upstreamDown">⚠️ אין חיבור למקור הנתונים של פיקוד העורף — ייתכן שאזעקות לא יוצגו. פעלו לפי האפליקציה הרשמית של פיקוד העורף.</div>
 <div class="overlay" id="overlay"></div>
@@ -308,7 +308,7 @@ let lang=URL_PARAMS.get('lang')||localStorage.getItem('alertmap-lang')||detectBr
 function syncURL(){const p=new URLSearchParams(location.search);if(lang!=='he')p.set('lang',lang);else p.delete('lang');if(theme==='light')p.set('theme',theme);else p.delete('theme');const ns=p.toString();const nu=location.pathname+(ns?'?'+ns:'');if(nu!==location.pathname+location.search)history.replaceState(null,'',nu)}
 async function shareLink(){const u=location.href;try{if(navigator.share){await navigator.share({url:u,title:document.title})}else if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(u);toast('🔗 הקישור הועתק')}else{prompt('העתק:',u)}}catch{}}
 function t(k){return(LN[lang]&&LN[lang][k])||LN.he[k]||k}
-function setLang(l){lang=l;localStorage.setItem('alertmap-lang',l);document.documentElement.lang=l;document.documentElement.dir=AlertLib.isRTL(l)?'rtl':'ltr';document.querySelectorAll('[data-i18n]').forEach(e=>{const v=t(e.dataset.i18n);if(v)e.textContent=v});document.getElementById('langS').value=l;schedUI();syncURL()}
+function setLang(l){lang=l;localStorage.setItem('alertmap-lang',l);document.documentElement.lang=l;document.documentElement.dir=AlertLib.isRTL(l)?'rtl':'ltr';document.querySelectorAll('[data-i18n]').forEach(e=>{const v=t(e.dataset.i18n);if(v)e.textContent=v});document.querySelectorAll('[data-i18n-aria]').forEach(e=>e.setAttribute('aria-label',t(e.dataset.i18nAria)));document.getElementById('langS').value=l;schedUI();syncURL()}
 // First-ever visit (no ?lang= and no saved preference): guess from the browser's language list.
 function detectBrowserLang(){return AlertLib.detectLang(navigator.languages||[navigator.language||''])}
 function initLangSelect(){document.getElementById('langS').innerHTML=Object.entries(AlertLib.LANG_META).map(([code,m])=>`<option value="${code}">${m.f} ${X(m.n)}</option>`).join('')}
@@ -747,7 +747,7 @@ function initPTR(){const sheet=document.getElementById('mSheet'),ind=document.ge
   sheet.addEventListener('touchend',()=>{if(!ptrActive)return;const dist=ptrDist;ptrActive=false;if(dist>=THRESH&&!ptrRefreshing){ptrRefreshing=true;ind.classList.add('spin');ind.style.transform='translateX(-50%) translateY(10px)';manualRefresh();setTimeout(()=>{ptrRefreshing=false;ptrReset()},700)}else{ptrReset()}});
 }
 // "I'm safe" — opens device's share sheet (or WhatsApp fallback) with a pre-filled status message
-async function shareSafe(){const time=new Date().toLocaleTimeString(lang==='he'?'he-IL':lang==='ar'?'ar-SA':lang==='ru'?'ru-RU':'en-US',{hour:'2-digit',minute:'2-digit'});const msg=lang==='en'?`✓ I'm safe (${time})`:lang==='ar'?`✓ أنا بأمان (${time})`:lang==='ru'?`✓ Я в безопасности (${time})`:`✓ אני בסדר (${time})`;if(navigator.share){try{await navigator.share({text:msg});return}catch{}}window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`,'_blank','noopener')}
+async function shareSafe(){const time=new Date().toLocaleTimeString(lang==='he'?'he-IL':lang==='ar'?'ar-SA':lang==='ru'?'ru-RU':'en-US',{hour:'2-digit',minute:'2-digit'});const msg=`${t('imSafe')} (${time})`;if(navigator.share){try{await navigator.share({text:msg});return}catch{}}window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`,'_blank','noopener')}
 function fTime(d){if(!(d instanceof Date)||isNaN(d))return'--:--';return d.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}
 function toast(msg,severity){const c=document.getElementById('tBox');while(c.children.length>=3)c.removeChild(c.firstChild);const t=document.createElement('div');t.className='t'+(severity?' '+severity:'');t.setAttribute('role',severity==='error'?'alert':'status');t.textContent=msg;c.appendChild(t);const ttl=severity==='error'?5000:3000;setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity .3s';setTimeout(()=>{try{t.remove()}catch{}},300)},ttl)}
 function regSW(){if(!('serviceWorker' in navigator))return;window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js').catch(()=>{})})}

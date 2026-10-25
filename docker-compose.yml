@@ -8,6 +8,9 @@ services:
       - "${PORT:-3000}:3000"
     environment:
       - PORT=3000
+      # כל מצב הריצה (לוגים, VAPID, push, snapshot) נשמר ב-/app/data -> ./data על המארח
+      - DATA_DIR=/app/data
+      - TZ=Asia/Jerusalem
       - ADMIN_USER=${ADMIN_USER:-admin}
       # Leave ADMIN_PASS unset to let the server generate a random one (printed in logs),
       # or set it in a .env file / your shell for a stable password.
@@ -17,7 +20,6 @@ services:
       - TELEGRAM_CHANNEL=${TELEGRAM_CHANNEL:-}
       - HEALTH_WEBHOOK=${HEALTH_WEBHOOK:-}
     volumes:
-      - ./logs:/app/logs
       - ./data:/app/data
     restart: unless-stopped
     logging:

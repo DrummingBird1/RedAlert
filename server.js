@@ -339,7 +339,7 @@ const MANIFEST = JSON.stringify({ name: 'צפיר', short_name: 'צפיר', desc
 // was left at v1, so anyone who'd visited before that fix kept their watermarked CARTO tiles cached
 // indefinitely. Bumping it now actually clears them.
 const SW = `
-const CN='red-alert-v18';
+const CN='red-alert-v19';
 const TILE='red-alert-tiles-v2';
 const AS=['/','/index.html','/lib.js','/manifest.json','/icon.svg'];
 const CDN=['https://unpkg.com/leaflet@1.9.4/dist/leaflet.css','https://unpkg.com/leaflet@1.9.4/dist/leaflet.js','https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css','https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css','https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js'];
