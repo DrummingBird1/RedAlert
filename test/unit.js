@@ -40,6 +40,9 @@ describe('i18n completeness', () => {
     test(`${l}: has a LANG_META entry`, () => assert.ok(lib.LANG_META[l], `LANG_META.${l} missing`));
     test(`${l}: has a TTS_LOCALE entry`, () => assert.ok(lib.TTS_LOCALE[l], `TTS_LOCALE.${l} missing`));
   }
+  test('rescue instruction is translated (not Hebrew) in every non-he language', () => {
+    for (const l of Object.keys(lib.LN).filter(x => x !== 'he')) for (const k of ['goShelter', 'shelterWhere', 'imSafe', 'imSafeAria']) assert.ok(lib.LN[l][k] && !/[֐-׿]/.test(lib.LN[l][k]), l + '.' + k + ' missing or Hebrew');
+  });
   test('LANG_META has no orphan entries beyond LN', () => {
     for (const l of Object.keys(lib.LANG_META)) assert.ok(lib.LN[l], `LANG_META has orphan ${l}`);
   });
