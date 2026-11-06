@@ -2,7 +2,7 @@
 
 מדריך עבודה לסוכני קוד (Codex, Grok, Claude Code, Cursor...). **זה מקור האמת היחיד** — `CLAUDE.md` רק מפנה לכאן.
 
-> **קרא קודם:** [docs/HANDOFF.md](docs/HANDOFF.md) — מצב נוכחי, משימות פתוחות והעדפות המשתמש (קצר).
+> **קרא קודם:** [docs/HANDOFF.md](docs/HANDOFF.md) — מצב נוכחי ומשימות פתוחות (קצר).
 > **עומק טכני לפי צורך:** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — משתני סביבה, פירוט שרת/קליינט, i18n, PWA, בדיקות. אל תקרא אותו כולו: `grep` לסעיף הרלוונטי.
 
 ## מה הפרויקט
