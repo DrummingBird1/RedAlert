@@ -1,12 +1,13 @@
-# 🚨 צפיר — Tzafir | ניטור אזעקות פיקוד העורף בזמן אמת
+# 🚨 Tzafir (צפיר) | Real-time Home Front Command alert monitoring
 
-> מפת דרכים / Roadmap: [ROADMAP.md](ROADMAP.md)
+> Roadmap: [ROADMAP.md](ROADMAP.md)
 
 <div align="center">
 
-**מערכת ניטור אזעקות בזמן אמת עם מפה אינטראקטיבית**
-**Real-time alert monitoring with interactive map**
-*(לשעבר "מפת אזעקות ישראל" / israel-alert-map — אותו פרויקט, מיתוג חדש)*
+**Real-time alert monitoring with an interactive map**
+*(formerly "Israel Alert Map" / israel-alert-map: same project, new branding)*
+
+English · [עברית](README.he.md)
 
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-green?logo=node.js)](https://nodejs.org/)
 [![Zero Dependencies](https://img.shields.io/badge/Core_Dependencies-Zero-blue)]()
@@ -18,23 +19,23 @@
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy_Me_a_Coffee-Support-FFDD00?logo=buymeacoffee&logoColor=000)](https://buymeacoffee.com/MrIdan)
 [![Patreon](https://img.shields.io/badge/Patreon-Support-FF424D?logo=patreon&logoColor=white)](https://www.patreon.com/c/IdanLights)
 
-**🌐 [גרסה חיה — red-alert-ten.vercel.app](https://red-alert-ten.vercel.app)**
+**🌐 [Live demo: red-alert-ten.vercel.app](https://red-alert-ten.vercel.app)**
 
-> ⚠️ **האתר הזה אינו מקבל אזעקות אמיתיות.** פיקוד העורף חוסם בקשות מחוץ לישראל, ו-Vercel פועל מחו"ל — מאז v1.6.4 הוא מציג באנר אזהרה "אין חיבור למקור הנתונים" במקום "הכל שקט". להתראות אמיתיות הריצו את השרת מכתובת IP ישראלית (ראו [פריסה](#vercel-בשימוש-בפועל--זו-הגרסה-החיה-למעלה-ללא-אזעקות-אמיתיות)).
+> ⚠️ **The demo site does not receive real alerts.** The Home Front Command blocks requests from outside Israel, and Vercel runs abroad. Since v1.6.4 the site shows a "no connection to the data source" warning banner instead of "all quiet". For real alerts, run the server from an Israeli IP address (see [Deployment](#vercel-in-use--this-is-the-live-demo-above-no-real-alerts)).
 
 </div>
 
-<p align="center"><img src="docs/screenshot.jpg" alt="מסך ראשי של צפיר — מפת אזעקות בזמן אמת" width="800"></p>
+<p align="center"><img src="docs/screenshot.jpg" alt="Tzafir main screen: real-time alert map" width="800"></p>
 
-> ⚠️ **מערכת זו למטרות מידע בלבד ואינה מחליפה הנחיות פיקוד העורף.**
+> ⚠️ **This system is for information only and does not replace Home Front Command instructions.**
 
 ---
 
-## 🎯 מה זה?
+## 🎯 What is it?
 
-אפליקציית ווב בזמן אמת שמציגה אזעקות פיקוד העורף על מפה אינטראקטיבית. שרת Node.js proxy + SSE, ללא תלויות חיצוניות (core), עם PWA להתקנה כאפליקציה.
+A real-time web app that shows Home Front Command alerts on an interactive map. A Node.js proxy server with SSE, no external core dependencies, and a PWA that can be installed as an app.
 
-## 🚀 הפעלה מהירה
+## 🚀 Quick start
 
 ```bash
 git clone https://github.com/DrummingBird1/RedAlert.git tzafir
@@ -43,164 +44,163 @@ node server.js
 # → http://localhost:3000
 ```
 
-### עם Docker
+### With Docker
 
 ```bash
 docker-compose up -d
 ```
 
-### עם תוספות אופציונליות
+### With optional extras
 
 ```bash
-npm install                    # web-push (Telegram bot אין לו תלויות — ראו למטה)
+npm install                    # web-push (the Telegram bot has no dependencies, see below)
 ADMIN_PASS=secret node server.js
 ```
 
 ---
 
-## ✨ תכונות (30+)
+## ✨ Features (30+)
 
-### מפה וויזואליזציה
-- 🗺️ **מפה אינטראקטיבית** — Leaflet.js עם dark/light tiles
-- 📍 **מרקרים אנימטיביים** — פעימה אדומה לאזעקות פעילות, אפור להיסטוריה
-- 🧲 **Marker Clustering** — קיבוץ מרקרים אוטומטי בזום רחוק
-- 🔥 **מפת חום** — שכבה ויזואלית לאזורים עם ריכוז אזעקות
-- 🏛️ **מקלטים ציבוריים** — שכבת מקלטים על המפה, כולל ניווט (Waze/Google Maps) מכל מרקר. נתונים אמיתיים לתל אביב-יפו, ירושלים וחיפה; שאר הערים illustrative (ראה `SHELTERS_URL`)
-- 📍 **המיקום שלי** — GPS + מרחק בק"מ מכל אזעקה
-- 🛰️ **תצוגת לוויין** — שכבת Esri World Imagery חינמית (ללא מפתח API), toggle בכפתור 🛰️
+### Map and visualization
+- 🗺️ **Interactive map**: Leaflet.js with dark/light tiles
+- 📍 **Animated markers**: pulsing red for active alerts, gray for history
+- 🧲 **Marker clustering**: automatic grouping when zoomed out
+- 🔥 **Heat map**: a layer showing areas with concentrated alerts
+- 🏛️ **Public shelters**: a shelter layer on the map, with navigation (Waze/Google Maps) from any marker. Real data for Tel Aviv-Yafo, Jerusalem and Haifa; other cities are illustrative (see `SHELTERS_URL`)
+- 📍 **My location**: GPS plus distance in km from each alert
+- 🛰️ **Satellite view**: free Esri World Imagery layer (no API key), toggled with the 🛰️ button
 
-### אזעקות ומידע
-- ⏱️ **זמן מיגון** — לכל ישוב (~57 ישובים מובנים) לפי נתוני פיקוד העורף
-- ⏳ **ספירה לאחור חיה** — "נותרו 23 שניות" על כל אזעקה פעילה
-- 🛡️ **הנחיות התגוננות** — פאנל ירוק עם הנחיות + countdown מרכזי
-- 🔍 **Fuzzy city matching** — "תל אביב - יפו" מוצא "תל אביב"
-- 🔎 **סינון וחיפוש** — לפי אזור, סוג אזעקה, טווח זמן, וחיפוש חופשי לפי שם יישוב
-- 📜 **טאב היסטוריה** — כל האזעקות שנשמרו ב-IndexedDB (לא רק האחרונות בזיכרון), עם טווח תאריכים (היום/אתמול/שבוע/חודש/הכל) וחיפוש
+### Alerts and information
+- ⏱️ **Shelter time**: per locality (~57 built-in localities), based on Home Front Command data
+- ⏳ **Live countdown**: "23 seconds left" on every active alert
+- 🛡️ **Protection instructions**: a green panel with instructions and a central countdown
+- 🔍 **Fuzzy city matching**: "תל אביב - יפו" finds "תל אביב"
+- 🔎 **Filter and search**: by region, alert type, time range, and free-text locality search
+- 📜 **History tab**: every alert saved in IndexedDB (not just the latest in memory), with a date range (today/yesterday/week/month/all) and search
 
-### התראות
-- 🔔 **Push Notifications** — התראות מערכת (Browser Notification API)
-- 📡 **Web Push** — VAPID keys + Service Worker (עם `npm i web-push`); ⭐ מועדפות עוברות לשרת ומסננות את הפושים אוטומטית
-- 🗣️ **TTS הכרזה קולית** — הקראת שמות הערים בהתרעה, בכל אחת מ-14 השפות הנתמכות; כל הערים החדשות באותו batch נקראות יחד בקריאה אחת
-- 📢 **לולאת צופר** — סירנה ישראלית (400-900Hz) בזמן אזעקה פעילה
-- 🌙 **מצב שקט (DND)** — ללא צליל בין 23:00-07:00
-- ⭐ **ערים מועדפות** — Push רק על ערים שבחרת
-- 📢 **Discord webhook** — שליחת embed לערוץ Discord על כל אזעקה אמיתית חדשה (`DISCORD_WEBHOOK_URL`)
+### Notifications
+- 🔔 **Push notifications**: system notifications (Browser Notification API)
+- 📡 **Web Push**: VAPID keys plus a Service Worker (with `npm i web-push`); ⭐ favorites are sent to the server and filter pushes automatically
+- 🗣️ **TTS voice announcement**: city names read aloud on alert, in any of the 14 supported languages; all new cities in the same batch are read in one announcement
+- 📢 **Siren loop**: an Israeli-style siren (400-900Hz) during an active alert
+- 🌙 **Do not disturb (DND)**: no sound between 23:00 and 07:00
+- ⭐ **Favorite cities**: push only for the cities you choose
+- 📢 **Discord webhook**: sends an embed to a Discord channel for every new real alert (`DISCORD_WEBHOOK_URL`)
 
-### סטטיסטיקה
-- 📊 **ציר זמן 24 שעות** — גרף Canvas בזמן אמת
-- 📈 **השוואה היסטורית** — היום vs אתמול vs ממוצע שבועי (IndexedDB)
-- 📥 **ייצוא CSV/JSON** — עם BOM לעברית ב-Excel
+### Statistics
+- 📊 **24-hour timeline**: a real-time Canvas chart
+- 📈 **Historical comparison**: today vs yesterday vs weekly average (IndexedDB)
+- 📥 **CSV/JSON export**: with a BOM so Hebrew opens correctly in Excel
 
-### נגישות ורב-לשוניות
-- 🌐 **14 שפות** — עברית, אנגלית, ערבית, רוסית, אמהרית, תיגרינית, תאילנדית, טאגלוג, אוקראינית, צרפתית, ספרדית, רומנית, הינדי, סינית + RTL/LTR אוטומטי (נבחרו לפי קהילות משמעותיות בישראל — עולים, עובדים זרים ומבקשי מקלט; תרגומי אמהרית/תיגרינית הם best-effort ומומלץ אימות ע״י דובר native)
-- 🕐 **שעון דיגיטלי** — שעון 24 שעות עם שניות בכותרת
-- ♿ **ARIA** — roles, aria-live, sr-only, keyboard navigation
-- 🔲 **ניגודיות גבוהה** — מצב high contrast לכבדי ראייה
-- 🎬 **Reduced motion** — כיבוד `prefers-reduced-motion`
-- 🌙 **Auto dark mode** — `prefers-color-scheme` + זיהוי שעת לילה
+### Accessibility and multilingual
+- 🌐 **14 languages**: Hebrew, English, Arabic, Russian, Amharic, Tigrinya, Thai, Tagalog, Ukrainian, French, Spanish, Romanian, Hindi, Chinese, with automatic RTL/LTR (chosen for significant communities in Israel: immigrants, migrant workers and asylum seekers; the Amharic and Tigrinya translations are best-effort and should be verified by a native speaker)
+- 🕐 **Digital clock**: a 24-hour clock with seconds in the header
+- ♿ **ARIA**: roles, aria-live, sr-only, keyboard navigation
+- 🔲 **High contrast**: a high-contrast mode for low-vision users
+- 🎬 **Reduced motion**: honors `prefers-reduced-motion`
+- 🌙 **Auto dark mode**: `prefers-color-scheme` plus night-time detection
 
-### מובייל ו-PWA
-- 🆕 **טאב "עדכונים"** — רשימת השינויים האחרונים בתוך האפליקציה עצמה, כולל פופאפ "מה חדש" חד-פעמי אחרי כל עדכון גרסה
-- 📱 **Bottom navigation** — סרגל ניווט תחתון למובייל עם bottom sheet
-- 📲 **PWA** — ניתן להתקנה ממובייל ודסקטופ ("הוסף למסך הבית")
-- 🔄 **Service Worker** — network-first + cache fallback
-- 📵 **Offline** — זיהוי אוטומטי + טעינה מ-IndexedDB
+### Mobile and PWA
+- 🆕 **"Updates" tab**: the latest changes inside the app itself, including a one-time "what's new" popup after each version update
+- 📱 **Bottom navigation**: a bottom navigation bar for mobile, with a bottom sheet
+- 📲 **PWA**: installable on mobile and desktop ("Add to home screen")
+- 🔄 **Service Worker**: network-first with cache fallback
+- 📵 **Offline**: automatic detection and loading from IndexedDB
 
-### שרת ו-Operations
-- ⚡ **SSE** — Server-Sent Events, fallback ל-polling
-- 📦 **Gzip** — דחיסה אוטומטית לכל תוכן > 1KB
-- 🛡️ **CSP + Security** — Content-Security-Policy, X-Frame-Options, rate limiting
-- 🔄 **Fallback** — מעבר אוטומטי למקור גיבוי אחרי 5 כשלונות OREF
-- 📡 **Health webhook** — POST לכל URL כשהמערכת degrade
-- 🛡️ **Admin dashboard** — `/admin` עם 12 מטריקות בזמן אמת
-- 📄 **File logging** — רוטציה 10MB × 5 קבצים
-- 💾 **IndexedDB** — היסטוריה מקומית ששורדת רענון
+### Server and operations
+- ⚡ **SSE**: Server-Sent Events, with polling fallback
+- 📦 **Gzip**: automatic compression for any content over 1KB
+- 🛡️ **CSP and security**: Content-Security-Policy, X-Frame-Options, rate limiting
+- 🔄 **Fallback**: automatic switch to a backup source after 5 OREF failures
+- 📡 **Health webhook**: POST to any URL when the system degrades
+- 🛡️ **Admin dashboard**: `/admin` with 12 real-time metrics
+- 📄 **File logging**: rotation at 10MB × 5 files
+- 💾 **IndexedDB**: local history that survives a refresh
 
 ---
 
-## 📁 מבנה הפרויקט
+## 📁 Project structure
 
 ```
 tzafir/
-├── server.js              # שרת Node.js — proxy, SSE, API, PWA, admin, snapshot
-├── index.html             # קליינט — מפה, UI, כל הלוגיקה (טוען lib.js)
-├── lib.js                 # מקור-אמת יחיד: data + פונקציות פניניות (UMD; קליינט + טסטים)
+├── server.js              # Node.js server: proxy, SSE, API, PWA, admin, snapshot
+├── index.html             # Client: map, UI, all logic (loads lib.js)
+├── lib.js                 # Single source of truth: data + pure functions (UMD; client + tests)
 ├── package.json           # Metadata + npm scripts
 ├── Dockerfile             # Docker image + healthcheck
 ├── docker-compose.yml     # One-click deployment
 ├── fly.toml               # Fly.io deployment config
-├── telegram-bot.js        # בוט טלגרם (עצמאי)
+├── telegram-bot.js        # Telegram bot (standalone)
 ├── test/
-│   ├── unit.js             # בדיקות יחידה (node:test) ל-lib.js
-│   ├── integration.js      # אינטגרציה ברמת API: mock OREF → server → SSE
-│   └── e2e.js               # E2E בדפדפן אמיתי (Playwright)
+│   ├── unit.js             # Unit tests (node:test) for lib.js
+│   ├── integration.js      # API-level integration: mock OREF → server → SSE
+│   └── e2e.js               # Real-browser E2E (Playwright)
 ├── scripts/
-│   ├── release-banner.mjs  # מייצר את הבאנר הממותג לכל release
-│   └── smoke.mjs           # בדיקת smoke לאתר פרוס (חובה לפני תיוג release)
+│   ├── release-banner.mjs  # Generates the branded banner for each release
+│   └── smoke.mjs           # Smoke test for a deployed site (required before tagging a release)
 ├── docs/
-│   ├── openapi.yaml        # OpenAPI 3.0.3 spec (מוגש ב-/api/spec)
-│   ├── HANDOFF.md          # מצב נוכחי + משימות פתוחות (לסוכני קוד: Claude/Codex/Grok)
-│   ├── ARCHITECTURE.md     # עומק טכני (נטען לפי צורך)
-│   └── screenshot.jpg      # תמונת ה-README
-├── release-banners/        # באנר ממותג לכל גרסה (vX.Y.Z.png)
+│   ├── openapi.yaml        # OpenAPI 3.0.3 spec (served at /api/spec)
+│   ├── ARCHITECTURE.md     # Technical depth (read as needed)
+│   └── screenshot.jpg      # README image
+├── release-banners/        # Branded banner per version (vX.Y.Z.png)
 ├── .github/                # CI + deploy workflows, CONTRIBUTING.md, SECURITY.md, Dependabot, issue/PR templates
-├── AGENTS.md               # הוראות עבודה לסוכני קוד (Codex/Grok/Cursor/...) — מקור האמת
-├── CLAUDE.md               # הפניה ל-AGENTS.md (Claude Code)
-├── CHANGELOG.md            # היסטוריית גרסאות
-├── README.md               # אתה פה
+├── AGENTS.md               # Working instructions for coding agents (Codex/Grok/Cursor/...), the source of truth
+├── CLAUDE.md               # Pointer to AGENTS.md (Claude Code)
+├── CHANGELOG.md            # Version history
+├── README.md               # You are here (Hebrew: README.he.md)
 ├── LICENSE                 # MIT
 └── .gitignore              # logs, secrets, snapshot, node_modules
 ```
 
-> 🗺️ **דיוק מיקום:** אזעקה לעיר שאינה במאגר הקואורדינטות (`lib.js` → `CITIES`) **לא מוצבת במיקום אקראי על המפה** — היא מופיעה ברשימה עם תווית "מיקום לא ידוע". זו אפליקציית בטיחות; מרקר במקום שגוי מטעה יותר ממרקר חסר.
+> 🗺️ **Location accuracy:** an alert for a city that is not in the coordinate database (`lib.js` → `CITIES`) is **not placed at a random location on the map**. It appears in the list with an "unknown location" label. This is a safety app; a marker in the wrong place misleads more than a missing marker.
 
 ---
 
-## 🏗️ ארכיטקטורה
+## 🏗️ Architecture
 
 ```mermaid
 flowchart LR
-  OREF["פיקוד העורף<br/>alerts.json"] -->|polling כל 2s| SRV["server.js"]
+  OREF["Home Front Command<br/>alerts.json"] -->|polling every 2s| SRV["server.js"]
   SRV -->|SSE /api/stream| CLIENT["index.html"]
   SRV -->|REST /api/*| CLIENT
-  SRV --> STORE[("store בזיכרון<br/>עד 5000")]
+  SRV --> STORE[("in-memory store<br/>up to 5000")]
   STORE -.snapshot.-> SNAP[".store-snapshot.json"]
-  SRV -.אופציונלי.-> DISCORD["Discord webhook"]
-  SRV -.אופציונלי.-> PUSH["Web Push subscribers"]
-  SRV -.אחרי 5 כשלונות.-> FALLBACK["FALLBACK_ALERT_URL(S)"]
-  BOT["telegram-bot.js"] -->|polling עצמאי| SRV
+  SRV -.optional.-> DISCORD["Discord webhook"]
+  SRV -.optional.-> PUSH["Web Push subscribers"]
+  SRV -.after 5 failures.-> FALLBACK["FALLBACK_ALERT_URL(S)"]
+  BOT["telegram-bot.js"] -->|independent polling| SRV
   ADMIN["/admin dashboard"] -->|Basic Auth| SRV
-  CLIENT --> IDB[("IndexedDB<br/>היסטוריה ארוכת-טווח")]
-  CLIENT --> MAP["Leaflet<br/>+ לוויין/שמות מקומות"]
+  CLIENT --> IDB[("IndexedDB<br/>long-term history")]
+  CLIENT --> MAP["Leaflet<br/>+ satellite/place names"]
 ```
 
 ---
 
-## 🔌 API Endpoints
+## 🔌 API endpoints
 
-| Endpoint | תיאור |
+| Endpoint | Description |
 |---|---|
-| `GET /` | דף ראשי (HTML) |
-| `GET /api/alerts` | אזעקות פעילות |
-| `GET /api/history?limit=200` | היסטוריה |
-| `GET /api/stream` | SSE זמן אמת |
-| `GET /api/stats` | סטטיסטיקות |
+| `GET /` | Main page (HTML) |
+| `GET /api/alerts` | Active alerts |
+| `GET /api/history?limit=200` | History |
+| `GET /api/stream` | Real-time SSE |
+| `GET /api/stats` | Statistics |
 | `GET /api/health` | Health check |
-| `GET /api/config` | קונפיג שזמין לקליינט (`shelters_url`, `web_push`) |
-| `GET /api/shelters/tel-aviv` | מקלטים אמיתיים בתל אביב-יפו (proxy מטומן ~24h לשכבת ה-GIS העירונית) |
-| `GET /api/shelters/jerusalem` | מקלטים אמיתיים בירושלים (מספר מקלט בלבד, ללא כתובת — proxy מטומן ~24h) |
-| `GET /api/shelters/haifa` | מקלטים ומיגוניות אמיתיים בחיפה, עם כתובת וסוג (proxy מטומן ~24h) |
-| `POST /api/client-error` | דיווח שגיאת JS מהקליינט (`window.onerror`/`unhandledrejection`) — נרשם ל-`logs/client-errors.log`, לא שירות tracking מלא |
+| `GET /api/config` | Config available to the client (`shelters_url`, `web_push`) |
+| `GET /api/shelters/tel-aviv` | Real shelters in Tel Aviv-Yafo (proxy cached ~24h for the city's GIS layer) |
+| `GET /api/shelters/jerusalem` | Real shelters in Jerusalem (shelter number only, no address; proxy cached ~24h) |
+| `GET /api/shelters/haifa` | Real shelters and protected spaces in Haifa, with address and type (proxy cached ~24h) |
+| `POST /api/client-error` | Report a JS error from the client (`window.onerror`/`unhandledrejection`); written to `logs/client-errors.log`, not a full tracking service |
 | `GET /api/spec` | OpenAPI 3.0.3 spec (YAML) |
-| `GET /api/logs` | צפייה בלוג |
-| `GET /api/v1/*` | Alias לכל endpoint תחת `/api/*` — מומלץ לאינטגרציות יציבות |
-| `GET /api/oref/live` | Proxy ל-OREF |
-| `GET /api/oref/history` | היסטוריה מ-OREF |
+| `GET /api/logs` | View the log |
+| `GET /api/v1/*` | Alias for every endpoint under `/api/*`; recommended for stable integrations |
+| `GET /api/oref/live` | Proxy to OREF |
+| `GET /api/oref/history` | History from OREF |
 | `GET /api/push/vapid-key` | VAPID public key |
-| `POST /api/push/subscribe` | הרשמה ל-Push |
-| `POST /api/push/unsubscribe` | ביטול Push |
+| `POST /api/push/subscribe` | Subscribe to Push |
+| `POST /api/push/unsubscribe` | Unsubscribe from Push |
 | `GET /admin` | Admin dashboard (basic auth) |
-| `GET /api/admin/metrics` | מטריקות מפורטות (JSON) |
+| `GET /api/admin/metrics` | Detailed metrics (JSON) |
 | `GET /metrics` | Prometheus exposition (basic auth) |
 | `GET /manifest.json` | PWA manifest |
 | `GET /sw.js` | Service Worker |
@@ -209,58 +209,58 @@ flowchart LR
 
 ---
 
-## ⚙️ משתני סביבה
+## ⚙️ Environment variables
 
-| משתנה | ברירת מחדל | תיאור |
+| Variable | Default | Description |
 |---|---|---|
-| `PORT` | `3000` | פורט השרת |
-| `ADMIN_USER` | `admin` | שם משתמש לאדמין |
-| `ADMIN_PASS` | *(אקראי)* | סיסמת אדמין. אם לא מוגדרת — השרת **מגריל סיסמה חזקה בהפעלה** ומדפיס אותה פעם אחת ללוג (משתנה בכל restart עד שתגדיר ערך קבוע). |
-| `ADMIN_TOTP_SECRET` | (ריק) | סוד TOTP (base32) ל-2FA אופציונלי על `/admin`+`/metrics`. כשמוגדר — הסיסמה ב-Basic Auth היא `ADMIN_PASS` + קוד בן 6 ספרות מכל אפליקציית authenticator תואמת. |
-| `FALLBACK_ALERT_URL` | (ריק) | URL חלופי לאזעקות (יחיד, legacy) |
-| `FALLBACK_ALERT_URLS` | (ריק) | רשימת URLs מופרדת בפסיק — sequence של mirrors. אם הראשון נכשל 5 פעמים השרת מסתובב לבא בתור |
-| `HEALTH_WEBHOOK` | (ריק) | URL ל-POST כשהמערכת degraded |
-| `DISCORD_WEBHOOK_URL` | (ריק) | Webhook של ערוץ Discord (Channel Settings → Integrations → Webhooks בדיסקורד) — שולח embed על כל batch אזעקות אמיתי חדש |
-| `OREF_URL_OVERRIDE` | (ריק) | החלף את URL של פיקוד העורף (לטסטים בלבד) |
-| `OREF_HIST_OVERRIDE` | (ריק) | החלף את URL של ההיסטוריה (לטסטים בלבד) |
-| `DATA_DIR` | תיקיית הריפו | היכן נכתבים קבצי ה-runtime (`logs/`, `.store-snapshot.json`, `.vapid-keys.json`, `.push-subs.json`). הטסטים מצביעים עליו לתיקייה זמנית כדי לא לכתוב אזעקות מדומות להיסטוריה שלכם |
-| `RATE_LIMIT_PER_MIN` | `120` | מגבלת בקשות לדקה לכל IP (override קיים לטסטי E2E בלבד) |
-| `SHELTERS_URL` | (ריק) | URL חיצוני ל-JSON של מקלטים אמיתיים (למשל מ-API של הרשות המקומית שלך). הקליינט מאחה אם זמין; אחרת fallback ל-~34 דוגמאות illustrative |
-| `TELEGRAM_TOKEN` | (ריק) | Bot token לטלגרם |
-| `TELEGRAM_CHANNEL` | (ריק) | Channel ID לטלגרם |
+| `PORT` | `3000` | Server port |
+| `ADMIN_USER` | `admin` | Admin username |
+| `ADMIN_PASS` | *(random)* | Admin password. If unset, the server **generates a strong password at startup** and prints it once to the log (it changes on every restart until you set a fixed value). |
+| `ADMIN_TOTP_SECRET` | (empty) | TOTP secret (base32) for optional 2FA on `/admin` and `/metrics`. When set, the Basic Auth password is `ADMIN_PASS` plus a 6-digit code from any compatible authenticator app. |
+| `FALLBACK_ALERT_URL` | (empty) | Alternative alert URL (single, legacy) |
+| `FALLBACK_ALERT_URLS` | (empty) | Comma-separated list of URLs, a sequence of mirrors. If the first fails 5 times the server rotates to the next |
+| `HEALTH_WEBHOOK` | (empty) | URL to POST to when the system is degraded |
+| `DISCORD_WEBHOOK_URL` | (empty) | Discord channel webhook (Channel Settings → Integrations → Webhooks in Discord). Sends an embed for every new real alert batch |
+| `OREF_URL_OVERRIDE` | (empty) | Replace the Home Front Command URL (tests only) |
+| `OREF_HIST_OVERRIDE` | (empty) | Replace the history URL (tests only) |
+| `DATA_DIR` | repo folder | Where runtime files are written (`logs/`, `.store-snapshot.json`, `.vapid-keys.json`, `.push-subs.json`). Tests point it at a temporary folder so they do not write fake alerts into your history |
+| `RATE_LIMIT_PER_MIN` | `120` | Requests-per-minute limit per IP (an override exists for E2E tests only) |
+| `SHELTERS_URL` | (empty) | External URL of a JSON file of real shelters (for example from your local authority's API). The client merges it if available; otherwise it falls back to ~34 illustrative examples |
+| `TELEGRAM_TOKEN` | (empty) | Telegram bot token |
+| `TELEGRAM_CHANNEL` | (empty) | Telegram channel ID |
 
-### ⚠️ לגבי דיוק נתוני המקלטים
+### ⚠️ About shelter data accuracy
 
-ה-`SHELTERS_DEFAULT` המובנה (~34 נקודות, אחת לכל עיר גדולה, מסומנות "לדוגמה") הוא **illustrative בלבד** — נקודת מרכז-עיר גסה, לא כתובת מקלט מאומתת. בדקנו: **אין ב-data.gov.il מאגר CKAN פתוח וניתן-לשליפה** של מקלטים ציבוריים (שאילתת API רשמית מחזירה 0 תוצאות); המידע קיים כשכבת GovMap פנימית ללא API מתועד ומאוחד ארצי.
+The built-in `SHELTERS_DEFAULT` (~34 points, one per major city, marked "example") is **illustrative only**: a rough city-center point, not a verified shelter address. We checked: **data.gov.il has no open, retrievable CKAN dataset** of public shelters (an official API query returns 0 results); the information exists as an internal GovMap layer with no documented, unified national API.
 
-**עדכון (2026-07 עד 2026-08):** מצאנו שלושה מקורות אמיתיים עד כה:
-- **תל אביב-יפו** — `gisn.tel-aviv.gov.il`, שכבה 592, ~374 מקלטים עם כתובת, סוג וסטטוס כשירות אמיתיים ([opendata.tel-aviv.gov.il](https://opendata.tel-aviv.gov.il/)).
-- **ירושלים** — `jerusalem.datacity.org.il`, ~215 מקלטים (מספר מקלט בלבד, ללא כתובת — זה כל מה שהמקור הרשמי מפרסם).
-- **חיפה** — `opendata.haifa.muni.il`, ~276 רשומות מיגון (מקלטים + מיגוניות), עם כתובת וסוג מלאים — השכבה העשירה ביותר מבין השלוש.
+**Update (2026-07 to 2026-08):** we have found three real sources so far:
+- **Tel Aviv-Yafo**: `gisn.tel-aviv.gov.il`, layer 592, ~374 shelters with real address, type and fitness status ([opendata.tel-aviv.gov.il](https://opendata.tel-aviv.gov.il/)).
+- **Jerusalem**: `jerusalem.datacity.org.il`, ~215 shelters (shelter number only, no address; this is all the official source publishes).
+- **Haifa**: `opendata.haifa.muni.il`, ~276 protection records (shelters plus protected spaces), with full address and type. It is the richest layer of the three.
 
-האפליקציה שולפת ומטמיעה את שלושתן אוטומטית (`GET /api/shelters/{tel-aviv,jerusalem,haifa}`, מטמון 24 שעות בצד השרת) **רק כשלא הוגדר `SHELTERS_URL`** — הן מחליפות את הדוגמאות הכלליות של אותן ערים במרקרים אמיתיים. **שאר הערים בארץ עדיין illustrative בלבד.** נבדקו גם ראשון לציון ופתח תקווה — לשתיהן אין שכבת GIS פתוחה וניתנת-לשליפה למקלטים (רק PDF/דף סטטי); לבאר שבע יש רישום קטלוגי אמיתי ב-ArcGIS Hub (`gis-beer-sheva.opendata.arcgis.com`, ~81 רשומות) אך ה-endpoint בפועל (`opendatagis.br7.org.il`) לא הגיב מכאן — כנראה חסום מחוץ לישראל — ולכן לא חובר עדיין. אם יש לעירייה שלכם שכבת GIS פתוחה דומה (ArcGIS REST / WFS / CSV), אפשר להצביע אליה דרך `SHELTERS_URL` ולקבל את אותה רמת דיוק. דיוק מזויף מסוכן יותר מהיעדר דיוק באפליקציית בטיחות — לכן ההבחנה בין "אמיתי" ל"לדוגמה" נשארת חדה ומתועדת.
+The app fetches and embeds all three automatically (`GET /api/shelters/{tel-aviv,jerusalem,haifa}`, cached 24 hours on the server) **only when `SHELTERS_URL` is not set**. They replace the generic examples for those cities with real markers. **All other cities are still illustrative only.** We also checked Rishon LeZion and Petah Tikva: neither has an open, retrievable GIS shelter layer (only a PDF or static page). Beer Sheva has a real catalog entry in ArcGIS Hub (`gis-beer-sheva.opendata.arcgis.com`, ~81 records), but the actual endpoint (`opendatagis.br7.org.il`) did not respond from here, probably because it is blocked outside Israel, so it is not connected yet. If your municipality has a similar open GIS layer (ArcGIS REST / WFS / CSV), you can point to it through `SHELTERS_URL` and get the same level of accuracy. In a safety app, false precision is more dangerous than no precision, so the distinction between "real" and "example" stays sharp and documented.
 
-### פורמט `SHELTERS_URL`
+### `SHELTERS_URL` format
 
-JSON עם מערך אובייקטים: `[{lat: number, lng: number, n: string}, ...]`. `n` הוא שם המקלט (יתחתך ל-120 תווים). מקסימום 5000 פריטים. ה-API נקרא פעם אחת בטעינת הקליינט וזמין דרך `GET /api/config`. דוגמה:
+JSON with an array of objects: `[{lat: number, lng: number, n: string}, ...]`. `n` is the shelter name (truncated to 120 characters). Maximum 5000 items. The API is read once when the client loads and is exposed through `GET /api/config`. Example:
 
 ```json
 [
-  {"lat": 32.0850, "lng": 34.7820, "n": "מקלט דיזנגוף 99"},
-  {"lat": 31.7683, "lng": 35.2137, "n": "מקלט יפו 25"}
+  {"lat": 32.0850, "lng": 34.7820, "n": "Dizengoff 99 shelter"},
+  {"lat": 31.7683, "lng": 35.2137, "n": "Jaffa 25 shelter"}
 ]
 ```
 
 ---
 
-## 🔗 חיבור ל-OREF
+## 🔗 Connecting to OREF
 
-המערכת מתחברת ל-API הפתוח של פיקוד העורף — **ללא צורך ב-signup או מפתחות**:
+The system connects to the Home Front Command's open API, **with no signup or keys required**:
 
 - **Endpoint:** `https://www.oref.org.il/WarningMessages/alert/alerts.json`
-- **Polling:** כל 2 שניות
-- **Headers נדרשים:** Accept-Language: he, X-Requested-With: XMLHttpRequest, Referer
-- **קטגוריות:** cat=1 רקטות, cat=2 כטב"מ, cat=3 רעידת אדמה, cat=6 צונאמי
+- **Polling:** every 2 seconds
+- **Required headers:** Accept-Language: he, X-Requested-With: XMLHttpRequest, Referer
+- **Categories:** cat=1 rockets, cat=2 UAV, cat=3 earthquake, cat=6 tsunami
 
 ---
 
@@ -270,7 +270,7 @@ JSON עם מערך אובייקטים: `[{lat: number, lng: number, n: string}, 
 # Build & Run
 docker-compose up -d
 
-# עם משתני סביבה
+# With environment variables
 ADMIN_PASS=mypass HEALTH_WEBHOOK=https://hooks.slack.com/xxx docker-compose up -d
 
 # Logs
@@ -279,97 +279,97 @@ docker-compose logs -f
 
 ---
 
-## ☁️ פריסה
+## ☁️ Deployment
 
-### Vercel (בשימוש בפועל — זו הגרסה החיה למעלה, **ללא אזעקות אמיתיות**)
+### Vercel (in use — this is the live demo above, **no real alerts**)
 
-הריפו מחובר ל-Vercel דרך אינטגרציית ה-GitHub שלה (Import Project ב-[vercel.com/new](https://vercel.com/new), zero-config — Vercel מזהה `"framework":"node"` אוטומטית, אין `vercel.json` בריפו). כל `git push` ל-`main` פורס ל-production; כל branch/PR מקבל preview deployment נפרד עם URL משלו. אין setup נוסף מעבר לחיבור הראשוני של הריפו לפרויקט ב-Vercel dashboard.
+The repo is connected to Vercel through its GitHub integration (Import Project at [vercel.com/new](https://vercel.com/new), zero-config: Vercel detects `"framework":"node"` automatically, and there is no `vercel.json` in the repo). Every `git push` to `main` deploys to production; every branch/PR gets its own preview deployment with its own URL. There is no setup beyond the initial connection of the repo to the project in the Vercel dashboard.
 
-**⚠️ מגבלה ידועה (אומתה ב-2026-10-16)**: פיקוד העורף (Akamai) מחזיר "Access Denied" לבקשות ממרכזי נתונים מחוץ לישראל, ו-Vercel פועל מפרנקפורט/וושינגטון — השרת שם **אף פעם לא הצליח למשוך אזעקה אחת** (`last_poll_ago: null` ב-`/api/health`). עד v1.6.2 זה היה שקט לגמרי: `/api/health` החזיר `ok` והאפליקציה הציגה "מחובר" + "הכל שקט". מ-v1.6.4 `/api/health` מחזיר `status: "degraded"` + `upstream_ok: false` והלקוח מציג באנר אזהרה. כדי לקבל אזעקות אמיתיות צריך להריץ את השרת מכתובת IP ישראלית (מחשב בית, VPS ישראלי) ו/או להגדיר `FALLBACK_ALERT_URL`.
+**⚠️ Known limitation (verified 2026-10-16)**: the Home Front Command (Akamai) returns "Access Denied" for requests from data centers outside Israel, and Vercel runs in Frankfurt/Washington. The server there **has never pulled a single alert** (`last_poll_ago: null` in `/api/health`). Up to v1.6.2 this was completely silent: `/api/health` returned `ok` and the app showed "connected" and "all quiet". From v1.6.4 `/api/health` returns `status: "degraded"` plus `upstream_ok: false`, and the client shows a warning banner. To receive real alerts you need to run the server from an Israeli IP address (a home computer, an Israeli VPS) and/or set `FALLBACK_ALERT_URL`.
 
-**שים לב**: השרת בנוי כתהליך ארוך-חיים אחד (`http.createServer` + `setInterval` polling כל 2s + store בזיכרון + חיבורי SSE ארוכים ב-`/api/stream`) — לא ארכיטקטורת serverless קלאסית. הוא אכן רץ כתהליך יציב ב-Vercel (ה-`uptime` עולה), אבל אם ייתקלו בבעיות ייחודיות ל-serverless (state שמתאפס בין invocations, timeouts על SSE ארוך) — זו הסיבה.
+**Note**: the server is built as a single long-lived process (`http.createServer` plus `setInterval` polling every 2s, an in-memory store and long SSE connections on `/api/stream`), not a classic serverless architecture. It does run as a stable process on Vercel (`uptime` keeps rising), but if you hit problems specific to serverless (state resetting between invocations, timeouts on long SSE), this is the reason.
 
-### Fly.io (מוכן אך לא מחובר כרגע)
+### Fly.io (ready but not connected at the moment)
 
-הריפו גם כולל [fly.toml](fly.toml) ו-[.github/workflows/deploy.yml](.github/workflows/deploy.yml) שמיועדים לפרוס אוטומטית ל-Fly.io בכל push ל-`main` — **אבל ה-workflow הזה כשל בכל ריצה עד כה** (`FLY_API_TOKEN` לא הוגדר מעולם כ-secret ב-GitHub, כך ש-`flyctl deploy` נכשל מיד עם "no access token available"). `https://red-alert.fly.dev` לא פנוי כרגע. ההוראות למטה עדיין תקפות אם תרצו להשלים את ה-setup בעצמכם (או כאלטרנטיבה/גיבוי ל-Vercel) — פשוט לא הושלמו.
+The repo also includes [fly.toml](fly.toml) and [.github/workflows/deploy.yml](.github/workflows/deploy.yml), meant to deploy to Fly.io automatically on every push to `main`. **But this workflow has failed on every run so far** (`FLY_API_TOKEN` was never set as a GitHub secret, so `flyctl deploy` fails immediately with "no access token available"). `https://red-alert.fly.dev` is currently not available. The instructions below are still valid if you want to finish the setup yourself (or use it as an alternative or backup to Vercel); they were just never completed.
 
-### setup חד-פעמי (3 דקות)
+### One-time setup (3 minutes)
 
 ```bash
-# 1. התקנת CLI + יצירת חשבון (חינמי, אישור באמצעות כרטיס בלי חיוב)
+# 1. Install the CLI + create an account (free, card verification without charge)
 curl -L https://fly.io/install.sh | sh     # macOS/Linux
-# או: iwr https://fly.io/install.ps1 -useb | iex   # Windows PowerShell
+# or: iwr https://fly.io/install.ps1 -useb | iex   # Windows PowerShell
 flyctl auth signup
 
-# 2. יצירת האפליקציה ב-Fly (השם חייב להיות גלובלית-ייחודי; ערוך את fly.toml בהתאם)
+# 2. Create the app on Fly (the name must be globally unique; edit fly.toml accordingly)
 flyctl apps create red-alert        # → https://red-alert.fly.dev
 
-# 3. הגדרת secrets (לא ב-fly.toml — אלה מוצפנים)
+# 3. Set secrets (not in fly.toml; these are encrypted)
 flyctl secrets set ADMIN_PASS="$(openssl rand -hex 16)"
-flyctl secrets set FALLBACK_ALERT_URLS=""    # אופציונלי
-flyctl secrets set HEALTH_WEBHOOK=""         # אופציונלי (Slack/Discord)
+flyctl secrets set FALLBACK_ALERT_URLS=""    # optional
+flyctl secrets set HEALTH_WEBHOOK=""         # optional (Slack/Discord)
 
-# 4. יצירת deploy token לשימוש ב-GitHub Actions
+# 4. Create a deploy token for GitHub Actions
 flyctl tokens create deploy -x 99999h
-# העתק את הפלט.
+# Copy the output.
 
-# 5. ב-GitHub: Settings → Secrets and variables → Actions → New repository secret
+# 5. In GitHub: Settings → Secrets and variables → Actions → New repository secret
 #    Name:  FLY_API_TOKEN
-#    Value: <ה-token מצעד 4>
+#    Value: <the token from step 4>
 
-# 6. דחיפה ראשונה
+# 6. First push
 git push origin main
 ```
 
-אם כל 6 הצעדים הושלמו נכון, ה-workflow ירוץ ב-Actions tab, יבנה Docker image מ-`Dockerfile`, ידחוף ל-Fly, ויאמת `/api/health` — וה-URL (`https://red-alert-<app-name>.fly.dev`, לפי השם שנבחר בצעד 2) יעלה. בדקו ב-Actions tab שהריצה באמת ירוקה — secret חסר/שגוי נכשל בשקט מבחינת המשתמש (ה-push עצמו מצליח, רק ה-deploy נכשל).
+If all 6 steps were completed correctly, the workflow will run in the Actions tab, build a Docker image from the `Dockerfile`, push it to Fly and verify `/api/health`, and the URL (`https://red-alert-<app-name>.fly.dev`, based on the name chosen in step 2) will come up. Check in the Actions tab that the run is actually green: a missing or wrong secret fails quietly from the user's point of view (the push itself succeeds, only the deploy fails).
 
-### למה Fly ולא Render/Railway/Heroku?
+### Why Fly and not Render/Railway/Heroku?
 
-- **SSE עובד מעולה** — חיבורים ארוכים, לא נחתכים
-- **`auto_stop_machines = false`** — ה-VM לא נרדם → אזעקות בזמן אמת
-- **HTTPS אוטומטי** — Web Push דורש זאת
-- **Frankfurt region** — ~80ms לישראל
-- **Free tier**: 3 VMs קטנים + 160GB egress/חודש (מספיק לטרפיק רגיל)
+- **SSE works great**: long connections are not cut
+- **`auto_stop_machines = false`**: the VM does not sleep, so alerts are real time
+- **Automatic HTTPS**: Web Push requires it
+- **Frankfurt region**: ~80ms to Israel
+- **Free tier**: 3 small VMs + 160GB egress/month (enough for normal traffic)
 
-### post-deploy hardening
+### Post-deploy hardening
 
 ```bash
-# הגדל זיכרון לעומסים גדולים (default 256MB מספיק עד ~500 SSE clients):
+# Increase memory for heavy loads (the default 256MB is enough up to ~500 SSE clients):
 flyctl scale memory 512
 
-# פרוס בכמה regions:
+# Deploy in several regions:
 flyctl regions add waw ams        # Warsaw + Amsterdam
-flyctl scale count 2 --region fra # 2 VMs ב-Frankfurt
+flyctl scale count 2 --region fra # 2 VMs in Frankfurt
 
-# מעקב בזמן אמת:
+# Real-time monitoring:
 flyctl logs                       # streaming logs
-flyctl status                     # מצב VMs + checks
-flyctl dashboard                  # פותח את ה-UI ב-Fly
+flyctl status                     # VM state + checks
+flyctl dashboard                  # opens the Fly UI
 ```
 
-### Persistent volume (אופציונלי) — שמירת VAPID keys בין deploys
+### Persistent volume (optional): keep VAPID keys across deploys
 
-ללא volume, בכל deploy ה-VAPID keys נוצרים מחדש → push subscribers ישנים מתנתקים בשקט. לפרודקשן מומלץ:
+Without a volume, VAPID keys are regenerated on every deploy, so old push subscribers are silently disconnected. For production, use:
 
 ```bash
 flyctl volumes create alertmap_data --region fra --size 1
-# ערוך fly.toml — בטל הערה ב-[mounts] בלוק
-# עדכן server.js שיכתוב VAPID + push-subs ל-/app/data
+# Edit fly.toml: uncomment the [mounts] block
+# Update server.js to write VAPID + push-subs to /app/data
 ```
 
 ---
 
-## 🔒 HTTPS (נדרש ל-Web Push)
+## 🔒 HTTPS (required for Web Push)
 
-הדפדפן **לא מאפשר Web Push ב-HTTP** (חוץ מ-`localhost`). לפריסה ציבורית — שים reverse proxy מול השרת ב-`:3000`.
+The browser **does not allow Web Push over HTTP** (except on `localhost`). For a public deployment, put a reverse proxy in front of the server on `:3000`.
 
-### אופציה 1 — Caddy (קל ביותר, HTTPS אוטומטי)
+### Option 1: Caddy (easiest, automatic HTTPS)
 
 `Caddyfile`:
 ```
 alertmap.example.com {
   reverse_proxy localhost:3000 {
-    flush_interval -1   # חיוני ל-SSE: מבטל בוצרינג של תגובות
+    flush_interval -1   # essential for SSE: disables response buffering
   }
 }
 ```
@@ -378,7 +378,7 @@ alertmap.example.com {
 caddy run --config Caddyfile
 ```
 
-### אופציה 2 — nginx + certbot
+### Option 2: nginx + certbot
 
 `/etc/nginx/sites-enabled/alertmap`:
 ```nginx
@@ -392,8 +392,8 @@ server {
     proxy_pass http://127.0.0.1:3000;
     proxy_http_version 1.1;
     proxy_set_header Connection "";
-    proxy_buffering off;            # חיוני ל-SSE
-    proxy_read_timeout 24h;         # SSE לא מתנתק
+    proxy_buffering off;            # essential for SSE
+    proxy_read_timeout 24h;         # SSE does not disconnect
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
   }
 }
@@ -403,7 +403,7 @@ server {
 sudo certbot --nginx -d alertmap.example.com
 ```
 
-### אופציה 3 — Cloudflare Tunnel (ללא פתיחת פורט)
+### Option 3: Cloudflare Tunnel (no open port)
 
 ```bash
 cloudflared tunnel --url http://localhost:3000
@@ -417,31 +417,31 @@ cloudflared tunnel --url http://localhost:3000
 TELEGRAM_TOKEN=123:ABC TELEGRAM_CHANNEL=@my_channel node telegram-bot.js
 ```
 
-ללא תלויות — קריאה ל-Telegram Bot API (`sendMessage`) דרך `https` גולמי, אין יותר `npm install`.
+No dependencies: it calls the Telegram Bot API (`sendMessage`) over raw `https`, so there is no `npm install` step.
 
 ---
 
-## 🧪 בדיקות + CI
+## 🧪 Tests + CI
 
 ```bash
 node test/unit.js           # node:test runner — 100+ unit tests (incl. full i18n key-parity)
 node test/integration.js    # API-level integration: mock OREF → server → SSE (16 assertions, incl. dead feed → degraded)
 node test/e2e.js            # real-browser E2E via Playwright (needs Chrome/Edge installed locally)
-npm run test:all            # כל השלושה
+npm run test:all            # all three
 npm run lint                # ESLint (flat config, devDependency)
 ```
 
-CI ב-[.github/workflows/test.yml](.github/workflows/test.yml) — מריץ unit + integration על Node 18/20/22 (Ubuntu) + Node 20 (Windows + macOS), ועוד job נפרד ל-E2E על Chrome המובנה של ה-runner. Dependabot ב-[.github/dependabot.yml](.github/dependabot.yml) — שבועי ל-npm, חודשי ל-GitHub Actions ול-Docker.
+CI in [.github/workflows/test.yml](.github/workflows/test.yml) runs unit + integration on Node 18/20/22 (Ubuntu) and Node 20 (Windows + macOS), plus a separate E2E job on the runner's built-in Chrome. Dependabot in [.github/dependabot.yml](.github/dependabot.yml) runs weekly for npm and monthly for GitHub Actions and Docker.
 
-`test/unit.js` משתמש ב-`node:test` המובנה (Node 18+) ובודק פונקציות פניניות (escapeHtml, formatShelter, shelterClass, distanceKm, isDND, fuzzyMatch, isRTL) וכן ששלל 14 השפות ב-`LN` חולקות בדיוק את אותו סט מפתחות. `test/integration.js` מקים שרת mock של OREF, מצביע אליו דרך `OREF_URL_OVERRIDE`, ובודק שאזעקה זורמת ל-`/api/alerts`, ל-SSE, ול-`/api/health` (12 assertions) — הכל ברמת API, בלי דפדפן. `test/e2e.js` מריץ Chrome אמיתי דרך Playwright (`channel:'chrome'`, לא מוריד דפדפן bundled) ובודק רגרסיות UI קונקרטיות מהיסטוריית הפרויקט (פוקוס בחיפוש, שימור טאב, רוחב ניווט מובייל, תוויות מקלטים, צבעי option).
+`test/unit.js` uses the built-in `node:test` (Node 18+) and checks pure functions (escapeHtml, formatShelter, shelterClass, distanceKm, isDND, fuzzyMatch, isRTL), and that all 14 languages in `LN` share exactly the same key set. `test/integration.js` starts a mock OREF server, points to it through `OREF_URL_OVERRIDE`, and checks that an alert flows to `/api/alerts`, to SSE and to `/api/health` (12 assertions), all at API level, with no browser. `test/e2e.js` runs a real Chrome through Playwright (`channel:'chrome'`, no bundled browser download) and checks concrete UI regressions from the project's history (search focus, tab persistence, mobile nav width, shelter labels, option colors).
 
-קונפיג ESLint ב-[eslint.config.js](eslint.config.js) (flat config) — מינימלי, מתמקד בחיפוש באגים אמיתיים (`no-unused-vars`, `no-undef`, `no-redeclare`, `eqeqeq`); לא אכפתי לסגנון בכוונה כי הקוד דחוס במכוון.
+The ESLint config in [eslint.config.js](eslint.config.js) (flat config) is minimal and focuses on finding real bugs (`no-unused-vars`, `no-undef`, `no-redeclare`, `eqeqeq`); it deliberately ignores style because the code is intentionally dense.
 
 ---
 
 ## 📊 Prometheus / Observability
 
-`GET /metrics` (admin-authed, פורמט exposition 0.0.4) — מתאים לסקרייפר Prometheus. מציין:
+`GET /metrics` (admin-authed, exposition format 0.0.4) suits a Prometheus scraper. It reports:
 - `alertmap_uptime_seconds`, `alertmap_memory_rss_bytes`, `alertmap_memory_heap_used_bytes`
 - `alertmap_requests_total`, `alertmap_alerts_total`
 - `alertmap_oref_polls_total`, `alertmap_oref_errors_total`, `alertmap_oref_latency_ms`
@@ -462,7 +462,7 @@ scrape_configs:
 
 ## 🌐 Embed widget
 
-הטמעה באתר חיצוני בשורה אחת:
+Embed on an external site in one line:
 
 ```html
 <script src="https://your-alertmap.example.com/embed.js"
@@ -473,59 +473,59 @@ scrape_configs:
         data-height="350px"></script>
 ```
 
-הסקריפט מזריק `<iframe>` עם `?embed=1` — מצב מינימלי ללא header/sidebar/mobile nav, מפה מלאה. הקליינט מזהה את הדגל ב-URL ומחיל מחלקת `html.embed`.
+The script injects an `<iframe>` with `?embed=1`: a minimal mode with no header/sidebar/mobile nav and a full map. The client detects the flag in the URL and applies an `html.embed` class.
 
 ---
 
 ## 🔗 Shareable URLs
 
-המצב מסונכרן ל-URL בזמן אמת ב-`history.replaceState`. ניתן להעתיק את הקישור הנוכחי לשיתוף:
+State is synced to the URL in real time with `history.replaceState`. You can copy the current link to share it:
 
-| פרמטר | דוגמה | פעולה |
+| Parameter | Example | Action |
 |---|---|---|
-| `?lang=` | `?lang=en` | שפה — אחת מ-14 (he/en/ar/ru/am/ti/th/tl/uk/fr/es/ro/hi/zh) |
-| `?theme=` | `?theme=light` | ערכת נושא |
-| `?city=` | `?city=שדרות` | flyTo לעיר בטעינה |
-| `?embed=1` | `?embed=1` | מצב iframe מצומצם |
+| `?lang=` | `?lang=en` | Language, one of 14 (he/en/ar/ru/am/ti/th/tl/uk/fr/es/ro/hi/zh) |
+| `?theme=` | `?theme=light` | Theme |
+| `?city=` | `?city=שדרות` | flyTo a city on load |
+| `?embed=1` | `?embed=1` | Reduced iframe mode |
 
-כפתור 🔗 בטאב "אודות" משתמש ב-`navigator.share` או clipboard.
+The 🔗 button in the "About" tab uses `navigator.share` or the clipboard.
 
 ---
 
-## 💛 תמיכה בפרויקט / Support
+## 💛 Support the project
 
-הפרויקט חינמי וקוד פתוח. אם הוא עוזר לכם — אפשר לתמוך באחת מהדרכים הבאות כדי לכסות שרתים ופיתוח:
+The project is free and open source. If it helps you, you can support it in one of the following ways to cover servers and development:
 
 - **[☕ ko-fi.com/idanlights](https://ko-fi.com/idanlights)**
 - **[🍵 buymeacoffee.com/MrIdan](https://buymeacoffee.com/MrIdan)**
 - **[💛 patreon.com/c/IdanLights](https://www.patreon.com/c/IdanLights)**
 
-כפתורי התרומה מופיעים גם בכל טאב באפליקציה (הכרטיס המלא, דו-לשוני, בטאב "אודות"). לשינוי הקישורים — ערכו את `DONATE_LINKS` ב-[index.html](index.html) (מערך ריק מסתיר את הכרטיס לגמרי).
+Donation buttons also appear in every tab of the app (the full card, bilingual, in the "About" tab). To change the links, edit `DONATE_LINKS` in [index.html](index.html) (an empty array hides the card entirely).
 
 ---
 
-## 🔒 אבטחה
+## 🔒 Security
 
-ראו [SECURITY.md](.github/SECURITY.md) — נוהל דיווח פגיעויות, checklist hardening לפריסה ציבורית, והחלטות עיצוב מכוונות (CORS פתוח, CSP עם `unsafe-inline`).
-
----
-
-## 🤝 תרומה לפרויקט
-
-PRs מתקבלים בברכה! ראו [CONTRIBUTING.md](.github/CONTRIBUTING.md) — הגדרת סביבת פיתוח, הרצת בדיקות, מוסכמות סגנון, ותבניות ל-issues/PRs. היסטוריית שינויים ב-[CHANGELOG.md](CHANGELOG.md).
+See [SECURITY.md](.github/SECURITY.md): vulnerability reporting procedure, a hardening checklist for public deployment, and deliberate design decisions (open CORS, CSP with `unsafe-inline`).
 
 ---
 
-## 📜 רישיון
+## 🤝 Contributing
 
-[MIT](LICENSE) — שימוש חופשי.
+PRs are welcome! See [CONTRIBUTING.md](.github/CONTRIBUTING.md): development environment setup, running tests, style conventions, and issue/PR templates. Change history is in [CHANGELOG.md](CHANGELOG.md).
+
+---
+
+## 📜 License
+
+[MIT](LICENSE): free to use.
 
 ---
 
 <div align="center">
 
-**נתונים: [פיקוד העורף](https://www.oref.org.il/) | מפה: [Leaflet](https://leafletjs.com/) + [CARTO](https://carto.com/)**
+**Data: [Home Front Command](https://www.oref.org.il/) | Map: [Leaflet](https://leafletjs.com/) + [CARTO](https://carto.com/)**
 
-⚠️ פעל תמיד לפי הנחיות גורמי הביטחון הרשמיים
+⚠️ Always follow the instructions of the official security authorities
 
 </div>
