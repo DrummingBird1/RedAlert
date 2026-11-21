@@ -1,142 +1,141 @@
 # AGENTS.md
 
-מדריך עבודה לסוכני קוד (Codex, Grok, Claude Code, Cursor...). **זה מקור האמת היחיד** — `CLAUDE.md` רק מפנה לכאן.
+Working guide for coding agents (Codex, Grok, Claude Code, Cursor...). **This is the single source of truth**: `CLAUDE.md` only points here.
 
-> **קרא קודם:** [docs/HANDOFF.md](docs/HANDOFF.md) — מצב נוכחי, משימות פתוחות והעדפות המשתמש (קצר).
-> **עומק טכני לפי צורך:** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — משתני סביבה, פירוט שרת/קליינט, i18n, PWA, בדיקות. אל תקרא אותו כולו: `grep` לסעיף הרלוונטי.
+> **Technical depth as needed:** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): environment variables, server/client details, i18n, PWA, tests. Do not read it whole: `grep` for the relevant section.
 
-## מה הפרויקט
-**צפיר** (Tzafir; חבילת npm: `tzafir`, לשעבר `israel-alert-map`, v1.6.5) — שרת Node.js + קליינט HTML עצמאי שמציג בזמן אמת את אזעקות פיקוד העורף על מפת Leaflet. תלות בליבה: אפס (רק `node` ≥ 18). תלות אופציונלית יחידה: `web-push` (ל-server.js). `telegram-bot.js` ללא תלויות בכלל — קורא ל-Telegram Bot API דרך `https` גולמי. שם ה-repo ב-GitHub נשאר `RedAlert` במכוון (המיתוג שונה, ה-repo לא שונה).
+## What the project is
+**Tzafir** (צפיר; npm package: `tzafir`, formerly `israel-alert-map`, v1.6.5): a Node.js server plus a standalone HTML client that shows Home Front Command (Pikud HaOref) alerts in real time on a Leaflet map. Core dependencies: zero (only `node` ≥ 18). The only optional dependency: `web-push` (for server.js). `telegram-bot.js` has no dependencies at all: it calls the Telegram Bot API over raw `https`. The GitHub repo name stays `RedAlert` on purpose (the branding changed, the repo did not).
 
-מקור הנתונים: `https://www.oref.org.il/WarningMessages/alert/alerts.json` (polling כל 2 שניות). אין מפתחות, אין הרשמה.
+Data source: `https://www.oref.org.il/WarningMessages/alert/alerts.json` (polling every 2 seconds). No keys, no signup.
 
-## ארכיטקטורה — תרשים
+## Architecture — diagram
 ```mermaid
 flowchart LR
-  OREF["פיקוד העורף<br/>alerts.json"] -->|polling כל 2s| SRV["server.js"]
+  OREF["Home Front Command<br/>alerts.json"] -->|polling every 2s| SRV["server.js"]
   SRV -->|SSE /api/stream| CLIENT["index.html"]
   SRV -->|REST /api/*| CLIENT
-  SRV --> STORE[("store בזיכרון<br/>עד 5000")]
+  SRV --> STORE[("in-memory store<br/>up to 5000")]
   STORE -.snapshot.-> SNAP[".store-snapshot.json"]
-  SRV -.אופציונלי.-> DISCORD["Discord webhook"]
-  SRV -.אופציונלי.-> PUSH["Web Push subscribers"]
-  SRV -.אחרי 5 כשלונות.-> FALLBACK["FALLBACK_ALERT_URL(S)"]
-  BOT["telegram-bot.js"] -->|polling עצמאי| SRV
+  SRV -.optional.-> DISCORD["Discord webhook"]
+  SRV -.optional.-> PUSH["Web Push subscribers"]
+  SRV -.after 5 failures.-> FALLBACK["FALLBACK_ALERT_URL(S)"]
+  BOT["telegram-bot.js"] -->|independent polling| SRV
   ADMIN["/admin dashboard"] -->|Basic Auth| SRV
-  CLIENT --> IDB[("IndexedDB<br/>היסטוריה ארוכת-טווח")]
-  CLIENT --> MAP["Leaflet<br/>+ לוויין/שמות מקומות"]
+  CLIENT --> IDB[("IndexedDB<br/>long-term history")]
+  CLIENT --> MAP["Leaflet<br/>+ satellite/place names"]
 ```
 
-## מבנה הקבצים
-**קוד האפליקציה עצמו שטוח לחלוטין** (אין `src/`, אין תיקיות משנה ל-`server.js`/`index.html`/`lib.js` — זו החלטה מכוונת). יש תיקיות משנה ל**עזר** בלבד: `test/` (טסטים), `scripts/` (כלי release), `docs/` (openapi.yaml + screenshot), `release-banners/` (נכסים):
+## File structure
+**The application code itself is completely flat** (no `src/`, no subfolders for `server.js`/`index.html`/`lib.js`: this is a deliberate decision). Subfolders exist for **helpers** only: `test/` (tests), `scripts/` (release tools), `docs/` (openapi.yaml + screenshot), `release-banners/` (assets):
 
-| קובץ | תפקיד |
+| File | Role |
 |---|---|
-| [server.js](server.js) | שרת HTTP יחיד — proxy ל-OREF, SSE, API, PWA assets, admin dashboard, Web Push, fallback, health webhook, store snapshot. **בנוי כקובץ אחד עם שורות צפופות מאוד** (one-liners מכוונים). |
-| [index.html](index.html) | קליינט מונוליטי — HTML + CSS + JS באותו קובץ. כל המפה, ה-UI, IndexedDB, audio, TTS. **טוען את [lib.js](lib.js) באופן סינכרוני** (`<script src="/lib.js">`) לפני הסקריפט הפנימי. |
-| [lib.js](lib.js) | **מקור-אמת יחיד** ל-data סטטי (`CITIES`, `LN`, `TM`, `RS`, `SHELTERS_DEFAULT`) ופונקציות פניניות (`escapeHtml`, `formatShelter`, `shelterClass`, `distanceKm`, `isDND`, `normalizeCity`, `fuzzyMatch`). UMD — עובד גם כ-`<script>` בדפדפן (גלובל `AlertLib`) וגם כ-`require('./lib.js')` ב-Node. הקליינט עוטף בשמות קצרים (`X`, `C`, `findC`...), הטסטים מייבאים ישירות. |
-| [test/unit.js](test/unit.js) | בדיקות יחידה ל-`lib.js` דרך `node:test`. ללא תלויות. |
-| [test/integration.js](test/integration.js) | בדיקת אינטגרציה ברמת ה-API — מקים mock OREF + spawned server, מאמת אזעקה זורמת ל-`/api/alerts` + SSE + `/api/health`. ללא דפדפן. |
-| [test/e2e.js](test/e2e.js) | E2E בדפדפן אמיתי (Playwright, `channel:'chrome'` — משתמש ב-Chrome המותקן מקומית, בלי הורדת דפדפן bundled). מריץ spawned server + בודק רגרסיות UI אמיתיות שנתפסו בעבר (פוקוס בחיפוש, שימור טאב, רוחב ניווט מובייל, תוויות מקלטים, צבעי option במצב כהה, תוויות טאב חסרות, קריסת טאב היסטוריה) — כל טסט מקושר לבאג ספציפי מה-CHANGELOG. `playwright` הוא `devDependency` בלבד. |
-| [telegram-bot.js](telegram-bot.js) | בוט עצמאי — polling ל-`/api/alerts` ושליחה לערוץ טלגרם. **ללא תלויות** — `sendMessage` ל-Telegram Bot API דרך `https` גולמי (אותו סגנון כמו `sendDiscord()` ב-server.js), לא `node-telegram-bot-api`. |
-| [Dockerfile](Dockerfile) + [docker-compose.yml](docker-compose.yml) | בנייה ל-`node:20-alpine` עם healthcheck. |
-| [package.json](package.json) | scripts בלבד; ללא `dependencies` רגילים, רק `optionalDependencies`. |
+| [server.js](server.js) | A single HTTP server: proxy to OREF, SSE, API, PWA assets, admin dashboard, Web Push, fallback, health webhook, store snapshot. **Built as one file with very dense lines** (deliberate one-liners). |
+| [index.html](index.html) | Monolithic client: HTML + CSS + JS in the same file. The whole map, UI, IndexedDB, audio, TTS. **Loads [lib.js](lib.js) synchronously** (`<script src="/lib.js">`) before the inline script. |
+| [lib.js](lib.js) | **Single source of truth** for static data (`CITIES`, `LN`, `TM`, `RS`, `SHELTERS_DEFAULT`) and pure functions (`escapeHtml`, `formatShelter`, `shelterClass`, `distanceKm`, `isDND`, `normalizeCity`, `fuzzyMatch`). UMD: works both as a `<script>` in the browser (global `AlertLib`) and as `require('./lib.js')` in Node. The client wraps it in short names (`X`, `C`, `findC`...), the tests import it directly. |
+| [test/unit.js](test/unit.js) | Unit tests for `lib.js` through `node:test`. No dependencies. |
+| [test/integration.js](test/integration.js) | API-level integration test: starts a mock OREF + a spawned server, verifies an alert flows to `/api/alerts` + SSE + `/api/health`. No browser. |
+| [test/e2e.js](test/e2e.js) | Real-browser E2E (Playwright, `channel:'chrome'`: uses the locally installed Chrome, with no bundled browser download). Runs a spawned server and checks real UI regressions caught in the past (search focus, tab persistence, mobile nav width, shelter labels, option colors in dark mode, missing tab labels, history tab collapse). Each test is tied to a specific bug from the CHANGELOG. `playwright` is a `devDependency` only. |
+| [telegram-bot.js](telegram-bot.js) | A standalone bot: polls `/api/alerts` and sends to a Telegram channel. **No dependencies**: `sendMessage` to the Telegram Bot API over raw `https` (the same style as `sendDiscord()` in server.js), not `node-telegram-bot-api`. |
+| [Dockerfile](Dockerfile) + [docker-compose.yml](docker-compose.yml) | Build on `node:20-alpine` with a healthcheck. |
+| [package.json](package.json) | Scripts only; no regular `dependencies`, only `optionalDependencies`. |
 
-קבצי runtime שנוצרים אוטומטית (ב-`.gitignore`):
-- `logs/alerts.log` — לוג אזעקות עם רוטציה (10MB × 5 קבצים)
-- `logs/client-errors.log` — שגיאות JS מהקליינט (`POST /api/client-error`), אותה מדיניות רוטציה, קובץ נפרד כדי שהתקפי שגיאות מקליינטים לא ידחקו את לוג האזעקות
-- `logs/admin-audit.log` — כל ניסיון אימות ל-`/admin`/`/metrics` (הצלחה/כישלון + IP), אותה מדיניות רוטציה
-- `.vapid-keys.json` — מפתחות VAPID ל-Web Push (נוצרים בהפעלה ראשונה)
-- `.push-subs.json` — הרשמות Push
-- `.store-snapshot.json` — snapshot של היסטוריית האזעקות; נטען בהפעלה (כ-history בלבד, לא active) כדי לשרוד restart/redeploy
+Runtime files created automatically (in `.gitignore`):
+- `logs/alerts.log`: alert log with rotation (10MB × 5 files)
+- `logs/client-errors.log`: JS errors from the client (`POST /api/client-error`), the same rotation policy, a separate file so that bursts of client errors do not push out the alert log
+- `logs/admin-audit.log`: every authentication attempt to `/admin`/`/metrics` (success/failure + IP), the same rotation policy
+- `.vapid-keys.json`: VAPID keys for Web Push (created on first run)
+- `.push-subs.json`: Push subscriptions
+- `.store-snapshot.json`: snapshot of the alert history; loaded at startup (as history only, not active) to survive a restart/redeploy
 
-## פקודות הפעלה
+## Run commands
 ```bash
-node server.js              # מפעיל את השרת על פורט 3000
-node test/unit.js           # 90+ בדיקות (כולל smoke test לשרת)
-node test/integration.js    # אינטגרציה ברמת API — mock OREF → server → SSE
-node test/e2e.js            # E2E בדפדפן אמיתי — דורש Chrome/Edge מקומי + playwright (devDependency)
-node telegram-bot.js        # בוט טלגרם (דורש משתני סביבה)
-npm install                 # התקנת web-push (אופציונלי; telegram-bot.js ללא תלויות)
-docker-compose up -d        # פריסה ב-Docker
+node server.js              # starts the server on port 3000
+node test/unit.js           # 90+ tests (including a server smoke test)
+node test/integration.js    # API-level integration: mock OREF → server → SSE
+node test/e2e.js            # real-browser E2E: needs local Chrome/Edge + playwright (devDependency)
+node telegram-bot.js        # Telegram bot (needs environment variables)
+npm install                 # install web-push (optional; telegram-bot.js has no dependencies)
+docker-compose up -d        # deploy with Docker
 
 npm start                   # = node server.js
 npm test                    # = node test/unit.js
 npm run test:integration    # = node test/integration.js
 npm run test:e2e            # = node test/e2e.js
-npm run test:all            # הריצה של שלושתם ברצף
+npm run test:all            # runs all three in sequence
 npm run telegram            # = node telegram-bot.js
 npm run docker:build        # docker build -t alertmap .
 npm run docker:run          # docker run -p 3000:3000 ...
 ```
 
-`npm run lint` — ESLint flat config (`eslint.config.js`, כללי "באג אמיתי" בלבד, `devDependency`). אין `typecheck`/`format` — הפרויקט כמעט ללא toolchain. ⚠️ סקריפט ה-lint **לא** מכסה את `lib.js`, `scripts/` ואת ה-JS הפנימי של `index.html` (הקובץ הגדול ביותר).
+`npm run lint`: ESLint flat config (`eslint.config.js`, "real bug" rules only, `devDependency`). There is no `typecheck`/`format`; the project has almost no toolchain. ⚠️ The lint script does **not** cover `lib.js`, `scripts/` or the inline JS of `index.html` (the largest file).
 
-## איך להוסיף תכונה / לשנות קוד
-1. **שינויים בלוגיקת השרת** — `server.js` ערוך ישירות. אין hot reload — `node server.js` מחדש.
-2. **שינויים בקליינט** — `index.html` ערוך ישירות. השרת מזהה את שינוי ה-mtime ומגיש את הגרסה החדשה (refresh בדפדפן). זכור ש-Service Worker עלול להגיש cached גרסה — חשוב ל-bump את `CN` (כרגע `red-alert-v18`) ב-`server.js` (משתנה `SW`) כדי להפעיל invalidate, או לפתוח DevTools → Application → Service Workers → Unregister. אם שינית URL/ספק של אריחי מפה — bump גם את `TILE` (כרגע `red-alert-tiles-v2`), אחרת אריחים ישנים נשארים במטמון הנפרד לצמיתות (ה-`activate` handler לא מנקה אותו).
-3. **הוספת עיר** — ערוך את `CITIES` ב-[lib.js](lib.js). פורמט: `"שם":{lat:X,lng:Y,r:"אזור",s:זמן_מיגון}`.
-4. **הוספת שפה** — הוסף ערך ל-`LN`, ל-`LANG_META` (שם native + דגל) ול-`TTS_LOCALE` (קוד BCP-47) ב-[lib.js](lib.js) — כולל **כל** המפתחות שקיימים ב-`LN.en` (test/unit.js/הקוד לא בודקים זאת אוטומטית, אבל חוסר מפתח נופל חזרה ל-Hebrew בשקט). `<select id="langS">` ב-index.html נבנה אוטומטית מ-`LANG_META` דרך `initLangSelect()` — אין לערוך אותו ידנית.
-5. **endpoint חדש** — הוסף `if (p === '/api/...')` ב-`server.js` ל-pipeline הקיים בתוך `http.createServer`. תזכור `track(p, code)` ו-`gz(req, res, body, ct)`.
-6. **בדיקות** — הפונקציות הפניניות חיות ב-[lib.js](lib.js) (מקור-אמת יחיד). הקליינט עוטף בשמות קצרים, ו-`test/unit.js` מייבא `require('../lib.js')`. **אם משנים לוגיקה פנינית — עורכים את `lib.js`, וזהו.** אין יותר שכפול ידני.
-7. **הוספת data סטטי** (עיר/שפה/סוג אזעקה) — עורכים את האובייקטים ב-[lib.js](lib.js) (`CITIES`/`LN`/`TM`/`RS`). הקליינט מושך אותם דרך `AlertLib`. עיר ללא קואורדינטה (לא נמצאה ב-`fuzzyMatch`) מסומנת `noLoc:true` — **לא מוצב מרקר במיקום אקראי** (היא מופיעה ברשימה עם תווית "מיקום לא ידוע" בלבד).
-8. **פרסום release** — עדכנו `package.json`/`APP_VERSION`/`CN` (server.js), הוסיפו סעיף ל-CHANGELOG.md + ל-`CHANGES` (index.html), והריצו את הטסטים. **⚠️ חובה לפני תיוג: אחרי ה-push, חכו שה-deploy ב-Vercel יסתיים והריצו `node scripts/smoke.mjs https://red-alert-ten.vercel.app --expect-version X.Y.Z` — רק אם עבר מסמנים תג/release.** (טסטים ירוקים לא מספיקים: v1.6.4 עבר את כולם ושבר את האתר החי — `GET /lib.js` החזיר 404 ב-Vercel, אז לא הייתה מפה ולא ממשק.) לשינויים בשרת/פריסה עדיף לאמת קודם על ענף → preview של Vercel. כל release חדש ב-GitHub כולל **רק** את `release-banners/vX.Y.Z.png` (לוגו ממותג עם מספר הגרסה, נוצר אוטומטית ע״י `node scripts/release-banner.mjs <version>` — headless Chrome, ללא תלות npm חדשה, דורש Chrome/Edge מותקן מקומית) בגוף ה-release notes. **אין** להוסיף את `docs/screenshot.jpg` לגוף ה-release notes — המשתמש הסיר אותו במכוון מ-v1.5.0/v1.6.0 (הוא נשאר רק ב-README עצמו, ומתעדכן שם כשה-UI משתנה משמעותית). **⚠️ מספור גרסאות אחרי 2026-08-30**: המשתמש ביקש למספר-מחדש את כל ההיסטוריה (מה שהיה v3.0.0 עד v3.6.0 הפך ל-v1.0.0 עד v1.6.0 — major הורד מ-3 ל-1, minor/patch נשארו זהים). **הגרסה הבאה ממשיכה מ-v1.6.5** (למשל v1.6.6 לתיקון, v1.7.0 לפיצ'ר) — **לא** לקפוץ בחזרה ל-v3.x ו**לא** לקפוץ ל-v2.0.0.
+## How to add a feature / change code
+1. **Server logic changes**: edit `server.js` directly. There is no hot reload; restart `node server.js`.
+2. **Client changes**: edit `index.html` directly. The server detects the mtime change and serves the new version (browser refresh). Remember that the Service Worker may serve a cached version: bump `CN` (currently `red-alert-v18`) in `server.js` (variable `SW`) to trigger invalidation, or open DevTools → Application → Service Workers → Unregister. If you changed the map tile URL/provider, also bump `TILE` (currently `red-alert-tiles-v2`), otherwise old tiles stay in the separate cache forever (the `activate` handler does not clear it).
+3. **Add a city**: edit `CITIES` in [lib.js](lib.js). Format: `"name":{lat:X,lng:Y,r:"region",s:shelter_time}`.
+4. **Add a language**: add an entry to `LN`, to `LANG_META` (native name + flag) and to `TTS_LOCALE` (BCP-47 code) in [lib.js](lib.js), including **all** the keys that exist in `LN.en` (test/unit.js and the code do not check this automatically, but a missing key silently falls back to Hebrew). `<select id="langS">` in index.html is built automatically from `LANG_META` through `initLangSelect()`; do not edit it by hand.
+5. **New endpoint**: add `if (p === '/api/...')` in `server.js` to the existing pipeline inside `http.createServer`. Remember `track(p, code)` and `gz(req, res, body, ct)`.
+6. **Tests**: the pure functions live in [lib.js](lib.js) (single source of truth). The client wraps them in short names, and `test/unit.js` imports `require('../lib.js')`. **If you change pure logic, edit `lib.js`, and that is it.** There is no manual duplication any more.
+7. **Add static data** (city/language/alert type): edit the objects in [lib.js](lib.js) (`CITIES`/`LN`/`TM`/`RS`). The client pulls them through `AlertLib`. A city without a coordinate (not found by `fuzzyMatch`) is marked `noLoc:true`: **no marker is placed at a random location** (it appears in the list with an "unknown location" label only).
+8. **Publishing a release**: update `package.json`/`APP_VERSION`/`CN` (server.js), add a section to CHANGELOG.md and to `CHANGES` (index.html), and run the tests. **⚠️ Required before tagging: after the push, wait for the Vercel deploy to finish and run `node scripts/smoke.mjs https://red-alert-ten.vercel.app --expect-version X.Y.Z`; only if it passes, mark the tag/release.** (Green tests are not enough: v1.6.4 passed all of them and broke the live site, because `GET /lib.js` returned 404 on Vercel, so there was no map and no UI.) For server/deployment changes, prefer to verify first on a branch → Vercel preview. Every new GitHub release includes **only** `release-banners/vX.Y.Z.png` (a branded logo with the version number, generated automatically by `node scripts/release-banner.mjs <version>`: headless Chrome, no new npm dependency, needs Chrome/Edge installed locally) in the release notes body. **Do not** add `docs/screenshot.jpg` to the release notes body: the user deliberately removed it from v1.5.0/v1.6.0 (it stays only in the README itself, and is updated there when the UI changes significantly). **⚠️ Version numbering after 2026-08-30**: the user asked to renumber the entire history (what was v3.0.0 through v3.6.0 became v1.0.0 through v1.6.0: major lowered from 3 to 1, minor/patch unchanged). **The next version continues from v1.6.5** (for example v1.6.6 for a fix, v1.7.0 for a feature); **do not** jump back to v3.x and **do not** jump to v2.0.0.
 
-## מוסכמות סגנון
-- **שפה**: הערות וטקסט UI בעברית. שמות משתנים/פונקציות באנגלית.
-- **דחיסה**: הפרויקט מעדיף one-liners ארוכים על קוד מרווח. כשעורכים אזור קיים — שמרו על הסגנון; אזורים חדשים יכולים להיות נשימים יותר.
-- **ללא תלויות**: כל פיצ'ר חדש בשרת אמור לעבוד גם כש-`web-push` לא מותקן. ההתקנה היא אופציונלית בכוונה.
-- **אין framework בקליינט**: לא להוסיף React/Vue. השתמש ב-DOM API.
-- **אבטחה**: כל מחרוזת מהמשתמש/OREF שמוצגת ב-HTML חייבת לעבור `X()` (escape).
+## Style conventions
+- **Language**: comments and UI text in Hebrew. Variable/function names in English.
+- **Density**: the project prefers long one-liners over spacious code. When editing an existing area, keep its style; new areas may be more spacious.
+- **No dependencies**: every new server feature should also work when `web-push` is not installed. The installation is optional on purpose.
+- **No client framework**: do not add React/Vue. Use the DOM API.
+- **Security**: every user/OREF string displayed in HTML must go through `X()` (escape).
 
-## אזהרות בטיחות
-- **סיסמת אדמין** — אם `ADMIN_PASS` לא מוגדרת, מוגרלת אקראית בהפעלה (מודפסת ללוג פעם אחת). הגדר ערך קבוע ל-production.
-- **CORS פתוח (`*`)** — מכוון; ה-API נועד לצריכה ציבורית.
-- **CSP מתיר `unsafe-inline`** — מכוון; הקליינט הוא HTML+JS מונוליטי.
-- **אתר Vercel (red-alert-ten.vercel.app) לא מקבל אזעקות אמיתיות** (אומת 2026-10-16) — OREF חוסם את ה-IP שלו. לפני שמצהירים שהפריסה "עובדת" יש לבדוק ש-`last_poll_ago` ב-`/api/health` הוא מספר ולא `null`; HTTP 200 לבדו לא מוכיח זרימת נתונים.
-- **המערכת אינה חליפה להנחיות פיקוד העורף**. הדגש את זה בכל UI חדש.
+## Safety warnings
+- **Admin password**: if `ADMIN_PASS` is not set, a random one is generated at startup (printed once to the log). Set a fixed value for production.
+- **Open CORS (`*`)**: deliberate; the API is meant for public consumption.
+- **CSP allows `unsafe-inline`**: deliberate; the client is monolithic HTML+JS.
+- **The Vercel site (red-alert-ten.vercel.app) does not receive real alerts** (verified 2026-10-16): OREF blocks its IP. Before claiming the deployment "works", check that `last_poll_ago` in `/api/health` is a number and not `null`; HTTP 200 alone does not prove data is flowing.
+- **The system is not a substitute for Home Front Command instructions.** Emphasize this in every new UI.
 
-## כללי ברזל (נלמדו בדרך הקשה — אל תדלג)
+## Iron rules (learned the hard way — do not skip)
 
-1. **לא מתייגים release לפני שמריצים smoke על האתר הפרוס**: אחרי push לחכות ל-deploy, ואז `node scripts/smoke.mjs https://red-alert-ten.vercel.app --expect-version X.Y.Z`. טסטים ירוקים לא מספיקים — v1.6.4 עבר את כולם ושבר את האתר החי (`/lib.js` 404, אין מפה).
-2. **"עובד" = הורצתי בפועל.** דפדפן אמיתי / HTTP מול האתר הפרוס / Docker אמיתי — לא רק קריאת קוד. דווחו בכנות מה לא אומת.
-3. **כל תיקון באג מקבל טסט שנכשל על הקוד הישן** (החזר זמנית את הבאג ואמת שהטסט נופל, ואז שחזר). בלי זה הטסט עשוי לעבור סתם (למשל הטסט הישן של "פוקוס בחיפוש" עבר גם כשהרשימה לא סוננה).
-4. **כל טסט שמרים `server.js` חייב**: `DATA_DIR` זמני (אחרת הוא כותב אזעקות מדומות להיסטוריה האמיתית של המפתח), `OREF_URL_OVERRIDE` ל-mock (פיקוד העורף חוסם IP לא-ישראלי, ב-CI זה יפיל טסטים), ובדפדפן אחד גם `RATE_LIMIT_PER_MIN` גבוה (אחרת 429 אקראי), ולנעול `locale: 'he-IL'` (השפה נבחרת לפי הדפדפן).
-5. **אל תעשו `require('./lib.js')` ב-server.js** — ב-Vercel זה מפסיק לפרוס את הקובץ כנכס (ראו אילוצים קריטיים). אותו כלל לכל קובץ שמוגש ללקוח מהדיסק.
-6. **אין לדחוף / לתייג / לפרסם release בלי שהמשתמש ביקש.** פעולות חיצוניות (GitHub, Vercel, מחיקות) — רק לפי בקשה מפורשת.
-7. **אל תחזירו screenshot לגוף ה-release notes** (רק `release-banners/vX.Y.Z.png`). מספור גרסאות ממשיך מ-1.x (לא 3.x ולא 2.0.0). השורש נשאר נקי — אל תוסיפו קבצים בשורש בלי סיבה (יש `docs/`, `test/`, `scripts/`, `.github/`).
-8. **`CLAUDE.md` הוא הפניה בלבד** — עורכים רק `AGENTS.md`/`docs/*`.
+1. **Do not tag a release before running smoke on the deployed site**: after a push, wait for the deploy, then `node scripts/smoke.mjs https://red-alert-ten.vercel.app --expect-version X.Y.Z`. Green tests are not enough: v1.6.4 passed all of them and broke the live site (`/lib.js` 404, no map).
+2. **"Works" = I actually ran it.** A real browser / HTTP against the deployed site / a real Docker, not just reading code. Report honestly what was not verified.
+3. **Every bug fix gets a test that fails on the old code** (temporarily bring the bug back and verify the test fails, then restore). Without this the test may pass for nothing (for example, the old "search focus" test passed even when the list was not filtered).
+4. **Every test that starts `server.js` must**: use a temporary `DATA_DIR` (otherwise it writes fake alerts into the developer's real history), `OREF_URL_OVERRIDE` pointing to a mock (the Home Front Command blocks non-Israeli IPs, and in CI this would fail the tests), and in a single browser also a high `RATE_LIMIT_PER_MIN` (otherwise random 429s), and pin `locale: 'he-IL'` (the language is chosen by the browser).
+5. **Do not `require('./lib.js')` in server.js**: on Vercel this stops deploying the file as an asset (see critical constraints). The same rule applies to every file served to the client from disk.
+6. **Do not push / tag / publish a release unless the user asked.** External actions (GitHub, Vercel, deletions) only on explicit request.
+7. **Do not bring a screenshot back into the release notes body** (only `release-banners/vX.Y.Z.png`). Version numbering continues from 1.x (not 3.x and not 2.0.0). Keep the root clean: do not add files in the root without a reason (there are `docs/`, `test/`, `scripts/`, `.github/`).
+8. **`CLAUDE.md` is a pointer only**: edit only `AGENTS.md`/`docs/*`.
 
-## סביבת העבודה
+## Working environment
 
-- Windows 11; Git Bash או PowerShell. `git` עלול להיכשל ב-"dubious ownership": `export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0="<נתיב הריפו>"` (לא לשנות config גלובלי).
-- `gh` (GitHub CLI) מחובר: releases, tags, PRs, runs. `gh run list --workflow=test.yml --branch main`.
-- Chrome מותקן מקומית (E2E ובאנרים). Docker Desktop מותקן אך לפעמים כבוי.
-- התקנות JS: **`pnpm`** (לא npm/yarn). Python: `uv`.
-- סקריפטים ארוכים עם גרשיים/עברית: כתבו לקובץ והריצו אותו; heredoc ב-shell נשבר בקלות.
-- המשתמש כותב ומצפה לתשובות **בעברית**, תמציתיות וכנות; שואל כשמשהו לא ברור ולא מנחש; לא אוהב עומס (בשורש וגם בתשובות).
+- Windows 11; Git Bash or PowerShell. `git` may fail with "dubious ownership": `export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0="<repo path>"` (do not change the global config).
+- `gh` (GitHub CLI) is connected: releases, tags, PRs, runs. `gh run list --workflow=test.yml --branch main`.
+- Chrome is installed locally (E2E and banners). Docker Desktop is installed but sometimes off.
+- JS installs: **`pnpm`** (not npm/yarn). Python: `uv`.
+- Long scripts with quotes/Hebrew: write them to a file and run it; a shell heredoc breaks easily.
+- The user writes and expects answers **in Hebrew**, concise and honest; asks when something is unclear and does not guess; does not like clutter (in the root and in answers).
 
-## קריאת הקוד בזול (חוסך טוקנים)
+## Reading the code cheaply (saves tokens)
 
-- `index.html` (~110KB) ו-`server.js` (~60KB) בנויים משורות ענקיות של קוד דחוס. **אל תקראו אותם בשלמותם.**
-- חיפוש: `grep -n -o "function renderSB.\{0,500\}" index.html` · קטע: `sed -n '540,560p' index.html | cut -c1-300`.
-- אחרי עריכה אל תקראו שוב לאימות — הריצו `node --check <file>` והטסטים. להרצה מלאה: `pnpm run lint && node test/unit.js && node test/integration.js && node test/e2e.js`.
-- אצווה פקודות עצמאיות יחד; אל תפעילו סוכני-משנה אלא אם התבקשתם.
+- `index.html` (~110KB) and `server.js` (~60KB) are made of huge lines of dense code. **Do not read them whole.**
+- Search: `grep -n -o "function renderSB.\{0,500\}" index.html` · a section: `sed -n '540,560p' index.html | cut -c1-300`.
+- After an edit do not re-read to verify: run `node --check <file>` and the tests. For a full run: `pnpm run lint && node test/unit.js && node test/integration.js && node test/e2e.js`.
+- Batch independent commands together; do not launch subagents unless asked.
 
-## בדיקות — כללים קצרים
+## Tests — short rules
 
-| פקודה | מה |
+| Command | What |
 |---|---|
-| `node test/unit.js` | 114 בדיקות יחידה ל-`lib.js`/בוט טלגרם |
-| `node test/integration.js` | 21 assertions: mock OREF → שרת → SSE/health/lib.js + תרחיש פיד מת + smoke |
-| `node test/e2e.js` | 12 טסטי Chrome אמיתי (Playwright), כל אחד מקושר לבאג שהיה |
-| `pnpm run lint` | ESLint (לא מכסה `lib.js`, `scripts/`, וה-JS שבתוך `index.html`) |
+| `node test/unit.js` | 114 unit tests for `lib.js`/the Telegram bot |
+| `node test/integration.js` | 21 assertions: mock OREF → server → SSE/health/lib.js + a dead-feed scenario + smoke |
+| `node test/e2e.js` | 12 real-Chrome tests (Playwright), each tied to a bug that existed |
+| `pnpm run lint` | ESLint (does not cover `lib.js`, `scripts/`, and the JS inside `index.html`) |
 
-CI (`.github/workflows/test.yml`) חייב להיות ירוק לפני תיוג. `deploy.yml` (Fly.io) אדום בכל push — ידוע ובכוונה לא מחובר (`FLY_API_TOKEN` לא הוגדר).
+CI (`.github/workflows/test.yml`) must be green before tagging. `deploy.yml` (Fly.io) is red on every push: known and deliberately not connected (`FLY_API_TOKEN` was not set).
 
-## אילוצים קריטיים — חובה לפני עריכה
+## Critical constraints — required before editing
 
-- **⚠️ אל תעשו `require('./lib.js')` ב-server.js**: הקובץ מוגש גם ללקוח מהדיסק (`getLib()`), וב-Vercel `require` הופך אותו למודול ב-bundle במקום לקובץ שנפרס — `GET /lib.js` החזיר 404 והאפליקציה מתה (v1.6.4). השרת טוען אותו כך: `new Function('module','exports', fs.readFileSync(…lib.js))` — אותה קריאת דיסק של `/lib.js`, כך שאם הקובץ מוגש, גם הטעינה עובדת. אותו כלל לכל קובץ שמוגש ללקוח מהדיסק (`index.html`, `lib.js`, `docs/openapi.yaml`).
-- **⚠️ אילוץ קריטי — רינדור מחדש של טאב לא-פעיל**: `updUI()` (שרץ מ-`schedUI()`/`procSA`/`visibilitychange` וכו') קורא ל-`refreshCurrentTab()` ולא ל-`renderSB()` ישירות — `refreshCurrentTab()` בודק את `currentTab` ומעדכן רק את `#sbC` של הטאב הפעיל בפועל. **לעולם אל תקראו ל-`renderSB()`/`renderHistoryTab()` בלי בדיקת `currentTab` קודם** — קריאה לא-מותנית כותבת על `#sbC` את תוכן האזעקות/היסטוריה גם כשמשתמש צופה בטאב אחר (זה בדיוק הבאג שתוקן: מעבר טאב בדפדפן החזיר את התצוגה לאזעקות במקום להישאר בטאב האחרון).
-- **⚠️ אילוץ קריטי — שדות חיפוש חיים (`#fQ`, `#hQ`)**: `renderSB()`/`renderHistoryTab()` מחליפים את כל ה-`innerHTML` של `#sbC`, כולל את שדה החיפוש עצמו. כל שינוי בפונקציות האלה **חייב** לשמר `document.activeElement`/`selectionStart`/`selectionEnd` לפני ה-render ולשחזר אותם (`focus()`+`setSelectionRange()`) אחריו, אחרת כל הקשה במקלדת מוציאה את הפוקוס מהשדה (המשתמש לא יכול להקליד ברצף). `renderHistoryTab()` גם מדלג על ה-skeleton loader כשהטאב כבר מרונדר (רק בטעינה ראשונה), ומגן מפני race condition עם `historySeq` **וגם** בודק `currentTab==='history'` אחרי ה-`await gDB()` — אחרת מעבר טאב בזמן שה-IndexedDB איטי צובע את רשימת ההיסטוריה מתחת לטאב אחר. **שני כללים נוספים (v1.6.3)**: (1) שחזור ערך השדה אחרי רינדור חייב להיות מהטקסט **הגולמי** (`prevVal`/`rawQ`), לא מ-`flt.q` — הוא עובר `.trim()` ושחזור ממנו אוכל את הרווח שהמשתמש הרגע הקליד ("תל " → "תלאב"), מה ששובר כל עיר דו-מילית. (2) שינוי פילטר **יזום ע״י המשתמש** (`applyF`) חייב לרנדר גם כשהפוקוס ב-`#fQ` — דגל `userFilt`; ה-guard ב-`refreshCurrentTab()` מיועד רק לרענוני רקע (SSE/טיימרים) ולא לתקתוקי המשתמש עצמו. הטסט הישן "keeps focus" עבר גם כשהרשימה לא סוננה בכלל, כי שום רינדור לא קרה — לכן הטסטים בודקים עכשיו גם שהרשימה באמת מצטמצמת וגם שהמקלדת ממשיכה לעבוד באמצע.
-- **⚠️ אילוץ קריטי — `sDB()` לא שומר `type`**: רשומות ב-IndexedDB (`sDB()`) שומרות רק `typeKey` (מחרוזת), לא את אובייקט `type` המלא (icon/css/color) ש-`rItem()`/`addMrk()` דורשים. `renderHistoryTab()` משחזר אותו ידנית (`a.type=TM[a.typeKey]||TM.rockets`) אחרי `gDB()` — **זה היה באג אמיתי וארוך-טווח**: לפני התיקון, כל ביקור בטאב היסטוריה עם נתוני IndexedDB אמיתיים קרס על `Cannot read properties of undefined (reading 'icon')` ותקוע על ה-skeleton loader לנצח. אם מוסיפים עוד מקום שקורא רשומות גולמיות מ-`gDB()`/IndexedDB — לבדוק את זה שוב. יש טסט E2E ל-regression הזה (`test/e2e.js`, זורע רשומה ידנית ב-IndexedDB בפורמט המדויק של `sDB()`).
+- **⚠️ Do not `require('./lib.js')` in server.js**: the file is also served to the client from disk (`getLib()`), and on Vercel `require` turns it into a module in the bundle instead of a deployed file: `GET /lib.js` returned 404 and the app died (v1.6.4). The server loads it like this: `new Function('module','exports', fs.readFileSync(…lib.js))`: the same disk read as `/lib.js`, so if the file is served, the load works too. The same rule applies to every file served to the client from disk (`index.html`, `lib.js`, `docs/openapi.yaml`).
+- **⚠️ Critical constraint — re-rendering an inactive tab**: `updUI()` (which runs from `schedUI()`/`procSA`/`visibilitychange` etc.) calls `refreshCurrentTab()` and not `renderSB()` directly: `refreshCurrentTab()` checks `currentTab` and updates only the `#sbC` of the tab that is actually active. **Never call `renderSB()`/`renderHistoryTab()` without checking `currentTab` first**: an unconditional call writes the alerts/history content onto `#sbC` even when the user is viewing another tab (this is exactly the bug that was fixed: switching a tab in the browser returned the view to alerts instead of staying on the last tab).
+- **⚠️ Critical constraint — live search fields (`#fQ`, `#hQ`)**: `renderSB()`/`renderHistoryTab()` replace the whole `innerHTML` of `#sbC`, including the search field itself. Any change to these functions **must** preserve `document.activeElement`/`selectionStart`/`selectionEnd` before the render and restore them (`focus()`+`setSelectionRange()`) after it, otherwise every keystroke takes focus out of the field (the user cannot type continuously). `renderHistoryTab()` also skips the skeleton loader when the tab is already rendered (first load only), and guards against a race condition with `historySeq` **and** checks `currentTab==='history'` after the `await gDB()`, otherwise switching tabs while IndexedDB is slow paints the history list under another tab. **Two more rules (v1.6.3)**: (1) restoring the field value after a render must come from the **raw** text (`prevVal`/`rawQ`), not from `flt.q`, which goes through `.trim()`, and restoring from it eats the space the user just typed ("תל " → "תלאב"), which breaks every two-word city. (2) A **user-initiated** filter change (`applyF`) must render even when focus is in `#fQ`: the `userFilt` flag; the guard in `refreshCurrentTab()` is meant only for background refreshes (SSE/timers) and not for the user's own keystrokes. The old "keeps focus" test passed even when the list was not filtered at all, because no render happened, so the tests now check both that the list actually narrows and that the keyboard keeps working midway.
+- **⚠️ Critical constraint — `sDB()` does not save `type`**: records in IndexedDB (`sDB()`) save only `typeKey` (a string), not the full `type` object (icon/css/color) that `rItem()`/`addMrk()` require. `renderHistoryTab()` restores it manually (`a.type=TM[a.typeKey]||TM.rockets`) after `gDB()`. **This was a real, long-running bug**: before the fix, every visit to the history tab with real IndexedDB data crashed on `Cannot read properties of undefined (reading 'icon')` and was stuck on the skeleton loader forever. If you add another place that reads raw records from `gDB()`/IndexedDB, check this again. There is an E2E test for this regression (`test/e2e.js`, which manually seeds a record in IndexedDB in the exact format of `sDB()`).
