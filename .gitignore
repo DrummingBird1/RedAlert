@@ -26,3 +26,7 @@ Thumbs.db
 
 # Claude Code local settings
 .claude/
+
+# Local-only notes (not published)
+.local/
+HANDOFF.local.md
