@@ -16,10 +16,14 @@ Direction of the project, in plain terms. No dates are promised; items move as t
 - **Reliability** — honest "no connection to the data source" state instead of a false "all clear", fallback alert sources, store snapshot that survives restarts.
 - **Quality** — unit, integration and real-browser (Playwright) tests, plus a post-deploy smoke test that must pass before a release is tagged.
 
+## Merged, not in a tagged release yet
+
+- **Rescue instruction in all 14 languages** — "get to a protected space now", the safe-room hint and the "I'm safe" button (including the message it shares) are translated in every UI language. The Amharic and Tigrinya strings are best-effort and still need a native-speaker review.
+- **Self-hosting setup** — a Docker Compose file that keeps all runtime data in one persistent directory and uses Israel time, plus a workflow that publishes the container image to GitHub Container Registry on version tags.
+
 ## In progress
 
-- **Self-hosting for real alerts** — the data source only answers Israeli IP addresses, so the hosted demo cannot receive live alerts. Work is under way on a Docker setup (persistent data directory, Israel time zone) and a container-image workflow so it can run 24/7 from a home connection.
-- **Translating the rescue instruction** — "get to a protected space now", the safe-room hint and the "I'm safe" button in all 14 languages.
+- **Self-hosting for real alerts** — the data source only answers Israeli IP addresses, so the hosted demo cannot receive live alerts. The Docker setup and the image workflow are merged; what is left is publishing the first image, writing the setup instructions and running it 24/7 from a home connection.
 
 ## Planned
 
